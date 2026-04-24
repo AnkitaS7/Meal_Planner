@@ -4,7 +4,7 @@
 ───────────────────────────────────────── */
 
 export const DAYS  = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-export const MEALS = ["Breakfast", "Lunch", "Dinner", "Snack"];
+export const MEALS = ["Breakfast", "Lunch", "Snack", "Dinner"];
 
 export const DIETARY_OPTIONS = [
   "Vegetarian", "Vegan", "Gluten-free", "Dairy-free",
