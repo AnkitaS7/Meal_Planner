@@ -62,7 +62,7 @@ export default function Dashboard({ setPage, dishes, pantry, userId }) {
   const totalCaloriesToday = todayMeals.reduce((s, r) => s + (Number(r.cal) || 0), 0);
 
   const stats = [
-    { icon: "🍽", value: dishes.length,  label: "Dishes Saved",   color: C.accent, page: "dishes"    },
+    { icon: "🍽", value: dishes.filter(d => d.user_id === userId).length, label: "Dishes Saved", color: C.accent, page: "dishes" },
     { icon: "🏺", value: pantry.length,  label: "Pantry Items",   color: C.sage,   page: "pantry"    },
     { icon: "🔥", value: totalCaloriesToday || "—", label: "Calories Today", color: C.gold, page: "nutrients" },
     { icon: "📅", value: todayMeals.length, label: "Meals Today",  color: C.purple, page: "planner"   },

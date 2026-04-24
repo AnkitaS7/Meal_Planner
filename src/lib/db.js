@@ -5,6 +5,7 @@ import { supabase } from "./supabase";
 export function mapDish(row) {
   return {
     id: row.id,
+    user_id: row.user_id,
     name: row.name,
     category: row.category,
     time: Number(row.total_time_min) || (Number(row.prep_time_min || 0) + Number(row.cook_time_min || 0)),
@@ -70,11 +71,13 @@ export function todayDateStr() {
 
 // ── Dishes ────────────────────────────────────────────────────
 
+const UNIVERSAL_USER_ID = "aaaaaaaa-0001-0001-0001-000000000001";
+
 export async function fetchDishes(userId) {
   const { data, error } = await supabase
     .from("v_dish_full")
     .select("*")
-    .eq("user_id", userId)
+    .in("user_id", [UNIVERSAL_USER_ID, userId])
     .order("id");
   if (error) throw error;
   return data.map(mapDish);

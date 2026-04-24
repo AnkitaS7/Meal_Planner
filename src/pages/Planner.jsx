@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import html2canvas from "html2canvas";
 import { C, FONTS } from "../theme";
 import { Card, Btn, Tag, Modal, Page, PageHeader } from "../components/ui";
 import { DAYS, MEALS } from "../data/mockData";
@@ -19,6 +20,8 @@ export default function Planner({ dishes, userId }) {
   });
   const [modal, setModal] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showExport, setShowExport] = useState(false);
+  const tableRef = useRef(null);
 
   useEffect(() => {
     setLoading(true);
@@ -76,15 +79,138 @@ export default function Planner({ dishes, userId }) {
     return `${fmt(dates[0])} – ${fmt(dates[6])}`;
   })();
 
+  const buildPlanText = () => {
+    const lines = [`Weekly Meal Plan — ${weekLabel}`, ""];
+    DAYS.forEach(day => {
+      lines.push(day);
+      MEALS.forEach(meal => {
+        const dish = dishById(plan[day]?.[meal]);
+        lines.push(`  ${meal}: ${dish ? dish.name : "—"}`);
+      });
+      lines.push("");
+    });
+    return lines.join("\n");
+  };
+
+  const exportPDF = () => {
+    setShowExport(false);
+    const win = window.open("", "_blank");
+    const bodyRows = MEALS.map(meal =>
+      `<tr>
+        <td style="font-weight:700;font-size:11px;color:#888;text-transform:uppercase;padding:10px 14px;border:1px solid #e8e0d8;white-space:nowrap">${meal}</td>
+        ${DAYS.map(day => {
+          const dish = dishById(plan[day]?.[meal]);
+          return `<td style="padding:10px 14px;border:1px solid #e8e0d8;font-size:13px">${dish ? `<strong>${dish.name}</strong>` : '<span style="color:#ccc">—</span>'}</td>`;
+        }).join("")}
+      </tr>`
+    ).join("");
+    win.document.write(`<!doctype html><html><head><meta charset="utf-8">
+      <title>Meal Plan — ${weekLabel}</title>
+      <style>
+        body{font-family:Georgia,serif;padding:40px;color:#1a1a1a;max-width:1100px;margin:0 auto}
+        h1{font-size:24px;margin:0 0 4px}
+        .sub{color:#888;font-size:13px;margin-bottom:28px}
+        table{width:100%;border-collapse:collapse}
+        th{background:#f9f5f1;padding:10px 14px;border:1px solid #e8e0d8;font-size:12px;color:#555;text-transform:uppercase;letter-spacing:.5px}
+        @media print{@page{margin:20mm}body{padding:0}}
+      </style></head><body>
+      <h1>Weekly Meal Plan</h1>
+      <div class="sub">${weekLabel}</div>
+      <table>
+        <thead><tr><th>Meal</th>${DAYS.map(d => `<th>${d}</th>`).join("")}</tr></thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+      <script>window.onload=()=>{window.print();}<\/script>
+      </body></html>`);
+    win.document.close();
+  };
+
+  const shareEmail = () => {
+    setShowExport(false);
+    const subject = `Meal Plan — ${weekLabel}`;
+    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(buildPlanText())}`;
+  };
+
+  const shareWhatsApp = async () => {
+    setShowExport(false);
+    if (!tableRef.current) return;
+    try {
+      const canvas = await html2canvas(tableRef.current, {
+        backgroundColor: "#ffffff",
+        scale: 2,
+        useCORS: true,
+      });
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+      const file = new File([blob], `meal-plan-${weekStart}.png`, { type: "image/png" });
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: `Meal Plan — ${weekLabel}` });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `meal-plan-${weekStart}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      if (err.name !== "AbortError") console.error("WhatsApp share failed:", err);
+    }
+  };
+
   return (
     <Page>
       <PageHeader
         title="Weekly Planner"
         subtitle={weekLabel}
         action={
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <Btn variant="secondary" onClick={() => shiftWeek(-1)}>← Previous</Btn>
             <Btn variant="secondary" onClick={() => shiftWeek(1)}>Next →</Btn>
+            <div style={{ position: "relative" }}>
+              <Btn onClick={() => setShowExport(v => !v)}>
+                Share ↗
+              </Btn>
+              {showExport && (
+                <>
+                  <div
+                    onClick={() => setShowExport(false)}
+                    style={{ position: "fixed", inset: 0, zIndex: 99 }}
+                  />
+                  <div style={{
+                    position: "absolute", top: "calc(100% + 8px)", right: 0,
+                    background: "#fff", border: `1px solid ${C.border}`,
+                    borderRadius: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+                    zIndex: 100, minWidth: 200, overflow: "hidden",
+                  }}>
+                    {[
+                      { icon: "📄", label: "Save as PDF", action: exportPDF },
+                      { icon: "✉️", label: "Send via Email", action: shareEmail },
+                      { icon: "💬", label: "Share on WhatsApp", action: shareWhatsApp },
+                    ].map(({ icon, label, action }, i, arr) => (
+                      <button
+                        key={label}
+                        onClick={action}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 10,
+                          width: "100%", padding: "12px 16px",
+                          background: "none", cursor: "pointer",
+                          border: "none",
+                          borderBottom: i < arr.length - 1 ? `1px solid ${C.border}` : "none",
+                          fontSize: 14, color: C.text,
+                          fontFamily: FONTS.body, textAlign: "left",
+                          transition: "background 0.15s",
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = C.bg}
+                        onMouseLeave={e => e.currentTarget.style.background = "none"}
+                      >
+                        <span style={{ fontSize: 16 }}>{icon}</span>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         }
       />
@@ -95,7 +221,7 @@ export default function Planner({ dishes, userId }) {
         </div>
       ) : (
         <div style={{ overflowX: "auto", marginBottom: 8 }}>
-          <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 8 }}>
+          <table ref={tableRef} style={{ width: "100%", borderCollapse: "separate", borderSpacing: 8 }}>
             <thead>
               <tr>
                 <th style={{
