@@ -132,7 +132,7 @@ function DishDetail({ dish, onBack, onDelete }) {
 
 /* ─── Add Dish form ─── */
 const BLANK = {
-  name: "", category: "Main", time: "", servings: "2",
+  name: "", category: "Main", prepTime: "", cookTime: "", servings: "2",
   recipe: "", youtubeLink: "", reqIngredients: "", optIngredients: "",
   img: "🍽", calories: "", protein: "", carbs: "", fat: "", fiber: "",
 };
@@ -146,7 +146,9 @@ function AddDishForm({ onSave, onCancel }) {
       id: Date.now(),
       name: f.name,
       category: f.category,
-      time: parseInt(f.time) || 30,
+      prepTime: parseInt(f.prepTime) || 0,
+      cookTime: parseInt(f.cookTime) || 0,
+      time: (parseInt(f.prepTime) || 0) + (parseInt(f.cookTime) || 0),
       servings: parseInt(f.servings) || 2,
       tags: [],
       youtubeLink: f.youtubeLink,
@@ -211,8 +213,10 @@ function AddDishForm({ onSave, onCancel }) {
                     options={DISH_CATEGORIES}
                   />
                 </div>
-                <Input label="Time (min)" value={f.time} type="number"
-                  onChange={e => set("time", e.target.value)} style={{ width: 90 }} />
+                <Input label="Prep (min)" value={f.prepTime} type="number"
+                  onChange={e => set("prepTime", e.target.value)} style={{ width: 82 }} />
+                <Input label="Cook (min)" value={f.cookTime} type="number"
+                  onChange={e => set("cookTime", e.target.value)} style={{ width: 82 }} />
                 <Input label="Servings" value={f.servings} type="number"
                   onChange={e => set("servings", e.target.value)} style={{ width: 80 }} />
               </div>
