@@ -4,6 +4,7 @@ import {
   Card, Btn, Input, Select, Page, PageHeader, Empty, SectionLabel,
 } from "../components/ui";
 import { PANTRY_CATEGORIES, PANTRY_UNITS } from "../data/mockData";
+import { insertPantryItem, deletePantryItem } from "../lib/db";
 
 const CAT_COLORS = {
   Grains:   C.gold,
@@ -39,7 +40,7 @@ function ExpiryLabel({ dateStr }) {
 
 const BLANK = { name: "", qty: "", unit: "g", category: "Produce", expiry: "" };
 
-export default function Pantry({ pantry, setPantry }) {
+export default function Pantry({ pantry, setPantry, userId }) {
   const [showAdd, setShowAdd]  = useState(false);
   const [form, setForm]        = useState(BLANK);
   const [search, setSearch]    = useState("");
@@ -47,17 +48,19 @@ export default function Pantry({ pantry, setPantry }) {
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-  const addItem = () => {
+  const addItem = async () => {
     if (!form.name || !form.qty) return;
-    setPantry(p => [
-      ...p,
-      { id: Date.now(), name: form.name, qty: parseFloat(form.qty), unit: form.unit, category: form.category, expiry: form.expiry },
-    ]);
+    const item = { name: form.name, qty: parseFloat(form.qty), unit: form.unit, category: form.category, expiry: form.expiry };
+    const saved = await insertPantryItem(item, userId).catch(console.error);
+    if (saved) setPantry(p => [...p, saved]);
     setForm(BLANK);
     setShowAdd(false);
   };
 
-  const removeItem = (id) => setPantry(p => p.filter(i => i.id !== id));
+  const removeItem = async (id) => {
+    await deletePantryItem(id).catch(console.error);
+    setPantry(p => p.filter(i => i.id !== id));
+  };
 
   const categories = ["All", ...new Set(pantry.map(p => p.category))];
 

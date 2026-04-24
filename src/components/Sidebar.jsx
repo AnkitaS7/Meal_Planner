@@ -14,7 +14,7 @@ const NAV_ITEMS = [
   { id: "profile",     icon: "👤", label: "Profile"       },
 ];
 
-export default function Sidebar({ page, setPage, user }) {
+export default function Sidebar({ page, setPage, user, onSignOut }) {
   return (
     <aside style={{
       width: 220,
@@ -96,22 +96,42 @@ export default function Sidebar({ page, setPage, user }) {
       <div style={{
         padding: "16px 20px",
         borderTop: "1px solid rgba(255,255,255,0.1)",
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
       }}>
-        <Avatar initials={user.avatar} size={34} color="#fff" />
-        <div style={{ overflow: "hidden" }}>
-          <div style={{
-            color: "#fff", fontSize: 13, fontWeight: 600,
-            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-          }}>
-            {user.name}
-          </div>
-          <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>
-            {user.handle}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+          <Avatar initials={user.avatar} size={34} color="#fff" />
+          <div style={{ overflow: "hidden" }}>
+            <div style={{
+              color: "#fff", fontSize: 13, fontWeight: 600,
+              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+            }}>
+              {user.name}
+            </div>
+            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>
+              {user.handle}
+            </div>
           </div>
         </div>
+        {onSignOut && (
+          <button
+            onClick={onSignOut}
+            style={{
+              width: "100%",
+              padding: "7px 0",
+              borderRadius: 8,
+              border: "1px solid rgba(255,255,255,0.15)",
+              background: "transparent",
+              color: "rgba(255,255,255,0.45)",
+              fontSize: 12,
+              cursor: "pointer",
+              fontFamily: FONTS.body,
+              transition: "all 0.18s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+          >
+            Sign Out
+          </button>
+        )}
       </div>
     </aside>
   );

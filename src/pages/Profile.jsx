@@ -3,18 +3,28 @@ import { C, FONTS, RADIUS } from "../theme";
 import {
   Card, Btn, Input, Textarea, Avatar, Toggle, Page, PageHeader, Divider,
 } from "../components/ui";
-import { MOCK_USER, DIETARY_OPTIONS } from "../data/mockData";
+import { DIETARY_OPTIONS } from "../data/mockData";
+import { updateProfile } from "../lib/db";
 
-export default function Profile() {
-  const [editing, setEditing]   = useState(false);
-  const [profile, setProfile]   = useState(MOCK_USER);
-  const [draft, setDraft]       = useState(MOCK_USER);
-  const [settings, setSettings] = useState({
-    notifications: true,
-    publicProfile:  true,
-    nutritionTrack: true,
-    weeklyDigest:   false,
+export default function Profile({ profile, setProfile, userId, dishCount }) {
+  const toAppProfile = (p) => ({
+    name:           p.name,
+    handle:         p.handle,
+    avatar:         p.avatar_initials,
+    bio:            p.bio ?? "",
+    dietary:        p.dietary_prefs ?? [],
+    followers:      p.follower_count,
+    following:      p.following_count,
+    dishes:         dishCount,
+    notif_email:    p.notif_email,
+    public_profile: p.public_profile,
+    nutrition_track:p.nutrition_track,
+    weekly_digest:  p.weekly_digest,
   });
+
+  const [editing, setEditing] = useState(false);
+  const [displayProfile, setDisplayProfile] = useState(() => toAppProfile(profile));
+  const [draft, setDraft]     = useState(() => toAppProfile(profile));
 
   const setD = (k, v) => setDraft(p => ({ ...p, [k]: v }));
 
@@ -26,18 +36,37 @@ export default function Profile() {
         : [...p.dietary, d],
     }));
 
-  const save = () => { setProfile(draft); setEditing(false); };
-  const cancel = () => { setDraft(profile); setEditing(false); };
+  const save = async () => {
+    const updates = {
+      name:           draft.name,
+      handle:         draft.handle,
+      bio:            draft.bio,
+      dietary_prefs:  draft.dietary,
+    };
+    const updated = await updateProfile(userId, updates).catch(console.error);
+    if (updated) {
+      setProfile(updated);
+      setDisplayProfile(toAppProfile(updated));
+    }
+    setEditing(false);
+  };
 
-  const toggleSetting = (k) => setSettings(s => ({ ...s, [k]: !s[k] }));
+  const cancel = () => { setDraft(displayProfile); setEditing(false); };
+
+  const toggleSetting = async (k) => {
+    const dbKey = { notifications: "notif_email", publicProfile: "public_profile", nutritionTrack: "nutrition_track", weeklyDigest: "weekly_digest" }[k];
+    const newVal = !displayProfile[k === "notifications" ? "notif_email" : k === "publicProfile" ? "public_profile" : k === "nutritionTrack" ? "nutrition_track" : "weekly_digest"];
+    setDisplayProfile(p => ({ ...p, [k === "notifications" ? "notif_email" : k === "publicProfile" ? "public_profile" : k === "nutritionTrack" ? "nutrition_track" : "weekly_digest"]: newVal }));
+    await updateProfile(userId, { [dbKey]: newVal }).catch(console.error);
+  };
 
   const activityStats = [
-    ["🍽", "Dishes Created",          profile.dishes,  C.accent ],
-    ["📅", "Meals Planned",           128,             C.sage   ],
-    ["🛒", "Shopping Lists",           23,             C.gold   ],
-    ["✨", "Recipes Shared",            19,             C.purple ],
-    ["👥", "Friends' Plans Viewed",     84,             C.teal   ],
-    ["🏺", "Pantry Items",              12,             C.success],
+    ["🍽", "Dishes Created",      displayProfile.dishes,    C.accent ],
+    ["📅", "Meals Planned",       128,                       C.sage   ],
+    ["🛒", "Shopping Lists",       23,                       C.gold   ],
+    ["✨", "Recipes Shared",        19,                       C.purple ],
+    ["👥", "Friends' Plans Viewed", 84,                      C.teal   ],
+    ["🏺", "Pantry Items",          12,                      C.success],
   ];
 
   return (
@@ -71,42 +100,30 @@ export default function Profile() {
               fontFamily: FONTS.body,
               userSelect: "none",
             }}>
-              {profile.avatar}
+              {displayProfile.avatar}
             </div>
 
             {editing ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                <Input
-                  label="Display Name"
-                  value={draft.name}
-                  onChange={e => setD("name", e.target.value)}
-                />
-                <Input
-                  label="Handle"
-                  value={draft.handle}
-                  onChange={e => setD("handle", e.target.value)}
-                />
+                <Input label="Display Name" value={draft.name}   onChange={e => setD("name", e.target.value)} />
+                <Input label="Handle"       value={draft.handle} onChange={e => setD("handle", e.target.value)} />
               </div>
             ) : (
               <>
                 <h2 style={{ fontFamily: FONTS.display, fontSize: 22, color: C.text }}>
-                  {profile.name}
+                  {displayProfile.name}
                 </h2>
                 <div style={{ fontSize: 13, color: C.textMuted, marginTop: 3 }}>
-                  {profile.handle}
+                  {displayProfile.handle}
                 </div>
               </>
             )}
 
-            {/* Follower stats */}
             <Divider style={{ margin: "18px 0" }} />
             <div style={{ display: "flex" }}>
-              {[["Followers", profile.followers], ["Following", profile.following], ["Dishes", profile.dishes]].map(([label, val]) => (
+              {[["Followers", displayProfile.followers], ["Following", displayProfile.following], ["Dishes", displayProfile.dishes]].map(([label, val]) => (
                 <div key={label} style={{ flex: 1, textAlign: "center" }}>
-                  <div style={{
-                    fontFamily: FONTS.display,
-                    fontSize: 20, fontWeight: 700, color: C.text,
-                  }}>
+                  <div style={{ fontFamily: FONTS.display, fontSize: 20, fontWeight: 700, color: C.text }}>
                     {val}
                   </div>
                   <div style={{ fontSize: 11, color: C.textMuted }}>{label}</div>
@@ -124,8 +141,8 @@ export default function Profile() {
               Dietary Preferences
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {(editing ? DIETARY_OPTIONS : DIETARY_OPTIONS).map(d => {
-                const active = (editing ? draft : profile).dietary.includes(d);
+              {DIETARY_OPTIONS.map(d => {
+                const active = (editing ? draft : displayProfile).dietary.includes(d);
                 return (
                   <span
                     key={d}
@@ -165,7 +182,7 @@ export default function Profile() {
               />
             ) : (
               <p style={{ color: C.textSub, lineHeight: 1.75, fontSize: 14 }}>
-                {profile.bio}
+                {displayProfile.bio || "No bio yet."}
               </p>
             )}
           </Card>
@@ -182,18 +199,8 @@ export default function Profile() {
                   padding: "16px 14px", textAlign: "center",
                 }}>
                   <div style={{ fontSize: 20, marginBottom: 4 }}>{icon}</div>
-                  <div style={{
-                    fontSize: 22, fontWeight: 700, color,
-                    fontFamily: FONTS.display,
-                  }}>
-                    {val}
-                  </div>
-                  <div style={{
-                    fontSize: 11, color: C.textSub,
-                    marginTop: 4, lineHeight: 1.4,
-                  }}>
-                    {label}
-                  </div>
+                  <div style={{ fontSize: 22, fontWeight: 700, color, fontFamily: FONTS.display }}>{val}</div>
+                  <div style={{ fontSize: 11, color: C.textSub, marginTop: 4, lineHeight: 1.4 }}>{label}</div>
                 </div>
               ))}
             </div>
@@ -206,11 +213,11 @@ export default function Profile() {
             </h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
               {[
-                ["notifications", "🔔 Email Notifications",   "Weekly meal reminders & recipe suggestions"],
-                ["publicProfile", "🔒 Public Profile",        "Anyone can view your dishes and menus"],
-                ["nutritionTrack","📊 Nutrition Tracking",    "Enabled — daily summaries active"],
-                ["weeklyDigest",  "📰 Weekly Digest",         "Receive a summary of trending recipes"],
-              ].map(([key, label, sub]) => (
+                ["notifications", "notif_email",     "🔔 Email Notifications",  "Weekly meal reminders & recipe suggestions"],
+                ["publicProfile", "public_profile",  "🔒 Public Profile",       "Anyone can view your dishes and menus"],
+                ["nutritionTrack","nutrition_track",  "📊 Nutrition Tracking",   "Enabled — daily summaries active"],
+                ["weeklyDigest",  "weekly_digest",    "📰 Weekly Digest",        "Receive a summary of trending recipes"],
+              ].map(([key, dbKey, label, sub]) => (
                 <div key={key} style={{
                   display: "flex", justifyContent: "space-between",
                   alignItems: "center", padding: "14px 0",
@@ -220,15 +227,19 @@ export default function Profile() {
                     <div style={{ fontWeight: 500, fontSize: 14, color: C.text }}>{label}</div>
                     <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>{sub}</div>
                   </div>
-                  <Toggle on={settings[key]} onChange={() => toggleSetting(key)} />
+                  <Toggle
+                    on={displayProfile[dbKey]}
+                    onChange={async () => {
+                      const newVal = !displayProfile[dbKey];
+                      setDisplayProfile(p => ({ ...p, [dbKey]: newVal }));
+                      await updateProfile(userId, { [dbKey]: newVal }).catch(console.error);
+                    }}
+                  />
                 </div>
               ))}
             </div>
-
             <div style={{ marginTop: 20 }}>
-              <Btn variant="danger" style={{ fontSize: 13 }}>
-                🗑 Delete Account
-              </Btn>
+              <Btn variant="danger" style={{ fontSize: 13 }}>🗑 Delete Account</Btn>
             </div>
           </Card>
         </div>

@@ -5,6 +5,7 @@ import {
   Page, PageHeader, Empty, SectionLabel,
 } from "../components/ui";
 import { DISH_CATEGORIES } from "../data/mockData";
+import { insertDish, deleteDish } from "../lib/db";
 
 /* ─── Dish Detail view ─── */
 function DishDetail({ dish, onBack, onDelete }) {
@@ -329,7 +330,7 @@ function DishCard({ dish, onClick }) {
 }
 
 /* ─── Main page ─── */
-export default function Dishes({ dishes, setDishes }) {
+export default function Dishes({ dishes, setDishes, userId }) {
   const [view, setView]       = useState("list");  // list | add | detail
   const [selected, setSelected] = useState(null);
   const [search, setSearch]   = useState("");
@@ -348,7 +349,8 @@ export default function Dishes({ dishes, setDishes }) {
       <DishDetail
         dish={selected}
         onBack={() => { setView("list"); setSelected(null); }}
-        onDelete={id => {
+        onDelete={async id => {
+          await deleteDish(id).catch(console.error);
           setDishes(ds => ds.filter(d => d.id !== id));
           setView("list"); setSelected(null);
         }}
@@ -359,7 +361,11 @@ export default function Dishes({ dishes, setDishes }) {
   if (view === "add") {
     return (
       <AddDishForm
-        onSave={dish => { setDishes(ds => [...ds, dish]); setView("list"); }}
+        onSave={async dish => {
+          const saved = await insertDish(dish, userId).catch(console.error);
+          if (saved) setDishes(ds => [...ds, saved]);
+          setView("list");
+        }}
         onCancel={() => setView("list")}
       />
     );

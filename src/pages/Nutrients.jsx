@@ -1,30 +1,71 @@
+import { useState, useEffect } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, RadarChart, Radar, PolarGrid, PolarAngleAxis,
+  PieChart, Pie, Cell,
 } from "recharts";
 import { C, FONTS, RADIUS } from "../theme";
 import { Card, NutrientBar, Tag, Page, PageHeader } from "../components/ui";
-import { NUTRIENTS_DAILY, DAYS } from "../data/mockData";
+import { DAYS } from "../data/mockData";
+import { fetchNutrientTargets, fetchWeeklyPlan, getWeekStart } from "../lib/db";
 
 const MACRO_COLORS = [C.gold, C.sage, C.accent, C.purple, C.teal];
 
-export default function Nutrients({ dishes }) {
-  // Fabricate a week of data for the chart
-  const weekData = DAYS.map(day => ({
-    day,
-    calories: Math.round(1550 + Math.random() * 700),
-    protein:  Math.round(55   + Math.random() * 40),
-    carbs:    Math.round(170  + Math.random() * 100),
-    fat:      Math.round(50   + Math.random() * 30),
-  }));
+export default function Nutrients({ dishes, userId }) {
+  const [nutrientData, setNutrientData] = useState([]);
+  const [weekData, setWeekData]         = useState([]);
+  const [loading, setLoading]           = useState(true);
 
-  const macroData = [
-    { name: "Carbs",   value: 210, color: C.gold   },
-    { name: "Protein", value: 72,  color: C.sage   },
-    { name: "Fat",     value: 64,  color: C.accent },
-  ];
+  useEffect(() => {
+    const weekStart = getWeekStart();
+    Promise.all([
+      fetchNutrientTargets(userId),
+      fetchWeeklyPlan(userId, weekStart),
+    ])
+      .then(([targets, planRows]) => {
+        // Aggregate per day
+        const byDay = {};
+        DAYS.forEach(d => {
+          byDay[d] = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 };
+        });
+        planRows.forEach(row => {
+          const d = byDay[row.day_label];
+          if (!d) return;
+          d.calories += Number(row.cal)       || 0;
+          d.protein  += Number(row.protein_g) || 0;
+          d.carbs    += Number(row.carbs_g)   || 0;
+          d.fat      += Number(row.fat_g)     || 0;
+          d.fiber    += Number(row.fiber_g)   || 0;
+        });
+        setWeekData(DAYS.map(day => ({
+          day,
+          calories: Math.round(byDay[day].calories),
+          protein:  Math.round(byDay[day].protein),
+          carbs:    Math.round(byDay[day].carbs),
+          fat:      Math.round(byDay[day].fat),
+        })));
 
-  // Per-dish radar (just first 5)
+        // Today's totals
+        const todayLabel = new Date().toLocaleString("en-US", { weekday: "short" }).slice(0, 3);
+        const todayTotals = byDay[todayLabel] ?? { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 };
+
+        const nutrientKey = { Calories: "calories", Protein: "protein", Carbs: "carbs", Fat: "fat", Fiber: "fiber" };
+        setNutrientData(targets.map(t => ({
+          name:    t.nutrient_name,
+          current: Math.round(todayTotals[nutrientKey[t.nutrient_name]] ?? 0),
+          target:  Number(t.target_value),
+          unit:    t.unit,
+          color:   t.display_color,
+        })));
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [userId]);
+
+  const macroData = nutrientData
+    .filter(n => ["Carbs", "Protein", "Fat"].includes(n.name))
+    .map((n, i) => ({ name: n.name, value: n.current, color: MACRO_COLORS[i] }));
+
+  // Per-dish radar data (first 3 dishes)
   const radarData = ["calories", "protein", "carbs", "fat", "fiber"].map(k => ({
     nutrient: k.charAt(0).toUpperCase() + k.slice(1),
     ...Object.fromEntries(dishes.slice(0, 3).map(d => [d.name.split(" ")[0], d.nutrients[k]])),
@@ -54,16 +95,17 @@ export default function Nutrients({ dishes }) {
         gap: 14,
         marginBottom: 28,
       }}>
-        {NUTRIENTS_DAILY.map(n => {
-          const pct = Math.round((n.current / n.target) * 100);
+        {loading ? (
+          <div style={{ gridColumn: "1/-1", color: C.textMuted, fontSize: 13 }}>Loading targets…</div>
+        ) : nutrientData.map(n => {
+          const pct = Math.min(100, Math.round((n.current / n.target) * 100));
           const circumference = 2 * Math.PI * 26;
           const dashOffset = circumference * (1 - pct / 100);
           return (
             <Card key={n.name} style={{ textAlign: "center", padding: 20 }}>
               <div style={{ position: "relative", width: 68, height: 68, margin: "0 auto 12px" }}>
                 <svg width={68} height={68} style={{ transform: "rotate(-90deg)" }}>
-                  <circle cx={34} cy={34} r={26}
-                    fill="none" stroke={C.border} strokeWidth={6} />
+                  <circle cx={34} cy={34} r={26} fill="none" stroke={C.border} strokeWidth={6} />
                   <circle cx={34} cy={34} r={26}
                     fill="none" stroke={n.color} strokeWidth={6}
                     strokeDasharray={circumference}
@@ -80,10 +122,7 @@ export default function Nutrients({ dishes }) {
                   {pct}%
                 </div>
               </div>
-              <div style={{
-                fontSize: 22, fontWeight: 700, color: C.text,
-                fontFamily: FONTS.display,
-              }}>
+              <div style={{ fontSize: 22, fontWeight: 700, color: C.text, fontFamily: FONTS.display }}>
                 {n.current}
               </div>
               <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2, lineHeight: 1.5 }}>
@@ -136,9 +175,7 @@ export default function Nutrients({ dishes }) {
             {macroData.map(m => (
               <div key={m.name} style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <span style={{ width: 10, height: 10, borderRadius: 3, background: m.color }} />
-                <span style={{ fontSize: 12, color: C.textSub }}>
-                  {m.name} · {m.value}g
-                </span>
+                <span style={{ fontSize: 12, color: C.textSub }}>{m.name} · {m.value}g</span>
               </div>
             ))}
           </div>
@@ -151,7 +188,7 @@ export default function Nutrients({ dishes }) {
           Today's Targets
         </h3>
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {NUTRIENTS_DAILY.map(n => <NutrientBar key={n.name} {...n} />)}
+          {nutrientData.map(n => <NutrientBar key={n.name} {...n} />)}
         </div>
       </Card>
 
@@ -178,13 +215,10 @@ export default function Nutrients({ dishes }) {
             </thead>
             <tbody>
               {dishes.map((d, idx) => (
-                <tr
-                  key={d.id}
-                  style={{
-                    borderBottom: `1px solid ${C.border}`,
-                    background: idx % 2 === 0 ? "#fff" : C.bg,
-                  }}
-                >
+                <tr key={d.id} style={{
+                  borderBottom: `1px solid ${C.border}`,
+                  background: idx % 2 === 0 ? "#fff" : C.bg,
+                }}>
                   <td style={{ padding: "13px 14px" }}>
                     <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                       <span style={{ fontSize: 20 }}>{d.img}</span>
@@ -196,8 +230,7 @@ export default function Nutrients({ dishes }) {
                   </td>
                   {["calories", "protein", "carbs", "fat", "fiber"].map(k => (
                     <td key={k} style={{
-                      padding: "13px 14px", textAlign: "center",
-                      fontSize: 14,
+                      padding: "13px 14px", textAlign: "center", fontSize: 14,
                       color: k === "calories" ? C.accent : C.text,
                       fontWeight: k === "calories" ? 700 : 400,
                     }}>

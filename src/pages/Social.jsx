@@ -1,14 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { C, FONTS, RADIUS } from "../theme";
-import {
-  Card, Btn, Avatar, Tag, Page, PageHeader, Empty,
-} from "../components/ui";
-import { MOCK_SOCIAL } from "../data/mockData";
+import { Card, Btn, Avatar, Page, PageHeader, Empty } from "../components/ui";
+import { fetchCommunityUsers, followUser, unfollowUser } from "../lib/db";
 
 function UserCard({ user, onToggle }) {
   return (
     <Card>
-      {/* Header */}
       <div style={{
         display: "flex", justifyContent: "space-between",
         alignItems: "flex-start", marginBottom: 16,
@@ -29,7 +26,6 @@ function UserCard({ user, onToggle }) {
         </Btn>
       </div>
 
-      {/* Stats */}
       <div style={{
         display: "flex", gap: 0,
         borderTop: `1px solid ${C.border}`,
@@ -46,20 +42,6 @@ function UserCard({ user, onToggle }) {
         ))}
       </div>
 
-      {/* Recent meal */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <span style={{ fontSize: 26 }}>{user.img}</span>
-        <div>
-          <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 700, letterSpacing: 0.5 }}>
-            LATEST MEAL
-          </div>
-          <div style={{ fontSize: 14, color: C.text, fontWeight: 500, marginTop: 2 }}>
-            {user.recentMeal}
-          </div>
-        </div>
-      </div>
-
-      {/* Actions */}
       <div style={{ marginTop: 14, display: "flex", gap: 6 }}>
         <Btn variant="secondary" style={{ flex: 1, fontSize: 12, padding: "8px 12px" }}>
           🍽 View Dishes
@@ -72,13 +54,37 @@ function UserCard({ user, onToggle }) {
   );
 }
 
-export default function Social() {
-  const [users, setUsers]  = useState(MOCK_SOCIAL);
+export default function Social({ userId }) {
+  const [users, setUsers]   = useState([]);
   const [search, setSearch] = useState("");
-  const [tab, setTab]       = useState("following"); // following | discover
+  const [tab, setTab]       = useState("following");
+  const [loading, setLoading] = useState(true);
 
-  const toggle = (id) =>
-    setUsers(u => u.map(x => x.id === id ? { ...x, following: !x.following } : x));
+  useEffect(() => {
+    fetchCommunityUsers(userId)
+      .then(setUsers)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [userId]);
+
+  const toggle = async (targetId) => {
+    const target = users.find(u => u.id === targetId);
+    if (!target) return;
+
+    // Optimistic update
+    setUsers(u => u.map(x => x.id === targetId ? { ...x, following: !x.following } : x));
+
+    if (target.following) {
+      await unfollowUser(userId, targetId).catch(() => {
+        // Revert on error
+        setUsers(u => u.map(x => x.id === targetId ? { ...x, following: true } : x));
+      });
+    } else {
+      await followUser(userId, targetId).catch(() => {
+        setUsers(u => u.map(x => x.id === targetId ? { ...x, following: false } : x));
+      });
+    }
+  };
 
   const displayed = users.filter(u =>
     (tab === "following" ? u.following : !u.following)
@@ -95,7 +101,6 @@ export default function Social() {
         subtitle="Follow cooks and explore their menus, dishes, and recipes"
       />
 
-      {/* Tab + search bar */}
       <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap", alignItems: "center" }}>
         <div style={{
           display: "flex", background: "#fff",
@@ -137,8 +142,11 @@ export default function Social() {
         />
       </div>
 
-      {/* Cards */}
-      {displayed.length === 0 ? (
+      {loading ? (
+        <div style={{ color: C.textMuted, fontSize: 14, padding: "40px 0", textAlign: "center" }}>
+          Loading community…
+        </div>
+      ) : displayed.length === 0 ? (
         <Empty
           icon="👥"
           title={tab === "following" ? "Not following anyone yet" : "No new people found"}

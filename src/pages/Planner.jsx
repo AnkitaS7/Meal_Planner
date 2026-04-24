@@ -1,164 +1,202 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { C, FONTS } from "../theme";
 import { Card, Btn, Tag, Modal, Page, PageHeader } from "../components/ui";
-import { DAYS, MEALS, INITIAL_PLAN } from "../data/mockData";
+import { DAYS, MEALS } from "../data/mockData";
+import {
+  fetchWeeklyPlan, buildPlanObject,
+  upsertMealPlan, removeMealPlan, clearDayMealPlan,
+  getWeekStart, getWeekDates,
+} from "../lib/db";
 
-export default function Planner({ dishes }) {
-  // plan stores dish IDs (or null) keyed by day → meal
+export default function Planner({ dishes, userId }) {
+  const [weekStart, setWeekStart] = useState(getWeekStart);
+  const weekDates = getWeekDates(weekStart);
+
   const [plan, setPlan] = useState(() => {
     const p = {};
-    DAYS.forEach(d => {
-      p[d] = {};
-      MEALS.forEach(m => { p[d][m] = INITIAL_PLAN[d]?.[m] ?? null; });
-    });
+    DAYS.forEach(d => { p[d] = {}; MEALS.forEach(m => { p[d][m] = null; }); });
     return p;
   });
-  const [modal, setModal] = useState(null); // { day, meal }
+  const [modal, setModal] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    fetchWeeklyPlan(userId, weekStart)
+      .then(rows => setPlan(buildPlanObject(rows, DAYS, MEALS)))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [userId, weekStart]);
 
   const dishById = id => dishes.find(d => d.id === id) ?? null;
 
-  const assign = (dish) => {
+  const assign = async (dish) => {
     if (!modal) return;
-    setPlan(p => ({
-      ...p,
-      [modal.day]: { ...p[modal.day], [modal.meal]: dish.id },
-    }));
+    const { day, meal } = modal;
+    const date = weekDates[day];
+    setPlan(p => ({ ...p, [day]: { ...p[day], [meal]: dish.id } }));
     setModal(null);
+    await upsertMealPlan(userId, date, meal, dish.id).catch(console.error);
   };
 
-  const remove = (day, meal) =>
+  const remove = async (day, meal) => {
+    const date = weekDates[day];
     setPlan(p => ({ ...p, [day]: { ...p[day], [meal]: null } }));
+    await removeMealPlan(userId, date, meal).catch(console.error);
+  };
 
-  const clearDay = (day) => {
+  const clearDay = async (day) => {
+    const date = weekDates[day];
     setPlan(p => {
       const updated = { ...p, [day]: {} };
       MEALS.forEach(m => { updated[day][m] = null; });
       return updated;
     });
+    await clearDayMealPlan(userId, date).catch(console.error);
   };
 
-  // Daily calorie totals
+  const shiftWeek = (delta) => {
+    const [y, m, d] = weekStart.split("-").map(Number);
+    const next = new Date(y, m - 1, d + delta * 7);
+    const yyyy = next.getFullYear();
+    const mm   = String(next.getMonth() + 1).padStart(2, "0");
+    const dd   = String(next.getDate()).padStart(2, "0");
+    setWeekStart(`${yyyy}-${mm}-${dd}`);
+  };
+
   const dayTotal = (day) =>
     MEALS.reduce((sum, meal) => {
       const dish = dishById(plan[day]?.[meal]);
       return sum + (dish?.nutrients.calories ?? 0);
     }, 0);
 
+  const weekLabel = (() => {
+    const dates = Object.values(weekDates);
+    const fmt = d => new Date(d + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    return `${fmt(dates[0])} – ${fmt(dates[6])}`;
+  })();
+
   return (
     <Page>
       <PageHeader
         title="Weekly Planner"
-        subtitle="Dec 9 – Dec 15, 2024"
+        subtitle={weekLabel}
         action={
           <div style={{ display: "flex", gap: 8 }}>
-            <Btn variant="secondary">← Previous</Btn>
-            <Btn variant="secondary">Next →</Btn>
+            <Btn variant="secondary" onClick={() => shiftWeek(-1)}>← Previous</Btn>
+            <Btn variant="secondary" onClick={() => shiftWeek(1)}>Next →</Btn>
           </div>
         }
       />
 
-      <div style={{ overflowX: "auto", marginBottom: 8 }}>
-        <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 8 }}>
-          <thead>
-            <tr>
-              <th style={{
-                width: 96, padding: "6px 10px",
-                textAlign: "left", fontSize: 11,
-                color: C.textMuted, fontWeight: 700, letterSpacing: 0.6,
-              }}>
-                MEAL
-              </th>
-              {DAYS.map(d => (
-                <th key={d} style={{ minWidth: 138, padding: "6px 4px" }}>
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                    <span style={{ fontSize: 13, color: C.text, fontWeight: 600 }}>{d}</span>
-                    {dayTotal(d) > 0 && (
-                      <Tag color={C.accent}>{dayTotal(d)} kcal</Tag>
-                    )}
-                    <button onClick={() => clearDay(d)}
-                      style={{
-                        fontSize: 10, color: C.textMuted, background: "none",
-                        border: "none", cursor: "pointer", fontFamily: FONTS.body,
-                      }}>
-                      clear
-                    </button>
-                  </div>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {MEALS.map(meal => (
-              <tr key={meal}>
-                <td style={{
-                  fontSize: 11, fontWeight: 700, color: C.textSub,
-                  padding: "4px 10px", verticalAlign: "top", paddingTop: 16,
-                  letterSpacing: 0.5,
+      {loading ? (
+        <div style={{ color: C.textMuted, fontSize: 14, padding: "40px 0", textAlign: "center" }}>
+          Loading plan…
+        </div>
+      ) : (
+        <div style={{ overflowX: "auto", marginBottom: 8 }}>
+          <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 8 }}>
+            <thead>
+              <tr>
+                <th style={{
+                  width: 96, padding: "6px 10px",
+                  textAlign: "left", fontSize: 11,
+                  color: C.textMuted, fontWeight: 700, letterSpacing: 0.6,
                 }}>
-                  {meal.toUpperCase()}
-                </td>
-                {DAYS.map(day => {
-                  const dish = dishById(plan[day]?.[meal]);
-                  return (
-                    <td key={day} style={{ verticalAlign: "top", padding: "4px" }}>
-                      {dish ? (
-                        <div style={{
-                          background: "#fff",
-                          border: `1px solid ${C.border}`,
-                          borderRadius: 12,
-                          padding: 10,
-                          position: "relative",
-                        }}>
-                          <span style={{ fontSize: 22 }}>{dish.img}</span>
-                          <div style={{
-                            fontSize: 12, fontWeight: 600, color: C.text,
-                            lineHeight: 1.3, marginTop: 4,
-                          }}>
-                            {dish.name}
-                          </div>
-                          <div style={{ fontSize: 11, color: C.textMuted, marginTop: 3 }}>
-                            {dish.nutrients.calories} kcal
-                          </div>
-                          <button
-                            onClick={() => remove(day, meal)}
-                            style={{
-                              position: "absolute", top: 6, right: 6,
-                              background: "none", border: "none",
-                              color: C.textMuted, fontSize: 13, cursor: "pointer",
-                              lineHeight: 1, padding: 2,
-                            }}
-                          >✕</button>
-                        </div>
-                      ) : (
-                        <div
-                          onClick={() => setModal({ day, meal })}
-                          style={{
-                            border: `2px dashed ${C.borderDark}`,
-                            borderRadius: 12, padding: "14px 6px",
-                            textAlign: "center", cursor: "pointer",
-                            color: C.textMuted, fontSize: 12,
-                            transition: "border-color 0.18s, background 0.18s",
-                          }}
-                          onMouseEnter={e => {
-                            e.currentTarget.style.borderColor = C.accent;
-                            e.currentTarget.style.background  = C.accentLight;
-                          }}
-                          onMouseLeave={e => {
-                            e.currentTarget.style.borderColor = C.borderDark;
-                            e.currentTarget.style.background  = "transparent";
-                          }}
-                        >
-                          + Add
-                        </div>
+                  MEAL
+                </th>
+                {DAYS.map(d => (
+                  <th key={d} style={{ minWidth: 138, padding: "6px 4px" }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                      <span style={{ fontSize: 13, color: C.text, fontWeight: 600 }}>{d}</span>
+                      {dayTotal(d) > 0 && (
+                        <Tag color={C.accent}>{dayTotal(d)} kcal</Tag>
                       )}
-                    </td>
-                  );
-                })}
+                      <button onClick={() => clearDay(d)}
+                        style={{
+                          fontSize: 10, color: C.textMuted, background: "none",
+                          border: "none", cursor: "pointer", fontFamily: FONTS.body,
+                        }}>
+                        clear
+                      </button>
+                    </div>
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {MEALS.map(meal => (
+                <tr key={meal}>
+                  <td style={{
+                    fontSize: 11, fontWeight: 700, color: C.textSub,
+                    padding: "4px 10px", verticalAlign: "top", paddingTop: 16,
+                    letterSpacing: 0.5,
+                  }}>
+                    {meal.toUpperCase()}
+                  </td>
+                  {DAYS.map(day => {
+                    const dish = dishById(plan[day]?.[meal]);
+                    return (
+                      <td key={day} style={{ verticalAlign: "top", padding: "4px" }}>
+                        {dish ? (
+                          <div style={{
+                            background: "#fff",
+                            border: `1px solid ${C.border}`,
+                            borderRadius: 12,
+                            padding: 10,
+                            position: "relative",
+                          }}>
+                            <span style={{ fontSize: 22 }}>{dish.img}</span>
+                            <div style={{
+                              fontSize: 12, fontWeight: 600, color: C.text,
+                              lineHeight: 1.3, marginTop: 4,
+                            }}>
+                              {dish.name}
+                            </div>
+                            <div style={{ fontSize: 11, color: C.textMuted, marginTop: 3 }}>
+                              {dish.nutrients.calories} kcal
+                            </div>
+                            <button
+                              onClick={() => remove(day, meal)}
+                              style={{
+                                position: "absolute", top: 6, right: 6,
+                                background: "none", border: "none",
+                                color: C.textMuted, fontSize: 13, cursor: "pointer",
+                                lineHeight: 1, padding: 2,
+                              }}
+                            >✕</button>
+                          </div>
+                        ) : (
+                          <div
+                            onClick={() => setModal({ day, meal })}
+                            style={{
+                              border: `2px dashed ${C.borderDark}`,
+                              borderRadius: 12, padding: "14px 6px",
+                              textAlign: "center", cursor: "pointer",
+                              color: C.textMuted, fontSize: 12,
+                              transition: "border-color 0.18s, background 0.18s",
+                            }}
+                            onMouseEnter={e => {
+                              e.currentTarget.style.borderColor = C.accent;
+                              e.currentTarget.style.background  = C.accentLight;
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.borderColor = C.borderDark;
+                              e.currentTarget.style.background  = "transparent";
+                            }}
+                          >
+                            + Add
+                          </div>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Dish picker modal */}
       <Modal open={!!modal} onClose={() => setModal(null)} width={500}>
