@@ -89,16 +89,16 @@ export default function Planner({ dishes, userId }) {
   const weekLabel = (() => {
     const dates = Object.values(weekDates);
     const fmt = d => new Date(d + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    return `${fmt(dates[0])} – ${fmt(dates[6])}`;
+    return `${fmt(dates[0])} - ${fmt(dates[6])}`;
   })();
 
   const buildPlanText = () => {
-    const lines = [`Weekly Meal Plan — ${weekLabel}`, ""];
+    const lines = [`Weekly Meal Plan - ${weekLabel}`, ""];
     DAYS.forEach(day => {
       lines.push(day);
       MEALS.forEach(meal => {
         const dish = dishById(plan[day]?.[meal]);
-        lines.push(`  ${meal}: ${dish ? dish.name : "—"}`);
+        lines.push(`  ${meal}: ${dish ? dish.name : "-"}`);
       });
       lines.push("");
     });
@@ -113,12 +113,12 @@ export default function Planner({ dishes, userId }) {
         <td style="font-weight:700;font-size:11px;color:#888;text-transform:uppercase;padding:10px 14px;border:1px solid #e8e0d8;white-space:nowrap">${meal}</td>
         ${DAYS.map(day => {
           const dish = dishById(plan[day]?.[meal]);
-          return `<td style="padding:10px 14px;border:1px solid #e8e0d8;font-size:13px">${dish ? `<strong>${dish.name}</strong>` : '<span style="color:#ccc">—</span>'}</td>`;
+          return `<td style="padding:10px 14px;border:1px solid #e8e0d8;font-size:13px">${dish ? `<strong>${dish.name}</strong>` : '<span style="color:#ccc">-</span>'}</td>`;
         }).join("")}
       </tr>`
     ).join("");
     win.document.write(`<!doctype html><html><head><meta charset="utf-8">
-      <title>Meal Plan — ${weekLabel}</title>
+      <title>Meal Plan - ${weekLabel}</title>
       <style>
         body{font-family:Georgia,serif;padding:40px;color:#1a1a1a;max-width:1100px;margin:0 auto}
         h1{font-size:24px;margin:0 0 4px}
@@ -140,7 +140,7 @@ export default function Planner({ dishes, userId }) {
 
   const shareEmail = () => {
     setShowExport(false);
-    const subject = `Meal Plan — ${weekLabel}`;
+    const subject = `Meal Plan - ${weekLabel}`;
     window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(buildPlanText())}`;
   };
 
@@ -149,7 +149,7 @@ export default function Planner({ dishes, userId }) {
     window.open(`https://wa.me/?text=${encodeURIComponent(buildPlanText())}`, "_blank");
   };
 
-  /* ── Shared share dropdown ── */
+  // Share dropdown
   const ShareDropdown = () => (
     <div style={{ position: "relative" }}>
       <Btn onClick={() => setShowExport(v => !v)}>Share ↗</Btn>
@@ -192,7 +192,7 @@ export default function Planner({ dishes, userId }) {
     </div>
   );
 
-  /* ── Dish cell (reused in both layouts) ── */
+  // Dish cell, shared between mobile and desktop layouts
   const DishCell = ({ day, meal }) => {
     const dish = dishById(plan[day]?.[meal]);
     return dish ? (
@@ -235,7 +235,7 @@ export default function Planner({ dishes, userId }) {
     );
   };
 
-  /* ── Dish picker modal content ── */
+  // Dish picker modal
   const ModalContent = () => (
     <>
       <h3 style={{ fontFamily: FONTS.display, fontSize: 22, color: C.text, marginBottom: 4 }}>
@@ -287,7 +287,7 @@ export default function Planner({ dishes, userId }) {
     </>
   );
 
-  /* ── Mobile layout ── */
+  // Mobile layout
   if (isMobile) {
     return (
       <Page>
@@ -402,7 +402,7 @@ export default function Planner({ dishes, userId }) {
     );
   }
 
-  /* ── Desktop layout ── */
+  // Desktop layout
   return (
     <Page>
       <PageHeader

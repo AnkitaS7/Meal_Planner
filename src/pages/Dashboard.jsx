@@ -64,7 +64,7 @@ export default function Dashboard({ setPage, dishes, pantry, userId }) {
   const stats = [
     { icon: "🍽", value: dishes.filter(d => d.user_id === userId).length, label: "Dishes Saved", color: C.accent, page: "dishes" },
     { icon: "🏺", value: pantry.length,  label: "Pantry Items",   color: C.sage,   page: "pantry"    },
-    { icon: "🔥", value: totalCaloriesToday || "—", label: "Calories Today", color: C.gold, page: "nutrients" },
+    { icon: "🔥", value: totalCaloriesToday || "-", label: "Calories Today", color: C.gold, page: "nutrients" },
     { icon: "📅", value: todayMeals.length, label: "Meals Today",  color: C.purple, page: "planner"   },
   ];
 
@@ -72,7 +72,7 @@ export default function Dashboard({ setPage, dishes, pantry, userId }) {
     <Page>
       <PageHeader
         title={`Good morning, welcome back 👋`}
-        subtitle={`Here's what's on the menu for today — ${today}`}
+        subtitle={`Here's what's on the menu for today - ${today}`}
       />
 
       {/* Stats row */}
@@ -106,7 +106,7 @@ export default function Dashboard({ setPage, dishes, pantry, userId }) {
                     {MEAL_ICONS[row.meal_slot] ?? "🍽"} {row.meal_slot.toUpperCase()}
                   </div>
                   <div style={{ fontWeight: 500, color: C.text, marginTop: 2 }}>
-                    {row.dish_name ?? "—"}
+                    {row.dish_name ?? "-"}
                   </div>
                 </div>
                 <Tag color={C.accent}>{Math.round(row.cal ?? 0)} kcal</Tag>

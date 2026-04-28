@@ -79,7 +79,7 @@ export default function Shopping({ userId }) {
   };
 
   const buildListText = () => {
-    const lines = [`🛒 Shopping List — ${todayDateStr()}`, ""];
+    const lines = [`🛒 Shopping List - ${todayDateStr()}`, ""];
     if (needed.length) {
       lines.push("TO BUY (Required)");
       needed.forEach(i => lines.push(`  • ${i.name}${i.dish ? ` (${i.dish})` : ""}`));
@@ -365,7 +365,7 @@ export default function Shopping({ userId }) {
                 ✅ Already in Pantry
               </h3>
               <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 16 }}>
-                {have.length} items covered — no need to buy
+                {have.length} items covered, no need to buy
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {have.map(name => (

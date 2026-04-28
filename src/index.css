@@ -1,4 +1,4 @@
-/* ─── Reset & Base ─── */
+/* Reset & Base */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -24,13 +24,13 @@ input:focus, textarea:focus, select:focus {
   outline: none;
 }
 
-/* ─── Scrollbar ─── */
+/* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #C8B9A8; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #A89888; }
 
-/* ─── Animations ─── */
+/* Animations */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -60,18 +60,18 @@ input:focus, textarea:focus, select:focus {
   100% { top: 100%; }
 }
 
-/* ─── Page transitions ─── */
+/* Page transitions */
 .page-enter {
   animation: fadeUp 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* ─── Utility ─── */
+/* Utility */
 .truncate {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* ─── Table base ─── */
+/* Table base */
 table { border-collapse: collapse; width: 100%; }
 th, td { padding: 0; }

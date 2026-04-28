@@ -123,7 +123,7 @@ export default function App() {
         />
       )}
 
-      {/* Sidebar — hidden off-screen on mobile, slide in when open */}
+      {/* Sidebar - hidden off-screen on mobile, slides in when open */}
       <div style={{
         position: isMobile ? "fixed" : "sticky",
         top: 0, left: 0,

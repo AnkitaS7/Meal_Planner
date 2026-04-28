@@ -1,6 +1,6 @@
 import { C, FONTS, RADIUS, SHADOW } from "../theme";
 
-/* ─── Tag ──────────────────────────────── */
+// Tag
 export const Tag = ({ children, color = C.sage }) => (
   <span style={{
     background: color + "22",
@@ -20,7 +20,7 @@ export const Tag = ({ children, color = C.sage }) => (
   </span>
 );
 
-/* ─── Card ──────────────────────────────── */
+// Card
 export const Card = ({ children, style = {}, onClick, onMouseEnter, onMouseLeave }) => (
   <div
     onClick={onClick}
@@ -40,14 +40,14 @@ export const Card = ({ children, style = {}, onClick, onMouseEnter, onMouseLeave
   </div>
 );
 
-/* ─── Button ────────────────────────────── */
+// Button
 const BTN_VARIANTS = {
-  primary:   { background: C.accent,   color: "#fff",     border: "none" },
-  secondary: { background: C.border,   color: C.text,     border: "none" },
+  primary:   { background: C.accent,      color: "#fff",   border: "none" },
+  secondary: { background: C.border,      color: C.text,   border: "none" },
   ghost:     { background: "transparent", color: C.accent, border: `1.5px solid ${C.accent}` },
-  sage:      { background: C.sage,     color: "#fff",     border: "none" },
-  danger:    { background: C.error,    color: "#fff",     border: "none" },
-  dark:      { background: C.sidebar,  color: "#fff",     border: "none" },
+  sage:      { background: C.sage,        color: "#fff",   border: "none" },
+  danger:    { background: C.error,       color: "#fff",   border: "none" },
+  dark:      { background: C.sidebar,     color: "#fff",   border: "none" },
 };
 
 export const Btn = ({
@@ -80,7 +80,7 @@ export const Btn = ({
   </button>
 );
 
-/* ─── Input ─────────────────────────────── */
+// Input
 export const Input = ({
   label, value, onChange, placeholder,
   type = "text", style = {}, readOnly = false,
@@ -111,13 +111,13 @@ export const Input = ({
         width: "100%",
         ...style,
       }}
-      onFocus={e  => { e.target.style.borderColor = C.accent; }}
-      onBlur={e   => { e.target.style.borderColor = C.border;  }}
+      onFocus={e => { e.target.style.borderColor = C.accent; }}
+      onBlur={e  => { e.target.style.borderColor = C.border; }}
     />
   </div>
 );
 
-/* ─── Textarea ───────────────────────────── */
+// Textarea
 export const Textarea = ({ label, value, onChange, placeholder, rows = 4 }) => (
   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
     {label && (
@@ -146,12 +146,12 @@ export const Textarea = ({ label, value, onChange, placeholder, rows = 4 }) => (
         transition: "border-color 0.18s",
       }}
       onFocus={e => { e.target.style.borderColor = C.accent; }}
-      onBlur={e  => { e.target.style.borderColor = C.border;  }}
+      onBlur={e  => { e.target.style.borderColor = C.border; }}
     />
   </div>
 );
 
-/* ─── Select ─────────────────────────────── */
+// Select
 export const Select = ({ label, value, onChange, options, style = {} }) => (
   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
     {label && (
@@ -186,7 +186,7 @@ export const Select = ({ label, value, onChange, options, style = {} }) => (
   </div>
 );
 
-/* ─── Avatar ─────────────────────────────── */
+// Avatar
 export const Avatar = ({ initials, size = 40, color = C.accent }) => (
   <div style={{
     width: size, height: size,
@@ -207,7 +207,7 @@ export const Avatar = ({ initials, size = 40, color = C.accent }) => (
   </div>
 );
 
-/* ─── NutrientBar ────────────────────────── */
+// NutrientBar
 export const NutrientBar = ({ name, current, target, unit, color }) => {
   const pct = target > 0 ? Math.min((current / target) * 100, 100) : 0;
   return (
@@ -231,7 +231,7 @@ export const NutrientBar = ({ name, current, target, unit, color }) => {
   );
 };
 
-/* ─── Toggle ─────────────────────────────── */
+// Toggle
 export const Toggle = ({ on, onChange }) => (
   <div
     onClick={onChange}
@@ -254,7 +254,7 @@ export const Toggle = ({ on, onChange }) => (
   </div>
 );
 
-/* ─── Section heading ────────────────────── */
+// SectionLabel
 export const SectionLabel = ({ children }) => (
   <div style={{
     fontSize: 11, fontWeight: 700, letterSpacing: 0.8,
@@ -265,12 +265,12 @@ export const SectionLabel = ({ children }) => (
   </div>
 );
 
-/* ─── Divider ────────────────────────────── */
+// Divider
 export const Divider = ({ style = {} }) => (
   <div style={{ height: 1, background: C.border, ...style }} />
 );
 
-/* ─── Empty State ────────────────────────── */
+// Empty state
 export const Empty = ({ icon = "🔍", title, subtitle, action }) => (
   <div style={{
     textAlign: "center", padding: "64px 24px",
@@ -284,7 +284,7 @@ export const Empty = ({ icon = "🔍", title, subtitle, action }) => (
   </div>
 );
 
-/* ─── Modal ──────────────────────────────── */
+// Modal
 export const Modal = ({ open, onClose, children, width = 520 }) => {
   if (!open) return null;
   return (
@@ -305,7 +305,7 @@ export const Modal = ({ open, onClose, children, width = 520 }) => {
           background: C.card,
           borderRadius: RADIUS.xl,
           padding: 32,
-            margin: "auto",
+          margin: "auto",
           width,
           maxWidth: "90vw",
           maxHeight: "85vh",
@@ -320,14 +320,14 @@ export const Modal = ({ open, onClose, children, width = 520 }) => {
   );
 };
 
-/* ─── Page wrapper ───────────────────────── */
+// Page wrapper
 export const Page = ({ children }) => (
   <div style={{ animation: "fadeUp 0.32s cubic-bezier(0.22,1,0.36,1) both" }}>
     {children}
   </div>
 );
 
-/* ─── Page header ────────────────────────── */
+// Page header
 export const PageHeader = ({ title, subtitle, action }) => (
   <div style={{
     display: "flex",
@@ -352,7 +352,7 @@ export const PageHeader = ({ title, subtitle, action }) => (
   </div>
 );
 
-/* ─── Stat tile ──────────────────────────── */
+// StatTile
 export const StatTile = ({ icon, value, label, color, onClick }) => (
   <Card
     onClick={onClick}
@@ -361,12 +361,12 @@ export const StatTile = ({ icon, value, label, color, onClick }) => (
       transition: "transform 0.2s, box-shadow 0.2s",
     }}
     onMouseEnter={onClick ? e => {
-      e.currentTarget.style.transform   = "translateY(-2px)";
-      e.currentTarget.style.boxShadow   = "0 8px 24px rgba(0,0,0,0.10)";
+      e.currentTarget.style.transform = "translateY(-2px)";
+      e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.10)";
     } : undefined}
     onMouseLeave={onClick ? e => {
-      e.currentTarget.style.transform   = "";
-      e.currentTarget.style.boxShadow   = "";
+      e.currentTarget.style.transform = "";
+      e.currentTarget.style.boxShadow = "";
     } : undefined}
   >
     <div style={{ fontSize: 26, marginBottom: 10 }}>{icon}</div>
