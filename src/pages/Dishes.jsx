@@ -5,7 +5,8 @@ import {
   Page, PageHeader, Empty, SectionLabel,
 } from "../components/ui";
 import { DISH_CATEGORIES } from "../data/mockData";
-import { insertDish, deleteDish } from "../lib/db";
+import { insertDish, deleteDish, UNIVERSAL_USER_ID } from "../lib/db";
+
 
 /* ─── Dish Detail view ─── */
 function DishDetail({ dish, onBack, onDelete }) {
@@ -56,9 +57,9 @@ function DishDetail({ dish, onBack, onDelete }) {
             )}
           </Card>
 
-          <Btn variant="danger" onClick={() => onDelete(dish.id)} style={{ alignSelf: "flex-start" }}>
+            {(dish.user_id !== UNIVERSAL_USER_ID) && <Btn variant="danger" onClick={() => onDelete(dish.id)} style={{ alignSelf: "flex-start" }}>
             🗑 Delete Dish
-          </Btn>
+          </Btn>}
         </div>
 
         {/* Right */}

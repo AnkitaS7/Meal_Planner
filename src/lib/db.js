@@ -71,7 +71,7 @@ export function todayDateStr() {
 
 // ── Dishes ────────────────────────────────────────────────────
 
-const UNIVERSAL_USER_ID = "aaaaaaaa-0001-0001-0001-000000000001";
+export const UNIVERSAL_USER_ID = "aaaaaaaa-0001-0001-0001-000000000001";
 
 export async function fetchDishes(userId) {
   const { data, error } = await supabase
