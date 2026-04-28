@@ -1,5 +1,4 @@
-import { useState, useEffect, useRef } from "react";
-import html2canvas from "html2canvas";
+import { useState, useEffect } from "react";
 import { C, FONTS } from "../theme";
 import { Card, Btn, Tag, Modal, Page, PageHeader } from "../components/ui";
 import { DAYS, MEALS } from "../data/mockData";
@@ -22,7 +21,7 @@ export default function Planner({ dishes, userId }) {
   const [modalSearch, setModalSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [showExport, setShowExport] = useState(false);
-  const tableRef = useRef(null);
+
 
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 700);
   const todayLabel = new Date().toLocaleString("en-US", { weekday: "short" }).slice(0, 3);
@@ -145,38 +144,9 @@ export default function Planner({ dishes, userId }) {
     window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(buildPlanText())}`;
   };
 
-  const shareWhatsApp = async () => {
+  const shareWhatsApp = () => {
     setShowExport(false);
-    if (!tableRef.current) return;
-    try {
-      const canvas = await html2canvas(tableRef.current, {
-        backgroundColor: "#ffffff",
-        scale: 2,
-        useCORS: true,
-      });
-      const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
-      const file = new File([blob], `meal-plan-${weekStart}.png`, { type: "image/png" });
-
-      if (navigator.canShare?.({ files: [file] })) {
-        // Mobile: native share sheet lets user pick WhatsApp directly
-        await navigator.share({ files: [file], title: `Meal Plan — ${weekLabel}` });
-      } else {
-        // Desktop: download the image then open WhatsApp Web with plan text
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `meal-plan-${weekStart}.png`;
-        a.click();
-        URL.revokeObjectURL(url);
-        // Open WhatsApp Web with plan text; user can attach the downloaded image
-        window.open(
-          `https://wa.me/?text=${encodeURIComponent(buildPlanText())}`,
-          "_blank"
-        );
-      }
-    } catch (err) {
-      if (err.name !== "AbortError") console.error("WhatsApp share failed:", err);
-    }
+    window.open(`https://wa.me/?text=${encodeURIComponent(buildPlanText())}`, "_blank");
   };
 
   /* ── Shared share dropdown ── */
@@ -453,7 +423,7 @@ export default function Planner({ dishes, userId }) {
         </div>
       ) : (
         <div style={{ overflowX: "auto", marginBottom: 8 }}>
-          <table ref={tableRef} style={{ width: "100%", borderCollapse: "separate", borderSpacing: 8 }}>
+          <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 8 }}>
             <thead>
               <tr>
                 <th style={{
