@@ -2,6 +2,15 @@ import { supabase } from "./supabase";
 
 // ── Shape transforms ──────────────────────────────────────────
 
+function normalizeIngredient(i) {
+  if (typeof i === "string") return { name: i, qty: null, unit: null };
+  return {
+    name: i.name ?? i.ingredient_name ?? "",
+    qty:  i.qty  ?? i.quantity ?? null,
+    unit: i.unit ?? null,
+  };
+}
+
 export function mapDish(row) {
   return {
     id: row.id,
@@ -23,8 +32,8 @@ export function mapDish(row) {
       fat:      Number(row.fat_g) || 0,
       fiber:    Number(row.fiber_g) || 0,
     },
-    reqIngredients: row.req_ingredients ?? [],
-    optIngredients: row.opt_ingredients ?? [],
+    reqIngredients: (row.req_ingredients ?? []).map(normalizeIngredient),
+    optIngredients: (row.opt_ingredients ?? []).map(normalizeIngredient),
   };
 }
 
@@ -109,13 +118,17 @@ export async function insertDish(dish, userId) {
     .single();
   if (dishErr) throw dishErr;
 
+  const toRow = (ing, type, i) => ({
+    dish_id:         dishRow.id,
+    ingredient_name: typeof ing === "string" ? ing : ing.name,
+    quantity:        typeof ing === "object" && ing.qty !== "" ? Number(ing.qty) || null : null,
+    unit:            typeof ing === "object" ? (ing.unit || null) : null,
+    type,
+    sort_order:      i + 1,
+  });
   const ingredients = [
-    ...(dish.reqIngredients ?? []).map((name, i) => ({
-      dish_id: dishRow.id, ingredient_name: name, type: "required", sort_order: i + 1,
-    })),
-    ...(dish.optIngredients ?? []).map((name, i) => ({
-      dish_id: dishRow.id, ingredient_name: name, type: "optional", sort_order: i + 1,
-    })),
+    ...(dish.reqIngredients ?? []).map((ing, i) => toRow(ing, "required",  i)),
+    ...(dish.optIngredients ?? []).map((ing, i) => toRow(ing, "optional", i)),
   ];
 
   if (ingredients.length > 0) {
