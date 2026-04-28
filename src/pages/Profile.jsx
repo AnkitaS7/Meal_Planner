@@ -79,7 +79,7 @@ export default function Profile({ profile, setProfile, userId, dishCount }) {
       />
 
       <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 24 }}>
-        {/* ── Left column ── */}
+        {/* Left column */}
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           {/* Avatar & identity */}
           <Card style={{ textAlign: "center" }}>
@@ -159,7 +159,7 @@ export default function Profile({ profile, setProfile, userId, dishCount }) {
           </Card>
         </div>
 
-        {/* ── Right column ── */}
+        {/* Right column */}
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           {/* Bio */}
           <Card>
@@ -208,7 +208,7 @@ export default function Profile({ profile, setProfile, userId, dishCount }) {
               {[
                 ["notifications", "notif_email",     "🔔 Email Notifications",  "Weekly meal reminders & recipe suggestions"],
                 ["publicProfile", "public_profile",  "🔒 Public Profile",       "Anyone can view your dishes and menus"],
-                ["nutritionTrack","nutrition_track",  "📊 Nutrition Tracking",   "Enabled — daily summaries active"],
+                ["nutritionTrack","nutrition_track",  "📊 Nutrition Tracking",   "Enabled - daily summaries active"],
                 ["weeklyDigest",  "weekly_digest",    "📰 Weekly Digest",        "Receive a summary of trending recipes"],
               ].map(([key, dbKey, label, sub]) => (
                 <div key={key} style={{

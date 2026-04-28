@@ -1,7 +1,4 @@
-/* ─────────────────────────────────────────
-   DESIGN TOKENS  —  Mise en Place
-   Warm organic editorial palette
-───────────────────────────────────────── */
+// Design tokens - Mise en Place
 
 export const C = {
   // Backgrounds
@@ -13,17 +10,17 @@ export const C = {
   sidebar:     "#1C2B1C",
   sidebarHover:"#2A3E2A",
 
-  // Primary — terracotta
+  // Primary - terracotta
   accent:      "#D4724A",
   accentLight: "#FAEAE3",
   accentDark:  "#B85C38",
 
-  // Secondary — sage green
+  // Secondary - sage green
   sage:        "#6B8F71",
   sageDark:    "#4A6B50",
   sageLight:   "#EBF3EC",
 
-  // Tertiary — warm gold
+  // Tertiary - warm gold
   gold:        "#C9A84C",
   goldLight:   "#FDF6E3",
 
@@ -50,16 +47,16 @@ export const FONTS = {
 };
 
 export const RADIUS = {
-  sm:  6,
-  md:  10,
-  lg:  14,
-  xl:  20,
+  sm:   6,
+  md:   10,
+  lg:   14,
+  xl:   20,
   full: 9999,
 };
 
 export const SHADOW = {
-  sm:  "0 1px 4px rgba(0,0,0,0.06)",
-  md:  "0 4px 16px rgba(0,0,0,0.08)",
-  lg:  "0 8px 28px rgba(0,0,0,0.10)",
-  xl:  "0 16px 48px rgba(0,0,0,0.14)",
+  sm: "0 1px 4px rgba(0,0,0,0.06)",
+  md: "0 4px 16px rgba(0,0,0,0.08)",
+  lg: "0 8px 28px rgba(0,0,0,0.10)",
+  xl: "0 16px 48px rgba(0,0,0,0.14)",
 };

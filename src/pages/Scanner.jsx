@@ -53,7 +53,7 @@ export default function Scanner({ setPantry }) {
         subtitle="Scan your grocery receipt to auto-populate your pantry"
       />
 
-      {/* ── IDLE ── */}
+      {/* Idle state */}
       {stage === "idle" && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
           {/* Drop zone */}
@@ -136,7 +136,7 @@ export default function Scanner({ setPantry }) {
         </div>
       )}
 
-      {/* ── SCANNING ── */}
+      {/* Scanning */}
       {stage === "scanning" && (
         <Card style={{ textAlign: "center", padding: "80px 40px" }}>
           <div style={{
@@ -173,7 +173,7 @@ export default function Scanner({ setPantry }) {
         </Card>
       )}
 
-      {/* ── RESULT ── */}
+      {/* Results */}
       {stage === "result" && (
         <div>
           {/* Header bar */}

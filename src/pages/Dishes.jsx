@@ -8,7 +8,7 @@ import { DISH_CATEGORIES } from "../data/mockData";
 import { insertDish, deleteDish, UNIVERSAL_USER_ID } from "../lib/db";
 
 
-/* ─── Dish Detail view ─── */
+// Dish detail
 function DishDetail({ dish, onBack, onDelete }) {
   return (
     <Page>
@@ -141,7 +141,7 @@ function DishDetail({ dish, onBack, onDelete }) {
   );
 }
 
-/* ─── Ingredient row ─── */
+// Ingredient row
 const BLANK_ING = () => ({ name: "", qty: "", unit: "" });
 
 const ING_UNITS = ["g", "kg", "ml", "L", "cups", "tbsp", "tsp", "pcs", "cloves", "slices", "sprigs", "leaves", "bunch"];
@@ -188,7 +188,7 @@ function IngredientRow({ ing, onChange, onRemove }) {
   );
 }
 
-/* ─── Add Dish form ─── */
+// Add dish form
 const BLANK = {
   name: "", category: "Main", prepTime: "", cookTime: "", servings: "2",
   recipe: "", youtubeLink: "", img: "🍽",
@@ -278,7 +278,7 @@ function AddDishForm({ onSave, onCancel }) {
       />
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-        {/* Left — Basic info */}
+        {/* Left - Basic info */}
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <Card>
             <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 18, color: C.text }}>
@@ -337,7 +337,7 @@ function AddDishForm({ onSave, onCancel }) {
           </Card>
         </div>
 
-        {/* Right — Ingredients + Nutrition */}
+        {/* Right - Ingredients + Nutrition */}
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <Card>
             <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 18, color: C.text }}>
@@ -376,7 +376,7 @@ function AddDishForm({ onSave, onCancel }) {
   );
 }
 
-/* ─── Dish card ─── */
+// Dish card
 function DishCard({ dish, onClick }) {
   return (
     <div
@@ -418,7 +418,7 @@ function DishCard({ dish, onClick }) {
   );
 }
 
-/* ─── Main page ─── */
+// Main page
 export default function Dishes({ dishes, setDishes, userId }) {
   const [view, setView]       = useState("list");  // list | add | detail
   const [selected, setSelected] = useState(null);

@@ -1,7 +1,4 @@
-/* ─────────────────────────────────────────
-   STATIC CONSTANTS  —  Mise en Place
-   (Mock data removed — app now uses Supabase)
-───────────────────────────────────────── */
+// Static constants (app data now lives in Supabase)
 
 export const DAYS  = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 export const MEALS = ["Breakfast", "Lunch", "Snack", "Dinner"];

@@ -1,4 +1,4 @@
-# 🍽 Mise en Place — Meal Planner
+# Mise en Place - Meal Planner
 
 A full-featured, beautifully designed meal planning web application built with React + Vite.
 
@@ -8,7 +8,7 @@ A full-featured, beautifully designed meal planning web application built with R
 
 | Module | Description |
 |---|---|
-| **Dashboard** | At-a-glance daily overview — meals, nutrients, suggestions, shopping alerts |
+| **Dashboard** | At-a-glance daily overview - meals, nutrients, suggestions, shopping alerts |
 | **Meal Planner** | Interactive weekly grid to plan Breakfast/Lunch/Dinner/Snack for each day |
 | **Dish Database** | Browse, filter, and add dishes with ingredients, recipes, YouTube links, and nutrition |
 | **Pantry** | Track available ingredients with quantities, categories, and expiry dates |
@@ -23,10 +23,10 @@ A full-featured, beautifully designed meal planning web application built with R
 
 ## Tech Stack
 
-- **React 18** — UI framework
-- **Vite 5** — build tool & dev server
-- **Recharts** — charts (bar, pie, radar)
-- No CSS framework — all styling is inline with a custom design token system
+- **React 18** - UI framework
+- **Vite 5** - build tool & dev server
+- **Recharts** - charts (bar, pie, radar)
+- No CSS framework - all styling is inline with a custom design token system
 
 ---
 
@@ -100,9 +100,9 @@ The app uses a warm organic editorial aesthetic:
 |---|---|---|
 | `bg` | `#F7F3EE` | Page background |
 | `sidebar` | `#1C2B1C` | Deep forest green sidebar |
-| `accent` | `#D4724A` | Terracotta — primary CTA color |
-| `sage` | `#6B8F71` | Sage green — secondary actions |
-| `gold` | `#C9A84C` | Warm gold — highlights |
+| `accent` | `#D4724A` | Terracotta - primary CTA color |
+| `sage` | `#6B8F71` | Sage green - secondary actions |
+| `gold` | `#C9A84C` | Warm gold - highlights |
 
 Fonts: **Playfair Display** (headings) + **Jost** (body)
 
@@ -118,7 +118,7 @@ Fonts: **Playfair Display** (headings) + **Jost** (body)
 
 ### Adding new dishes
 
-Use the **Dish Database → Add New Dish** form in the UI, or extend `MOCK_DISHES` in `src/data/mockData.js`.
+Use the **Dish Database -> Add New Dish** form in the UI, or extend `MOCK_DISHES` in `src/data/mockData.js`.
 
 ### Connecting a backend
 

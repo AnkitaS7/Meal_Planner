@@ -1,6 +1,6 @@
 import { supabase } from "./supabase";
 
-// ── Shape transforms ──────────────────────────────────────────
+// Shape transforms
 
 function normalizeIngredient(i) {
   if (typeof i === "string") return { name: i, qty: null, unit: null };
@@ -48,7 +48,7 @@ export function mapPantryItem(row) {
   };
 }
 
-// ── Week helpers ──────────────────────────────────────────────
+// Week helpers
 
 export function getWeekStart(date = new Date()) {
   const d = new Date(date);
@@ -80,7 +80,7 @@ export function todayDateStr() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
-// ── Dishes ────────────────────────────────────────────────────
+// Dishes
 
 export const UNIVERSAL_USER_ID = "aaaaaaaa-0001-0001-0001-000000000001";
 
@@ -144,7 +144,7 @@ export async function deleteDish(id) {
   if (error) throw error;
 }
 
-// ── Pantry ────────────────────────────────────────────────────
+// Pantry
 
 export async function fetchPantry(userId) {
   const { data, error } = await supabase
@@ -178,7 +178,7 @@ export async function deletePantryItem(id) {
   if (error) throw error;
 }
 
-// ── Profile ───────────────────────────────────────────────────
+// Profile
 
 export async function fetchProfile(userId) {
   const { data, error } = await supabase
@@ -201,7 +201,7 @@ export async function updateProfile(userId, updates) {
   return data;
 }
 
-// ── Nutrient targets ──────────────────────────────────────────
+// Nutrient targets
 
 export async function fetchNutrientTargets(userId) {
   const { data, error } = await supabase
@@ -213,7 +213,7 @@ export async function fetchNutrientTargets(userId) {
   return data;
 }
 
-// ── Meal plan ─────────────────────────────────────────────────
+// Meal plan
 
 export async function fetchWeeklyPlan(userId, weekStart) {
   const [y, m, d] = weekStart.split("-").map(Number);
@@ -287,7 +287,7 @@ export async function clearDayMealPlan(userId, planDate) {
   if (error) throw error;
 }
 
-// ── Community / Social ────────────────────────────────────────
+// Community / Social
 
 export async function fetchCommunityUsers(userId) {
   const [{ data: profiles, error: pErr }, { data: follows, error: fErr }] = await Promise.all([
@@ -327,7 +327,7 @@ export async function unfollowUser(followerId, followingId) {
   if (error) throw error;
 }
 
-// ── Shopping ──────────────────────────────────────────────────
+// Shopping
 
 export async function fetchShoppingNeeded(userId, weekStart) {
   const [y, m, d] = weekStart.split("-").map(Number);
