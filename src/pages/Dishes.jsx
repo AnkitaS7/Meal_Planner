@@ -37,7 +37,9 @@ function DishDetail({ dish, onBack, onDelete }) {
             </h2>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 20 }}>
               <Tag color={C.accent}>{dish.category}</Tag>
-              <Tag color={C.sage}>⏱ {dish.time} min</Tag>
+              {dish.prepTime > 0 && <Tag color={C.sage}>🥄 Prep {dish.prepTime} min</Tag>}
+              {dish.cookTime > 0 && <Tag color={C.sage}>🍳 Cook {dish.cookTime} min</Tag>}
+              {dish.prepTime === 0 && dish.cookTime === 0 && <Tag color={C.sage}>⏱ {dish.time} min</Tag>}
               <Tag color={C.gold}>👥 {dish.servings} servings</Tag>
               {dish.tags.map(t => <Tag key={t} color={C.textMuted}>{t}</Tag>)}
             </div>

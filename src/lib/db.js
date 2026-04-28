@@ -8,6 +8,8 @@ export function mapDish(row) {
     user_id: row.user_id,
     name: row.name,
     category: row.category,
+    prepTime: Number(row.prep_time_min) || 0,
+    cookTime: Number(row.cook_time_min) || 0,
     time: Number(row.total_time_min) || (Number(row.prep_time_min || 0) + Number(row.cook_time_min || 0)),
     servings: row.servings,
     tags: row.tags ?? [],
