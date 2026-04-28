@@ -21,9 +21,11 @@ export const Tag = ({ children, color = C.sage }) => (
 );
 
 /* ─── Card ──────────────────────────────── */
-export const Card = ({ children, style = {}, onClick }) => (
+export const Card = ({ children, style = {}, onClick, onMouseEnter, onMouseLeave }) => (
   <div
     onClick={onClick}
+    onMouseEnter={onMouseEnter}
+    onMouseLeave={onMouseLeave}
     style={{
       background: C.card,
       borderRadius: RADIUS.lg,
@@ -207,7 +209,7 @@ export const Avatar = ({ initials, size = 40, color = C.accent }) => (
 
 /* ─── NutrientBar ────────────────────────── */
 export const NutrientBar = ({ name, current, target, unit, color }) => {
-  const pct = Math.min((current / target) * 100, 100);
+  const pct = target > 0 ? Math.min((current / target) * 100, 100) : 0;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>

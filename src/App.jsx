@@ -79,12 +79,12 @@ export default function App() {
   }, [user?.id]);
 
   if (authLoading || dataLoading) return <LoadingScreen />;
-  if (!user || !profile) return <Login />;
+  if (!user) return <Login />;
 
   const sidebarUser = {
-    name:   profile.name,
-    handle: profile.handle,
-    avatar: profile.avatar_initials,
+    name:   profile?.name   ?? user.email?.split("@")[0] ?? "User",
+    handle: profile?.handle ?? "@user",
+    avatar: profile?.avatar_initials ?? "?",
   };
 
   const sharedProps = { dishes, setDishes, pantry, setPantry, userId: user.id };
@@ -99,7 +99,7 @@ export default function App() {
     nutrients:   <Nutrients   dishes={dishes} userId={user.id} />,
     scanner:     <Scanner     setPantry={setPantry} />,
     social:      <Social      userId={user.id} />,
-    profile:     <Profile     profile={profile} setProfile={setProfile} userId={user.id} dishCount={dishes.length} />,
+    profile:     profile ? <Profile profile={profile} setProfile={setProfile} userId={user.id} dishCount={dishes.length} /> : <LoadingScreen />,
   };
 
   return (

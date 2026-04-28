@@ -57,7 +57,7 @@ function UserCard({ user, onToggle }) {
 export default function Social({ userId }) {
   const [users, setUsers]   = useState([]);
   const [search, setSearch] = useState("");
-  const [tab, setTab]       = useState("following");
+  const [tab, setTab]       = useState("discover");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

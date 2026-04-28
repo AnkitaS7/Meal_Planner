@@ -13,8 +13,8 @@ export default function Profile({ profile, setProfile, userId, dishCount }) {
     avatar:         p.avatar_initials,
     bio:            p.bio ?? "",
     dietary:        p.dietary_prefs ?? [],
-    followers:      p.follower_count,
-    following:      p.following_count,
+    followers:      p.follower_count ?? 0,
+    following:      p.following_count ?? 0,
     dishes:         dishCount,
     notif_email:    p.notif_email,
     public_profile: p.public_profile,
@@ -52,13 +52,6 @@ export default function Profile({ profile, setProfile, userId, dishCount }) {
   };
 
   const cancel = () => { setDraft(displayProfile); setEditing(false); };
-
-  const toggleSetting = async (k) => {
-    const dbKey = { notifications: "notif_email", publicProfile: "public_profile", nutritionTrack: "nutrition_track", weeklyDigest: "weekly_digest" }[k];
-    const newVal = !displayProfile[k === "notifications" ? "notif_email" : k === "publicProfile" ? "public_profile" : k === "nutritionTrack" ? "nutrition_track" : "weekly_digest"];
-    setDisplayProfile(p => ({ ...p, [k === "notifications" ? "notif_email" : k === "publicProfile" ? "public_profile" : k === "nutritionTrack" ? "nutrition_track" : "weekly_digest"]: newVal }));
-    await updateProfile(userId, { [dbKey]: newVal }).catch(console.error);
-  };
 
   const activityStats = [
     ["🍽", "Dishes Created",      displayProfile.dishes,    C.accent ],

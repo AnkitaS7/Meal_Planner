@@ -98,7 +98,7 @@ export default function Nutrients({ dishes, userId }) {
         {loading ? (
           <div style={{ gridColumn: "1/-1", color: C.textMuted, fontSize: 13 }}>Loading targets…</div>
         ) : nutrientData.map(n => {
-          const pct = Math.min(100, Math.round((n.current / n.target) * 100));
+          const pct = n.target > 0 ? Math.min(100, Math.round((n.current / n.target) * 100)) : 0;
           const circumference = 2 * Math.PI * 26;
           const dashOffset = circumference * (1 - pct / 100);
           return (
