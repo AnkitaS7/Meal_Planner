@@ -26,19 +26,24 @@ export default function Shopping({ userId }) {
       fetchManualShoppingItems(userId, weekStart),
     ])
       .then(([shoppingRows, manualRows]) => {
-        const seen = new Set();
         const req_needed = [], req_have = [], opt_needed = [];
 
         shoppingRows.forEach(r => {
-          const key = `${r.ingredient_name.toLowerCase()}:${r.type}`;
-          if (seen.has(key)) return;
-          seen.add(key);
-
           if (r.type === "required") {
-            if (r.in_pantry) req_have.push(r.ingredient_name);
-            else req_needed.push({ name: r.ingredient_name, dish: r.dish_name });
-          } else {
-            if (!r.in_pantry) opt_needed.push({ name: r.ingredient_name, dish: r.dish_name });
+            if (r.in_pantry) {
+              if (!req_have.includes(r.ingredient_name)) req_have.push(r.ingredient_name);
+            } else {
+              const existing = req_needed.find(n => n.name === r.ingredient_name);
+              if (existing) {
+                if (existing.qty != null && r.quantity != null)
+                  existing.qty = Math.round((existing.qty + Number(r.quantity)) * 100) / 100;
+              } else {
+                req_needed.push({ name: r.ingredient_name, dish: r.dish_name, qty: r.quantity != null ? Number(r.quantity) : null, unit: r.unit ?? null });
+              }
+            }
+          } else if (!r.in_pantry) {
+            if (!opt_needed.find(n => n.name === r.ingredient_name))
+              opt_needed.push({ name: r.ingredient_name, dish: r.dish_name, qty: r.quantity != null ? Number(r.quantity) : null, unit: r.unit ?? null });
           }
         });
 
@@ -80,14 +85,18 @@ export default function Shopping({ userId }) {
 
   const buildListText = () => {
     const lines = [`🛒 Shopping List — ${todayDateStr()}`, ""];
+    const fmtItem = i => {
+      const qty = i.qty != null ? `${i.qty}${i.unit ? " " + i.unit : ""} ` : "";
+      return `  • ${qty}${i.name}${i.dish ? ` (${i.dish})` : ""}`;
+    };
     if (needed.length) {
       lines.push("TO BUY (Required)");
-      needed.forEach(i => lines.push(`  • ${i.name}${i.dish ? ` (${i.dish})` : ""}`));
+      needed.forEach(i => lines.push(fmtItem(i)));
       lines.push("");
     }
     if (optNeed.length) {
       lines.push("OPTIONAL");
-      optNeed.forEach(i => lines.push(`  • ${i.name}${i.dish ? ` (${i.dish})` : ""}`));
+      optNeed.forEach(i => lines.push(fmtItem(i)));
       lines.push("");
     }
     if (manual.length) {
@@ -120,8 +129,8 @@ export default function Shopping({ userId }) {
       </style></head><body>
       <h1>🛒 Shopping List</h1>
       <div class="sub">${todayDateStr()}</div>
-      ${section("To Buy (Required)", needed.map(i => `${i.name}${i.dish ? ` <span style="color:#aaa;font-size:12px">(${i.dish})</span>` : ""}`))}
-      ${section("Optional", optNeed.map(i => `${i.name}${i.dish ? ` <span style="color:#aaa;font-size:12px">(${i.dish})</span>` : ""}`))}
+      ${section("To Buy (Required)", needed.map(i => { const qty = i.qty != null ? `<strong>${i.qty}${i.unit ? " " + i.unit : ""}</strong> ` : ""; return `${qty}${i.name}${i.dish ? ` <span style="color:#aaa;font-size:12px">(${i.dish})</span>` : ""}`; }))}
+      ${section("Optional", optNeed.map(i => { const qty = i.qty != null ? `<strong>${i.qty}${i.unit ? " " + i.unit : ""}</strong> ` : ""; return `${qty}${i.name}${i.dish ? ` <span style="color:#aaa;font-size:12px">(${i.dish})</span>` : ""}`; }))}
       ${section("Custom Items", manual.map(i => `${i.is_checked ? "✓ " : ""}${i.name}`))}
       ${section("Already in Pantry ✓", have)}
       <script>window.onload=()=>{window.print();}<\/script>
@@ -161,6 +170,16 @@ export default function Shopping({ userId }) {
           {checked && <span style={{ color: "#fff", fontSize: 11 }}>✓</span>}
         </div>
         <div style={{ flex: 1 }}>
+          {item.qty != null && (
+            <span style={{
+              fontSize: 13, fontWeight: 600,
+              color: checked ? C.textMuted : C.accent,
+              textDecoration: checked ? "line-through" : "none",
+              marginRight: 4,
+            }}>
+              {item.qty}{item.unit ? " " + item.unit : ""}
+            </span>
+          )}
           <span style={{
             fontSize: 14, color: checked ? C.textMuted : C.text,
             textDecoration: checked ? "line-through" : "none",
