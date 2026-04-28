@@ -141,7 +141,7 @@ function DishDetail({ dish, onBack, onDelete }) {
   );
 }
 
-/* ─── Ingredient row ─── */
+// Ingredient row
 const BLANK_ING = () => ({ name: "", qty: "", unit: "" });
 
 const ING_UNITS = ["g", "kg", "ml", "L", "cups", "tbsp", "tsp", "pcs", "cloves", "slices", "sprigs", "leaves", "bunch"];
@@ -188,7 +188,7 @@ function IngredientRow({ ing, onChange, onRemove }) {
   );
 }
 
-/* ─── Add Dish form ─── */
+// Add dish form
 const BLANK = {
   name: "", category: "Main", prepTime: "", cookTime: "", servings: "2",
   recipe: "", youtubeLink: "", img: "🍽",
