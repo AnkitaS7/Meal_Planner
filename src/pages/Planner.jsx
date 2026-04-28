@@ -19,9 +19,12 @@ export default function Planner({ dishes, userId }) {
     return p;
   });
   const [modal, setModal] = useState(null);
+  const [modalSearch, setModalSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [showExport, setShowExport] = useState(false);
   const tableRef = useRef(null);
+
+  useEffect(() => { if (!modal) setModalSearch(""); }, [modal]);
 
   useEffect(() => {
     setLoading(true);
@@ -331,11 +334,28 @@ export default function Planner({ dishes, userId }) {
             <h3 style={{ fontFamily: FONTS.display, fontSize: 22, color: C.text, marginBottom: 4 }}>
               Add {modal.meal}
             </h3>
-            <p style={{ color: C.textSub, fontSize: 13, marginBottom: 20 }}>
+            <p style={{ color: C.textSub, fontSize: 13, marginBottom: 16 }}>
               {modal.day} · Select a dish from your database
             </p>
+            <input
+              autoFocus
+              value={modalSearch}
+              onChange={e => setModalSearch(e.target.value)}
+              placeholder="Search dishes…"
+              style={{
+                width: "100%", marginBottom: 14,
+                background: C.bg, border: `1.5px solid ${C.border}`,
+                borderRadius: 10, padding: "10px 14px",
+                fontSize: 14, color: C.text,
+                outline: "none", boxSizing: "border-box",
+              }}
+              onFocus={e  => { e.target.style.borderColor = C.accent; }}
+              onBlur={e   => { e.target.style.borderColor = C.border; }}
+            />
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {dishes.map(d => (
+              {dishes
+                .filter(d => d.name.toLowerCase().includes(modalSearch.toLowerCase()))
+                .map(d => (
                 <div
                   key={d.id}
                   onClick={() => assign(d)}

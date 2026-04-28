@@ -293,7 +293,7 @@ export const Modal = ({ open, onClose, children, width = 520 }) => {
       style={{
         position: "fixed", inset: 0,
         background: "rgba(0,0,0,0.45)",
-        display: "flex", alignItems: "center",
+        display: "flex", alignItems: "center", padding: "16px",
         justifyContent: "center", zIndex: 200,
         animation: "fadeIn 0.2s ease",
         backdropFilter: "blur(2px)",
@@ -305,6 +305,7 @@ export const Modal = ({ open, onClose, children, width = 520 }) => {
           background: C.card,
           borderRadius: RADIUS.xl,
           padding: 32,
+            margin: "auto",
           width,
           maxWidth: "90vw",
           maxHeight: "85vh",
