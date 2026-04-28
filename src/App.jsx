@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { C } from "./theme";
 import { supabase } from "./lib/supabase";
 import { fetchDishes, fetchPantry, fetchProfile } from "./lib/db";
@@ -87,6 +87,15 @@ export default function App() {
     avatar: profile?.avatar_initials ?? "?",
   };
 
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 700);
+  const [showSidebar, setShowSidebar] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 700px)");
+    const handler = e => { setIsMobile(e.matches); if (!e.matches) setShowSidebar(false); };
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
   const sharedProps = { dishes, setDishes, pantry, setPantry, userId: user.id };
 
   const PAGES = {
@@ -102,16 +111,60 @@ export default function App() {
     profile:     profile ? <Profile profile={profile} setProfile={setProfile} userId={user.id} dishCount={dishes.length} /> : <LoadingScreen />,
   };
 
+  const handleNav = (p) => { setPage(p); setShowSidebar(false); };
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: C.bg }}>
-      <Sidebar page={page} setPage={setPage} user={sidebarUser} onSignOut={() => supabase.auth.signOut()} />
+      {/* Mobile overlay */}
+      {isMobile && showSidebar && (
+        <div
+          onClick={() => setShowSidebar(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 149 }}
+        />
+      )}
+
+      {/* Sidebar — hidden off-screen on mobile, slide in when open */}
+      <div style={{
+        position: isMobile ? "fixed" : "sticky",
+        top: 0, left: 0,
+        height: isMobile ? "100vh" : undefined,
+        transform: isMobile ? (showSidebar ? "translateX(0)" : "translateX(-100%)") : "none",
+        transition: "transform 0.26s ease",
+        zIndex: 150,
+        flexShrink: 0,
+      }}>
+        <Sidebar page={page} setPage={handleNav} user={sidebarUser} onSignOut={() => supabase.auth.signOut()} />
+      </div>
+
       <main style={{
         flex: 1,
-        padding: "36px 40px",
+        padding: isMobile ? "16px 16px 80px" : "36px 40px",
         overflowY: "auto",
         maxHeight: "100vh",
         maxWidth: 1280,
       }}>
+        {/* Mobile top bar */}
+        {isMobile && (
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            marginBottom: 16,
+          }}>
+            <button
+              onClick={() => setShowSidebar(v => !v)}
+              style={{
+                background: "none", border: `1px solid ${C.border}`,
+                borderRadius: 8, padding: "8px 12px", cursor: "pointer",
+                fontSize: 18, color: C.text,
+              }}
+            >
+              ☰
+            </button>
+            <span style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 18, color: C.text }}>
+              Mise en Place
+            </span>
+            <div style={{ width: 42 }} />
+          </div>
+        )}
         {PAGES[page] ?? <Dashboard {...sharedProps} setPage={setPage} />}
       </main>
     </div>
