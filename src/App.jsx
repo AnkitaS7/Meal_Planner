@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { C } from "./theme";
 import { supabase } from "./lib/supabase";
 import { fetchDishes, fetchPantry, fetchProfile } from "./lib/db";
@@ -39,6 +39,8 @@ export default function App() {
   const [dishes, setDishes] = useState([]);
   const [pantry, setPantry] = useState([]);
   const [page, setPage]     = useState("dashboard");
+  const [isMobile, setIsMobile]     = useState(() => window.innerWidth < 700);
+  const [showSidebar, setShowSidebar] = useState(false);
 
   // Track auth state
   useEffect(() => {
@@ -52,6 +54,13 @@ export default function App() {
     });
 
     return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 700px)");
+    const handler = e => { setIsMobile(e.matches); if (!e.matches) setShowSidebar(false); };
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
   }, []);
 
   // Load data when user authenticates
@@ -86,15 +95,6 @@ export default function App() {
     handle: profile?.handle ?? "@user",
     avatar: profile?.avatar_initials ?? "?",
   };
-
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 700);
-  const [showSidebar, setShowSidebar] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 700px)");
-    const handler = e => { setIsMobile(e.matches); if (!e.matches) setShowSidebar(false); };
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
 
   const sharedProps = { dishes, setDishes, pantry, setPantry, userId: user.id };
 
