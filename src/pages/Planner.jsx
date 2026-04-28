@@ -1,5 +1,4 @@
-import { useState, useEffect, useRef } from "react";
-import html2canvas from "html2canvas";
+import { useState, useEffect } from "react";
 import { C, FONTS } from "../theme";
 import { Card, Btn, Tag, Modal, Page, PageHeader } from "../components/ui";
 import { DAYS, MEALS } from "../data/mockData";
@@ -22,7 +21,18 @@ export default function Planner({ dishes, userId }) {
   const [modalSearch, setModalSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [showExport, setShowExport] = useState(false);
-  const tableRef = useRef(null);
+
+
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 700);
+  const todayLabel = new Date().toLocaleString("en-US", { weekday: "short" }).slice(0, 3);
+  const [selectedDay, setSelectedDay] = useState(() => DAYS.includes(todayLabel) ? todayLabel : DAYS[0]);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 700px)");
+    const handler = e => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   useEffect(() => { if (!modal) setModalSearch(""); }, [modal]);
 
@@ -134,32 +144,265 @@ export default function Planner({ dishes, userId }) {
     window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(buildPlanText())}`;
   };
 
-  const shareWhatsApp = async () => {
+  const shareWhatsApp = () => {
     setShowExport(false);
-    if (!tableRef.current) return;
-    try {
-      const canvas = await html2canvas(tableRef.current, {
-        backgroundColor: "#ffffff",
-        scale: 2,
-        useCORS: true,
-      });
-      const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
-      const file = new File([blob], `meal-plan-${weekStart}.png`, { type: "image/png" });
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: `Meal Plan — ${weekLabel}` });
-      } else {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `meal-plan-${weekStart}.png`;
-        a.click();
-        URL.revokeObjectURL(url);
-      }
-    } catch (err) {
-      if (err.name !== "AbortError") console.error("WhatsApp share failed:", err);
-    }
+    window.open(`https://wa.me/?text=${encodeURIComponent(buildPlanText())}`, "_blank");
   };
 
+  /* ── Shared share dropdown ── */
+  const ShareDropdown = () => (
+    <div style={{ position: "relative" }}>
+      <Btn onClick={() => setShowExport(v => !v)}>Share ↗</Btn>
+      {showExport && (
+        <>
+          <div onClick={() => setShowExport(false)} style={{ position: "fixed", inset: 0, zIndex: 99 }} />
+          <div style={{
+            position: "absolute", top: "calc(100% + 8px)", right: 0,
+            background: "#fff", border: `1px solid ${C.border}`,
+            borderRadius: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+            zIndex: 100, minWidth: 200, overflow: "hidden",
+          }}>
+            {[
+              { icon: "📄", label: "Save as PDF",        action: exportPDF      },
+              { icon: "✉️", label: "Send via Email",     action: shareEmail     },
+              { icon: "💬", label: "Share on WhatsApp",  action: shareWhatsApp  },
+            ].map(({ icon, label, action }, i, arr) => (
+              <button
+                key={label}
+                onClick={action}
+                style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  width: "100%", padding: "12px 16px",
+                  background: "none", cursor: "pointer", border: "none",
+                  borderBottom: i < arr.length - 1 ? `1px solid ${C.border}` : "none",
+                  fontSize: 14, color: C.text,
+                  fontFamily: FONTS.body, textAlign: "left",
+                  transition: "background 0.15s",
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = C.bg}
+                onMouseLeave={e => e.currentTarget.style.background = "none"}
+              >
+                <span style={{ fontSize: 16 }}>{icon}</span>
+                {label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+
+  /* ── Dish cell (reused in both layouts) ── */
+  const DishCell = ({ day, meal }) => {
+    const dish = dishById(plan[day]?.[meal]);
+    return dish ? (
+      <div style={{
+        background: "#fff", border: `1px solid ${C.border}`,
+        borderRadius: 12, padding: 10, position: "relative",
+      }}>
+        <span style={{ fontSize: 22 }}>{dish.img}</span>
+        <div style={{ fontSize: 12, fontWeight: 600, color: C.text, lineHeight: 1.3, marginTop: 4 }}>
+          {dish.name}
+        </div>
+        <div style={{ fontSize: 11, color: C.textMuted, marginTop: 3 }}>
+          {dish.nutrients.calories} kcal
+        </div>
+        <button
+          onClick={() => remove(day, meal)}
+          style={{
+            position: "absolute", top: 6, right: 6,
+            background: "none", border: "none",
+            color: C.textMuted, fontSize: 13, cursor: "pointer",
+            lineHeight: 1, padding: 2,
+          }}
+        >✕</button>
+      </div>
+    ) : (
+      <div
+        onClick={() => setModal({ day, meal })}
+        style={{
+          border: `2px dashed ${C.borderDark}`,
+          borderRadius: 12, padding: "14px 6px",
+          textAlign: "center", cursor: "pointer",
+          color: C.textMuted, fontSize: 12,
+          transition: "border-color 0.18s, background 0.18s",
+        }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = C.accent; e.currentTarget.style.background = C.accentLight; }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = C.borderDark; e.currentTarget.style.background = "transparent"; }}
+      >
+        + Add
+      </div>
+    );
+  };
+
+  /* ── Dish picker modal content ── */
+  const ModalContent = () => (
+    <>
+      <h3 style={{ fontFamily: FONTS.display, fontSize: 22, color: C.text, marginBottom: 4 }}>
+        Add {modal?.meal}
+      </h3>
+      <p style={{ color: C.textSub, fontSize: 13, marginBottom: 16 }}>
+        {modal?.day} · Select a dish from your database
+      </p>
+      <input
+        autoFocus
+        value={modalSearch}
+        onChange={e => setModalSearch(e.target.value)}
+        placeholder="Search dishes…"
+        style={{
+          width: "100%", marginBottom: 14,
+          background: C.bg, border: `1.5px solid ${C.border}`,
+          borderRadius: 10, padding: "10px 14px",
+          fontSize: 14, color: C.text, outline: "none", boxSizing: "border-box",
+        }}
+        onFocus={e => { e.target.style.borderColor = C.accent; }}
+        onBlur={e  => { e.target.style.borderColor = C.border; }}
+      />
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {dishes
+          .filter(d => d.name.toLowerCase().includes(modalSearch.toLowerCase()))
+          .map(d => (
+            <div
+              key={d.id}
+              onClick={() => assign(d)}
+              style={{
+                display: "flex", gap: 14, padding: 14,
+                background: C.bg, borderRadius: 12, cursor: "pointer",
+                border: "1.5px solid transparent",
+                transition: "border-color 0.18s, background 0.18s",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = C.accent; e.currentTarget.style.background = C.accentLight; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.background = C.bg; }}
+            >
+              <span style={{ fontSize: 30 }}>{d.img}</span>
+              <div>
+                <div style={{ fontWeight: 600, color: C.text }}>{d.name}</div>
+                <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
+                  {d.time} min · {d.category} · {d.nutrients.calories} kcal
+                </div>
+              </div>
+            </div>
+          ))}
+      </div>
+    </>
+  );
+
+  /* ── Mobile layout ── */
+  if (isMobile) {
+    return (
+      <Page>
+        {/* Compact mobile header */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            marginBottom: 10,
+          }}>
+            <h1 style={{ fontFamily: FONTS.display, fontSize: 22, color: C.text }}>
+              Weekly Planner
+            </h1>
+            <ShareDropdown />
+          </div>
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            background: "#fff", border: `1px solid ${C.border}`,
+            borderRadius: 10, padding: "8px 12px",
+          }}>
+            <button
+              onClick={() => shiftWeek(-1)}
+              style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: C.accent, padding: "0 4px" }}
+            >‹</button>
+            <span style={{ fontSize: 13, color: C.textSub, fontWeight: 500 }}>{weekLabel}</span>
+            <button
+              onClick={() => shiftWeek(1)}
+              style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: C.accent, padding: "0 4px" }}
+            >›</button>
+          </div>
+        </div>
+
+        {/* Day tab strip */}
+        <div style={{
+          display: "flex", gap: 6, overflowX: "auto",
+          paddingBottom: 4, marginBottom: 16,
+          scrollbarWidth: "none",
+        }}>
+          {DAYS.map(day => {
+            const isSelected = day === selectedDay;
+            const isToday    = day === todayLabel;
+            const kcal       = dayTotal(day);
+            return (
+              <button
+                key={day}
+                onClick={() => setSelectedDay(day)}
+                style={{
+                  flexShrink: 0,
+                  display: "flex", flexDirection: "column", alignItems: "center",
+                  gap: 2, padding: "8px 12px",
+                  borderRadius: 10, border: "none", cursor: "pointer",
+                  background: isSelected ? C.accent : isToday ? C.accentLight : "#fff",
+                  color: isSelected ? "#fff" : isToday ? C.accent : C.textSub,
+                  fontFamily: FONTS.body,
+                  boxShadow: isSelected ? "0 2px 8px rgba(0,0,0,0.12)" : "none",
+                  transition: "all 0.18s",
+                }}
+              >
+                <span style={{ fontSize: 12, fontWeight: 600 }}>{day}</span>
+                {kcal > 0 && (
+                  <span style={{
+                    fontSize: 10,
+                    color: isSelected ? "rgba(255,255,255,0.8)" : C.accent,
+                    fontWeight: 500,
+                  }}>
+                    {kcal}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Selected day meal cards */}
+        {loading ? (
+          <div style={{ color: C.textMuted, fontSize: 14, textAlign: "center", padding: "40px 0" }}>
+            Loading plan…
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button
+                onClick={() => clearDay(selectedDay)}
+                style={{
+                  background: "none", border: "none", fontSize: 12,
+                  color: C.textMuted, cursor: "pointer", fontFamily: FONTS.body,
+                }}
+              >
+                Clear {selectedDay}
+              </button>
+            </div>
+            {MEALS.map(meal => (
+              <div key={meal} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                <div style={{
+                  width: 72, flexShrink: 0,
+                  fontSize: 10, fontWeight: 700, color: C.textSub,
+                  letterSpacing: 0.5, paddingTop: 14,
+                }}>
+                  {meal.toUpperCase()}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <DishCell day={selectedDay} meal={meal} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <Modal open={!!modal} onClose={() => setModal(null)} width={500}>
+          {modal && <ModalContent />}
+        </Modal>
+      </Page>
+    );
+  }
+
+  /* ── Desktop layout ── */
   return (
     <Page>
       <PageHeader
@@ -169,51 +412,7 @@ export default function Planner({ dishes, userId }) {
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <Btn variant="secondary" onClick={() => shiftWeek(-1)}>← Previous</Btn>
             <Btn variant="secondary" onClick={() => shiftWeek(1)}>Next →</Btn>
-            <div style={{ position: "relative" }}>
-              <Btn onClick={() => setShowExport(v => !v)}>
-                Share ↗
-              </Btn>
-              {showExport && (
-                <>
-                  <div
-                    onClick={() => setShowExport(false)}
-                    style={{ position: "fixed", inset: 0, zIndex: 99 }}
-                  />
-                  <div style={{
-                    position: "absolute", top: "calc(100% + 8px)", right: 0,
-                    background: "#fff", border: `1px solid ${C.border}`,
-                    borderRadius: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
-                    zIndex: 100, minWidth: 200, overflow: "hidden",
-                  }}>
-                    {[
-                      { icon: "📄", label: "Save as PDF", action: exportPDF },
-                      { icon: "✉️", label: "Send via Email", action: shareEmail },
-                      { icon: "💬", label: "Share on WhatsApp", action: shareWhatsApp },
-                    ].map(({ icon, label, action }, i, arr) => (
-                      <button
-                        key={label}
-                        onClick={action}
-                        style={{
-                          display: "flex", alignItems: "center", gap: 10,
-                          width: "100%", padding: "12px 16px",
-                          background: "none", cursor: "pointer",
-                          border: "none",
-                          borderBottom: i < arr.length - 1 ? `1px solid ${C.border}` : "none",
-                          fontSize: 14, color: C.text,
-                          fontFamily: FONTS.body, textAlign: "left",
-                          transition: "background 0.15s",
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.background = C.bg}
-                        onMouseLeave={e => e.currentTarget.style.background = "none"}
-                      >
-                        <span style={{ fontSize: 16 }}>{icon}</span>
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
+            <ShareDropdown />
           </div>
         }
       />
@@ -224,7 +423,7 @@ export default function Planner({ dishes, userId }) {
         </div>
       ) : (
         <div style={{ overflowX: "auto", marginBottom: 8 }}>
-          <table ref={tableRef} style={{ width: "100%", borderCollapse: "separate", borderSpacing: 8 }}>
+          <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 8 }}>
             <thead>
               <tr>
                 <th style={{
@@ -238,9 +437,7 @@ export default function Planner({ dishes, userId }) {
                   <th key={d} style={{ minWidth: 138, padding: "6px 4px" }}>
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
                       <span style={{ fontSize: 13, color: C.text, fontWeight: 600 }}>{d}</span>
-                      {dayTotal(d) > 0 && (
-                        <Tag color={C.accent}>{dayTotal(d)} kcal</Tag>
-                      )}
+                      {dayTotal(d) > 0 && <Tag color={C.accent}>{dayTotal(d)} kcal</Tag>}
                       <button onClick={() => clearDay(d)}
                         style={{
                           fontSize: 10, color: C.textMuted, background: "none",
@@ -263,63 +460,11 @@ export default function Planner({ dishes, userId }) {
                   }}>
                     {meal.toUpperCase()}
                   </td>
-                  {DAYS.map(day => {
-                    const dish = dishById(plan[day]?.[meal]);
-                    return (
-                      <td key={day} style={{ verticalAlign: "top", padding: "4px" }}>
-                        {dish ? (
-                          <div style={{
-                            background: "#fff",
-                            border: `1px solid ${C.border}`,
-                            borderRadius: 12,
-                            padding: 10,
-                            position: "relative",
-                          }}>
-                            <span style={{ fontSize: 22 }}>{dish.img}</span>
-                            <div style={{
-                              fontSize: 12, fontWeight: 600, color: C.text,
-                              lineHeight: 1.3, marginTop: 4,
-                            }}>
-                              {dish.name}
-                            </div>
-                            <div style={{ fontSize: 11, color: C.textMuted, marginTop: 3 }}>
-                              {dish.nutrients.calories} kcal
-                            </div>
-                            <button
-                              onClick={() => remove(day, meal)}
-                              style={{
-                                position: "absolute", top: 6, right: 6,
-                                background: "none", border: "none",
-                                color: C.textMuted, fontSize: 13, cursor: "pointer",
-                                lineHeight: 1, padding: 2,
-                              }}
-                            >✕</button>
-                          </div>
-                        ) : (
-                          <div
-                            onClick={() => setModal({ day, meal })}
-                            style={{
-                              border: `2px dashed ${C.borderDark}`,
-                              borderRadius: 12, padding: "14px 6px",
-                              textAlign: "center", cursor: "pointer",
-                              color: C.textMuted, fontSize: 12,
-                              transition: "border-color 0.18s, background 0.18s",
-                            }}
-                            onMouseEnter={e => {
-                              e.currentTarget.style.borderColor = C.accent;
-                              e.currentTarget.style.background  = C.accentLight;
-                            }}
-                            onMouseLeave={e => {
-                              e.currentTarget.style.borderColor = C.borderDark;
-                              e.currentTarget.style.background  = "transparent";
-                            }}
-                          >
-                            + Add
-                          </div>
-                        )}
-                      </td>
-                    );
-                  })}
+                  {DAYS.map(day => (
+                    <td key={day} style={{ verticalAlign: "top", padding: "4px" }}>
+                      <DishCell day={day} meal={meal} />
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>
@@ -327,65 +472,8 @@ export default function Planner({ dishes, userId }) {
         </div>
       )}
 
-      {/* Dish picker modal */}
       <Modal open={!!modal} onClose={() => setModal(null)} width={500}>
-        {modal && (
-          <>
-            <h3 style={{ fontFamily: FONTS.display, fontSize: 22, color: C.text, marginBottom: 4 }}>
-              Add {modal.meal}
-            </h3>
-            <p style={{ color: C.textSub, fontSize: 13, marginBottom: 16 }}>
-              {modal.day} · Select a dish from your database
-            </p>
-            <input
-              autoFocus
-              value={modalSearch}
-              onChange={e => setModalSearch(e.target.value)}
-              placeholder="Search dishes…"
-              style={{
-                width: "100%", marginBottom: 14,
-                background: C.bg, border: `1.5px solid ${C.border}`,
-                borderRadius: 10, padding: "10px 14px",
-                fontSize: 14, color: C.text,
-                outline: "none", boxSizing: "border-box",
-              }}
-              onFocus={e  => { e.target.style.borderColor = C.accent; }}
-              onBlur={e   => { e.target.style.borderColor = C.border; }}
-            />
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {dishes
-                .filter(d => d.name.toLowerCase().includes(modalSearch.toLowerCase()))
-                .map(d => (
-                <div
-                  key={d.id}
-                  onClick={() => assign(d)}
-                  style={{
-                    display: "flex", gap: 14, padding: 14,
-                    background: C.bg, borderRadius: 12, cursor: "pointer",
-                    border: "1.5px solid transparent",
-                    transition: "border-color 0.18s, background 0.18s",
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.borderColor = C.accent;
-                    e.currentTarget.style.background  = C.accentLight;
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.borderColor = "transparent";
-                    e.currentTarget.style.background  = C.bg;
-                  }}
-                >
-                  <span style={{ fontSize: 30 }}>{d.img}</span>
-                  <div>
-                    <div style={{ fontWeight: 600, color: C.text }}>{d.name}</div>
-                    <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
-                      {d.time} min · {d.category} · {d.nutrients.calories} kcal
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
+        {modal && <ModalContent />}
       </Modal>
     </Page>
   );

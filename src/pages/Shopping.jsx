@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { C, FONTS, RADIUS } from "../theme";
 import { Card, Btn, Page, PageHeader } from "../components/ui";
+import { todayDateStr } from "../lib/db";
 import {
   fetchShoppingNeeded, fetchManualShoppingItems,
   addManualShoppingItem, toggleManualShoppingItem, deleteManualShoppingItem,
@@ -17,6 +18,7 @@ export default function Shopping({ userId }) {
   const [autoChecked, setAutoChecked] = useState({}); // local check state for auto items
   const [extraInput, setExtraInput]   = useState("");
   const [loading, setLoading]   = useState(true);
+  const [showExport, setShowExport] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -74,6 +76,67 @@ export default function Shopping({ userId }) {
   const removeExtra = async (id) => {
     setManual(m => m.filter(x => x.id !== id));
     await deleteManualShoppingItem(id).catch(console.error);
+  };
+
+  const buildListText = () => {
+    const lines = [`🛒 Shopping List — ${todayDateStr()}`, ""];
+    if (needed.length) {
+      lines.push("TO BUY (Required)");
+      needed.forEach(i => lines.push(`  • ${i.name}${i.dish ? ` (${i.dish})` : ""}`));
+      lines.push("");
+    }
+    if (optNeed.length) {
+      lines.push("OPTIONAL");
+      optNeed.forEach(i => lines.push(`  • ${i.name}${i.dish ? ` (${i.dish})` : ""}`));
+      lines.push("");
+    }
+    if (manual.length) {
+      lines.push("CUSTOM ITEMS");
+      manual.forEach(i => lines.push(`  ${i.is_checked ? "✓" : "•"} ${i.name}`));
+      lines.push("");
+    }
+    if (have.length) {
+      lines.push("ALREADY IN PANTRY");
+      have.forEach(n => lines.push(`  ✓ ${n}`));
+    }
+    return lines.join("\n");
+  };
+
+  const exportPDF = () => {
+    setShowExport(false);
+    const win = window.open("", "_blank");
+    const section = (title, items) => items.length === 0 ? "" : `
+      <h2 style="font-size:14px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin:24px 0 10px">${title}</h2>
+      <ul style="list-style:none;padding:0;margin:0">
+        ${items.map(i => `<li style="padding:8px 0;border-bottom:1px solid #f0ebe4;font-size:14px">${i}</li>`).join("")}
+      </ul>`;
+    win.document.write(`<!doctype html><html><head><meta charset="utf-8">
+      <title>Shopping List</title>
+      <style>
+        body{font-family:Georgia,serif;padding:40px;color:#1a1a1a;max-width:700px;margin:0 auto}
+        h1{font-size:26px;margin:0 0 4px}
+        .sub{color:#888;font-size:13px;margin-bottom:28px}
+        @media print{@page{margin:20mm}body{padding:0}}
+      </style></head><body>
+      <h1>🛒 Shopping List</h1>
+      <div class="sub">${todayDateStr()}</div>
+      ${section("To Buy (Required)", needed.map(i => `${i.name}${i.dish ? ` <span style="color:#aaa;font-size:12px">(${i.dish})</span>` : ""}`))}
+      ${section("Optional", optNeed.map(i => `${i.name}${i.dish ? ` <span style="color:#aaa;font-size:12px">(${i.dish})</span>` : ""}`))}
+      ${section("Custom Items", manual.map(i => `${i.is_checked ? "✓ " : ""}${i.name}`))}
+      ${section("Already in Pantry ✓", have)}
+      <script>window.onload=()=>{window.print();}<\/script>
+      </body></html>`);
+    win.document.close();
+  };
+
+  const shareEmail = () => {
+    setShowExport(false);
+    window.location.href = `mailto:?subject=${encodeURIComponent("Shopping List")}&body=${encodeURIComponent(buildListText())}`;
+  };
+
+  const shareWhatsApp = () => {
+    setShowExport(false);
+    window.open(`https://wa.me/?text=${encodeURIComponent(buildListText())}`, "_blank");
   };
 
   const AutoCheckItem = ({ item }) => {
@@ -155,9 +218,47 @@ export default function Shopping({ userId }) {
         title="Shopping List"
         subtitle="Based on this week's meal plan · Pantry items excluded"
         action={
-          <div style={{ display: "flex", gap: 8 }}>
-            <Btn variant="secondary">🖨 Print</Btn>
-            <Btn variant="sage">📤 Export</Btn>
+          <div style={{ position: "relative" }}>
+            <Btn onClick={() => setShowExport(v => !v)}>Share ↗</Btn>
+            {showExport && (
+              <>
+                <div
+                  onClick={() => setShowExport(false)}
+                  style={{ position: "fixed", inset: 0, zIndex: 99 }}
+                />
+                <div style={{
+                  position: "absolute", top: "calc(100% + 8px)", right: 0,
+                  background: "#fff", border: `1px solid ${C.border}`,
+                  borderRadius: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+                  zIndex: 100, minWidth: 200, overflow: "hidden",
+                }}>
+                  {[
+                    { icon: "📄", label: "Save as PDF",       action: exportPDF     },
+                    { icon: "✉️", label: "Send via Email",    action: shareEmail    },
+                    { icon: "💬", label: "Share on WhatsApp", action: shareWhatsApp },
+                  ].map(({ icon, label, action }, i, arr) => (
+                    <button
+                      key={label}
+                      onClick={action}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 10,
+                        width: "100%", padding: "12px 16px",
+                        background: "none", cursor: "pointer", border: "none",
+                        borderBottom: i < arr.length - 1 ? `1px solid ${C.border}` : "none",
+                        fontSize: 14, color: C.text,
+                        fontFamily: FONTS.body, textAlign: "left",
+                        transition: "background 0.15s",
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = C.bg}
+                      onMouseLeave={e => e.currentTarget.style.background = "none"}
+                    >
+                      <span style={{ fontSize: 16 }}>{icon}</span>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         }
       />
