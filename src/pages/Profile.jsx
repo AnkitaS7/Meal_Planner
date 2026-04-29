@@ -3,10 +3,10 @@ import { C, FONTS, RADIUS } from "../theme";
 import {
   Card, Btn, Input, Textarea, Avatar, Toggle, Page, PageHeader, Divider,
 } from "../components/ui";
-import { DIETARY_OPTIONS } from "../data/mockData";
+
 import { updateProfile } from "../lib/db";
 
-export default function Profile({ profile, setProfile, userId, dishCount }) {
+export default function Profile({ profile, setProfile, userId, dishCount, dietaryOptions }) {
   const toAppProfile = (p) => ({
     name:           p.name,
     handle:         p.handle,
@@ -134,7 +134,7 @@ export default function Profile({ profile, setProfile, userId, dishCount }) {
               Dietary Preferences
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {DIETARY_OPTIONS.map(d => {
+              {dietaryOptions.map(d => {
                 const active = (editing ? draft : displayProfile).dietary.includes(d);
                 return (
                   <span

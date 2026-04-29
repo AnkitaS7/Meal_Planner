@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { C } from "./theme";
 import { supabase } from "./lib/supabase";
-import { fetchDishes, fetchPantry, fetchProfile } from "./lib/db";
+import { fetchDishes, fetchPantry, fetchProfile, fetchAppEnums } from "./lib/db";
 import Sidebar     from "./components/Sidebar";
 import Login       from "./pages/Login";
 import Dashboard   from "./pages/Dashboard";
@@ -38,6 +38,7 @@ export default function App() {
   const [profile, setProfile] = useState(null);
   const [dishes, setDishes] = useState([]);
   const [pantry, setPantry] = useState([]);
+  const [enums, setEnums]   = useState({ dishCategories: [], pantryCategories: [], pantryUnits: [], dietaryOptions: [] });
   const [page, setPage]     = useState("dashboard");
   const [isMobile, setIsMobile]     = useState(() => window.innerWidth < 700);
   const [showSidebar, setShowSidebar] = useState(false);
@@ -77,11 +78,13 @@ export default function App() {
       fetchDishes(user.id),
       fetchPantry(user.id),
       fetchProfile(user.id),
+      fetchAppEnums(),
     ])
-      .then(([d, p, prof]) => {
+      .then(([d, p, prof, e]) => {
         setDishes(d);
         setPantry(p);
         setProfile(prof);
+        setEnums(e);
       })
       .catch(console.error)
       .finally(() => setDataLoading(false));
@@ -101,14 +104,14 @@ export default function App() {
   const PAGES = {
     dashboard:   <Dashboard   {...sharedProps} setPage={setPage} />,
     planner:     <Planner     dishes={dishes} userId={user.id} />,
-    dishes:      <Dishes      dishes={dishes} setDishes={setDishes} userId={user.id} />,
-    pantry:      <Pantry      pantry={pantry} setPantry={setPantry} userId={user.id} />,
+    dishes:      <Dishes      dishes={dishes} setDishes={setDishes} userId={user.id} dishCategories={enums.dishCategories} />,
+    pantry:      <Pantry      pantry={pantry} setPantry={setPantry} userId={user.id} pantryCategories={enums.pantryCategories} pantryUnits={enums.pantryUnits} />,
     shopping:    <Shopping    dishes={dishes} pantry={pantry} setPantry={setPantry} userId={user.id} />,
     suggestions: <Suggestions dishes={dishes} pantry={pantry} />,
     nutrients:   <Nutrients   dishes={dishes} userId={user.id} />,
     scanner:     <Scanner     setPantry={setPantry} />,
     social:      <Social      userId={user.id} />,
-    profile:     profile ? <Profile profile={profile} setProfile={setProfile} userId={user.id} dishCount={dishes.length} /> : <LoadingScreen />,
+    profile:     profile ? <Profile profile={profile} setProfile={setProfile} userId={user.id} dishCount={dishes.length} dietaryOptions={enums.dietaryOptions} /> : <LoadingScreen />,
   };
 
   const handleNav = (p) => { setPage(p); setShowSidebar(false); };

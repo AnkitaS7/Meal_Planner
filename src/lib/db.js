@@ -80,6 +80,14 @@ export function todayDateStr() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
+// App enums
+
+export async function fetchAppEnums() {
+  const { data, error } = await supabase.rpc("get_app_enums");
+  if (error) throw error;
+  return data;
+}
+
 // Dishes
 
 export const UNIVERSAL_USER_ID = "aaaaaaaa-0001-0001-0001-000000000001";
@@ -118,21 +126,21 @@ export async function insertDish(dish, userId) {
     .single();
   if (dishErr) throw dishErr;
 
-  const toRow = (ing, type, i) => ({
-    dish_id:         dishRow.id,
-    ingredient_name: typeof ing === "string" ? ing : ing.name,
-    quantity:        typeof ing === "object" && ing.qty !== "" ? Number(ing.qty) || null : null,
-    unit:            typeof ing === "object" ? (ing.unit || null) : null,
-    type,
-    sort_order:      i + 1,
+  const toIngObj = (ing, i) => ({
+    name:       typeof ing === "string" ? ing : ing.name,
+    qty:        typeof ing === "object" && ing.qty !== "" ? Number(ing.qty) || null : null,
+    unit:       typeof ing === "object" ? (ing.unit || null) : null,
+    sort_order: i + 1,
   });
-  const ingredients = [
-    ...(dish.reqIngredients ?? []).map((ing, i) => toRow(ing, "required",  i)),
-    ...(dish.optIngredients ?? []).map((ing, i) => toRow(ing, "optional", i)),
-  ];
 
-  if (ingredients.length > 0) {
-    const { error: ingErr } = await supabase.from("dish_ingredients").insert(ingredients);
+  const typeRows = [];
+  if (dish.reqIngredients?.length)
+    typeRows.push({ dish_id: dishRow.id, type: "required", ingredients: dish.reqIngredients.map(toIngObj) });
+  if (dish.optIngredients?.length)
+    typeRows.push({ dish_id: dishRow.id, type: "optional", ingredients: dish.optIngredients.map(toIngObj) });
+
+  if (typeRows.length > 0) {
+    const { error: ingErr } = await supabase.from("dish_ingredients").insert(typeRows);
     if (ingErr) throw ingErr;
   }
 

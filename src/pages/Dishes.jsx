@@ -4,7 +4,7 @@ import {
   Card, Btn, Tag, Input, Textarea, Select, Modal,
   Page, PageHeader, Empty, SectionLabel,
 } from "../components/ui";
-import { DISH_CATEGORIES } from "../data/mockData";
+
 import { insertDish, deleteDish, UNIVERSAL_USER_ID } from "../lib/db";
 
 
@@ -308,7 +308,7 @@ function AddDishForm({ onSave, onCancel }) {
                     label="Category"
                     value={f.category}
                     onChange={e => set("category", e.target.value)}
-                    options={DISH_CATEGORIES}
+                    options={dishCategories}
                   />
                 </div>
                 <Input label="Prep (min)" value={f.prepTime} type="number"
@@ -419,7 +419,7 @@ function DishCard({ dish, onClick }) {
 }
 
 // Main page
-export default function Dishes({ dishes, setDishes, userId }) {
+export default function Dishes({ dishes, setDishes, userId, dishCategories }) {
   const [view, setView]       = useState("list");  // list | add | detail
   const [selected, setSelected] = useState(null);
   const [search, setSearch]   = useState("");

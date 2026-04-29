@@ -3,7 +3,7 @@ import { C, FONTS, RADIUS } from "../theme";
 import {
   Card, Btn, Input, Select, Page, PageHeader, Empty, SectionLabel,
 } from "../components/ui";
-import { PANTRY_CATEGORIES, PANTRY_UNITS } from "../data/mockData";
+
 import { insertPantryItem, deletePantryItem } from "../lib/db";
 
 const CAT_COLORS = {
@@ -40,7 +40,7 @@ function ExpiryLabel({ dateStr }) {
 
 const BLANK = { name: "", qty: "", unit: "g", category: "Produce", expiry: "" };
 
-export default function Pantry({ pantry, setPantry, userId }) {
+export default function Pantry({ pantry, setPantry, userId, pantryCategories, pantryUnits }) {
   const [showAdd, setShowAdd]  = useState(false);
   const [form, setForm]        = useState(BLANK);
   const [search, setSearch]    = useState("");
@@ -70,7 +70,7 @@ export default function Pantry({ pantry, setPantry, userId }) {
   );
 
   // Summary by category
-  const summary = PANTRY_CATEGORIES.filter(c => pantry.some(p => p.category === c));
+  const summary = pantryCategories.filter(c => pantry.some(p => p.category === c));
 
   return (
     <Page>
@@ -134,7 +134,7 @@ export default function Pantry({ pantry, setPantry, userId }) {
                 label="Unit"
                 value={form.unit}
                 onChange={e => set("unit", e.target.value)}
-                options={PANTRY_UNITS}
+                options={pantryUnits}
               />
             </div>
             <div style={{ width: 140 }}>
@@ -142,7 +142,7 @@ export default function Pantry({ pantry, setPantry, userId }) {
                 label="Category"
                 value={form.category}
                 onChange={e => set("category", e.target.value)}
-                options={PANTRY_CATEGORIES}
+                options={pantryCategories}
               />
             </div>
             <div style={{ width: 150 }}>
