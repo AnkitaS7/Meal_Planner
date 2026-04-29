@@ -5,10 +5,10 @@ import { todayDateStr } from "../lib/db";
 import {
   fetchShoppingNeeded, fetchManualShoppingItems,
   addManualShoppingItem, toggleManualShoppingItem, deleteManualShoppingItem,
-  getWeekStart,
+  insertPantryItem, getWeekStart,
 } from "../lib/db";
 
-export default function Shopping({ userId }) {
+export default function Shopping({ userId, setPantry }) {
   const weekStart = getWeekStart();
 
   const [needed, setNeeded]     = useState([]); // { name, type, dish_name }
@@ -17,8 +17,9 @@ export default function Shopping({ userId }) {
   const [manual, setManual]     = useState([]); // shopping_list_items rows
   const [autoChecked, setAutoChecked] = useState({}); // local check state for auto items
   const [extraInput, setExtraInput]   = useState("");
-  const [loading, setLoading]   = useState(true);
+  const [loading, setLoading]       = useState(true);
   const [showExport, setShowExport] = useState(false);
+  const [addingToPantry, setAddingToPantry] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -55,6 +56,37 @@ export default function Shopping({ userId }) {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [userId, weekStart]);
+
+  const checkedAutoCount = Object.values(autoChecked).filter(Boolean).length;
+
+  const addCheckedToPantry = async () => {
+    const allChecked = [
+      ...needed.filter(i => autoChecked[i.name]),
+      ...optNeed.filter(i => autoChecked[i.name]),
+    ];
+    if (!allChecked.length) return;
+
+    // Update UI immediately so the user sees the change on click
+    const addedNames = new Set(allChecked.map(i => i.name));
+    setNeeded(n => n.filter(i => !addedNames.has(i.name)));
+    setOptNeed(n => n.filter(i => !addedNames.has(i.name)));
+    setHave(h => [...h, ...allChecked.map(i => i.name).filter(n => !h.includes(n))]);
+    setAutoChecked(c => {
+      const next = { ...c };
+      addedNames.forEach(name => delete next[name]);
+      return next;
+    });
+
+    setAddingToPantry(true);
+    const results = await Promise.all(
+      allChecked.map(item =>
+        insertPantryItem({ name: item.name, qty: item.qty ?? 1, unit: item.unit ?? "", category: "Groceries", expiry: "" }, userId)
+          .catch(console.error)
+      )
+    ).finally(() => setAddingToPantry(false));
+    const inserted = results.filter(Boolean);
+    if (inserted.length) setPantry(p => [...p, ...inserted]);
+  };
 
   const totalItems = needed.length + optNeed.length + manual.length;
   const doneAuto   = Object.values(autoChecked).filter(Boolean).length;
@@ -318,9 +350,21 @@ export default function Shopping({ userId }) {
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             {/* Required items to buy */}
             <Card>
-              <h3 style={{ fontFamily: FONTS.display, fontSize: 20, marginBottom: 4, color: C.text }}>
-                🛒 Items to Buy
-              </h3>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 4 }}>
+                <h3 style={{ fontFamily: FONTS.display, fontSize: 20, color: C.text }}>
+                  🛒 Items to Buy
+                </h3>
+                {checkedAutoCount > 0 && (
+                  <Btn
+                    variant="sage"
+                    disabled={addingToPantry}
+                    onClick={addCheckedToPantry}
+                    style={{ padding: "7px 14px", fontSize: 13 }}
+                  >
+                    {addingToPantry ? "Adding…" : `Add ${checkedAutoCount} to Pantry 🏺`}
+                  </Btn>
+                )}
+              </div>
               <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 16 }}>
                 {needed.length} required ingredients missing from pantry
               </p>

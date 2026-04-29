@@ -103,7 +103,7 @@ export default function App() {
     planner:     <Planner     dishes={dishes} userId={user.id} />,
     dishes:      <Dishes      dishes={dishes} setDishes={setDishes} userId={user.id} />,
     pantry:      <Pantry      pantry={pantry} setPantry={setPantry} userId={user.id} />,
-    shopping:    <Shopping    dishes={dishes} pantry={pantry} userId={user.id} />,
+    shopping:    <Shopping    dishes={dishes} pantry={pantry} setPantry={setPantry} userId={user.id} />,
     suggestions: <Suggestions dishes={dishes} pantry={pantry} />,
     nutrients:   <Nutrients   dishes={dishes} userId={user.id} />,
     scanner:     <Scanner     setPantry={setPantry} />,
