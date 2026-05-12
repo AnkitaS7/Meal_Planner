@@ -104,7 +104,7 @@ export default function App() {
   const PAGES = {
     dashboard:   <Dashboard   {...sharedProps} setPage={setPage} />,
     planner:     <Planner     dishes={dishes} userId={user.id} />,
-    dishes:      <Dishes      dishes={dishes} setDishes={setDishes} userId={user.id} dishCategories={enums.dishCategories} />,
+    dishes:      <Dishes      dishes={dishes} setDishes={setDishes} userId={user.id} dishCategories={enums.dishCategories} dietaryOptions={enums.dietaryOptions} />,
     pantry:      <Pantry      pantry={pantry} setPantry={setPantry} userId={user.id} pantryCategories={enums.pantryCategories} pantryUnits={enums.pantryUnits} />,
     shopping:    <Shopping    dishes={dishes} pantry={pantry} setPantry={setPantry} userId={user.id} />,
     suggestions: <Suggestions dishes={dishes} pantry={pantry} />,

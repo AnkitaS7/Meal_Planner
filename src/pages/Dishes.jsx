@@ -109,10 +109,25 @@ function DishDetail({ dish, onBack, onDelete }) {
 
           {dish.recipe && (
             <Card>
-              <h3 style={{ fontFamily: FONTS.display, fontSize: 18, marginBottom: 12, color: C.text }}>
+              <h3 style={{ fontFamily: FONTS.display, fontSize: 18, marginBottom: 16, color: C.text }}>
                 📝 Recipe
               </h3>
-              <p style={{ fontSize: 14, color: C.textSub, lineHeight: 1.75 }}>{dish.recipe}</p>
+              <ol style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 12 }}>
+                {dish.recipe.split(/(?<=[.!?])\s+/).filter(s => s.trim()).map((step, i) => (
+                  <li key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                    <span style={{
+                      minWidth: 24, height: 24, borderRadius: "50%",
+                      background: C.accent + "18", color: C.accent,
+                      fontSize: 12, fontWeight: 700,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      flexShrink: 0, marginTop: 1,
+                    }}>
+                      {i + 1}
+                    </span>
+                    <span style={{ fontSize: 14, color: C.textSub, lineHeight: 1.7 }}>{step.trim()}</span>
+                  </li>
+                ))}
+              </ol>
             </Card>
           )}
 
@@ -188,49 +203,19 @@ function IngredientRow({ ing, onChange, onRemove }) {
   );
 }
 
-// Add dish form
+// Add dish form helpers — defined at module level so IngSection has a stable reference
 const BLANK = {
   name: "", category: "Main", prepTime: "", cookTime: "", servings: "2",
   recipe: "", youtubeLink: "", img: "🍽",
   calories: "", protein: "", carbs: "", fat: "", fiber: "",
 };
 
-function AddDishForm({ onSave, onCancel }) {
-  const [f, setF]           = useState(BLANK);
-  const [reqIngs, setReqIngs] = useState([BLANK_ING()]);
-  const [optIngs, setOptIngs] = useState([BLANK_ING()]);
-  const set = (k, v) => setF(prev => ({ ...prev, [k]: v }));
+const updateIng = (list, setList, idx, val) => setList(list.map((x, i) => i === idx ? val : x));
+const addIng    = setList => setList(l => [...l, BLANK_ING()]);
+const removeIng = (list, setList, idx) => setList(list.filter((_, i) => i !== idx));
 
-  const updateIng = (list, setList, idx, val) => setList(list.map((x, i) => i === idx ? val : x));
-  const addIng    = setList => setList(l => [...l, BLANK_ING()]);
-  const removeIng = (list, setList, idx) => setList(list.filter((_, i) => i !== idx));
-
-  const save = () => {
-    onSave({
-      id: Date.now(),
-      name:     f.name,
-      category: f.category,
-      prepTime: parseInt(f.prepTime) || 0,
-      cookTime: parseInt(f.cookTime) || 0,
-      time:     (parseInt(f.prepTime) || 0) + (parseInt(f.cookTime) || 0),
-      servings: parseInt(f.servings) || 2,
-      tags: [],
-      youtubeLink: f.youtubeLink,
-      recipe:      f.recipe,
-      img:         f.img || "🍽",
-      nutrients: {
-        calories: parseInt(f.calories) || 0,
-        protein:  parseInt(f.protein)  || 0,
-        carbs:    parseInt(f.carbs)    || 0,
-        fat:      parseInt(f.fat)      || 0,
-        fiber:    parseInt(f.fiber)    || 0,
-      },
-      reqIngredients: reqIngs.filter(i => i.name.trim()),
-      optIngredients: optIngs.filter(i => i.name.trim()),
-    });
-  };
-
-  const IngSection = ({ label, list, setList }) => (
+function IngSection({ label, list, setList }) {
+  return (
     <div style={{ marginBottom: 4 }}>
       <div style={{ display: "flex", gap: 6, marginBottom: 6, paddingRight: 34 }}>
         {[["Name", "flex: 1"], ["Qty", "width: 64px"], ["Unit", "width: 72px"]].map(([h, s]) => (
@@ -264,6 +249,42 @@ function AddDishForm({ onSave, onCancel }) {
       </button>
     </div>
   );
+}
+
+function AddDishForm({ onSave, onCancel, dishCategories, dietaryOptions }) {
+  const [f, setF]           = useState(BLANK);
+  const [reqIngs, setReqIngs] = useState([BLANK_ING()]);
+  const [optIngs, setOptIngs] = useState([BLANK_ING()]);
+  const [tags, setTags]     = useState([]);
+  const set = (k, v) => setF(prev => ({ ...prev, [k]: v }));
+
+  const toggleTag = tag =>
+    setTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+
+  const save = () => {
+    onSave({
+      id: Date.now(),
+      name:     f.name,
+      category: f.category,
+      prepTime: parseInt(f.prepTime) || 0,
+      cookTime: parseInt(f.cookTime) || 0,
+      time:     (parseInt(f.prepTime) || 0) + (parseInt(f.cookTime) || 0),
+      servings: parseInt(f.servings) || 2,
+      tags,
+      youtubeLink: f.youtubeLink,
+      recipe:      f.recipe,
+      img:         f.img || "🍽",
+      nutrients: {
+        calories: parseInt(f.calories) || 0,
+        protein:  parseInt(f.protein)  || 0,
+        carbs:    parseInt(f.carbs)    || 0,
+        fat:      parseInt(f.fat)      || 0,
+        fiber:    parseInt(f.fiber)    || 0,
+      },
+      reqIngredients: reqIngs.filter(i => i.name.trim()),
+      optIngredients: optIngs.filter(i => i.name.trim()),
+    });
+  };
 
   return (
     <Page>
@@ -333,6 +354,37 @@ function AddDishForm({ onSave, onCancel }) {
                 onChange={e => set("youtubeLink", e.target.value)}
                 placeholder="https://youtube.com/watch?v=..."
               />
+
+              {dietaryOptions?.length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: C.textSub, letterSpacing: 0.6, textTransform: "uppercase" }}>
+                    Dietary Tags
+                  </label>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {dietaryOptions.map(tag => {
+                      const active = tags.includes(tag);
+                      return (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => toggleTag(tag)}
+                          style={{
+                            padding: "5px 12px", borderRadius: RADIUS.full,
+                            border: `1.5px solid ${active ? C.sage : C.border}`,
+                            background: active ? C.sage + "22" : "#fff",
+                            color: active ? C.sage : C.textSub,
+                            fontSize: 12, fontWeight: active ? 600 : 400,
+                            cursor: "pointer", fontFamily: FONTS.body,
+                            transition: "all 0.18s",
+                          }}
+                        >
+                          {active && "✓ "}{tag}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </Card>
         </div>
@@ -419,18 +471,28 @@ function DishCard({ dish, onClick }) {
 }
 
 // Main page
-export default function Dishes({ dishes, setDishes, userId, dishCategories }) {
+export default function Dishes({ dishes, setDishes, userId, dishCategories, dietaryOptions }) {
   const [view, setView]       = useState("list");  // list | add | detail
   const [selected, setSelected] = useState(null);
   const [search, setSearch]   = useState("");
   const [catFilter, setCatFilter] = useState("All");
+  const [tagFilters, setTagFilters] = useState(new Set());
 
   const categories = ["All", ...new Set(dishes.map(d => d.category))];
+  const allTags = [...new Set(dishes.flatMap(d => d.tags ?? []))].sort();
+
+  const toggleTag = tag =>
+    setTagFilters(prev => {
+      const next = new Set(prev);
+      next.has(tag) ? next.delete(tag) : next.add(tag);
+      return next;
+    });
 
   const filtered = dishes.filter(d => {
     const matchName = d.name.toLowerCase().includes(search.toLowerCase());
     const matchCat  = catFilter === "All" || d.category === catFilter;
-    return matchName && matchCat;
+    const matchTags = tagFilters.size === 0 || (d.tags ?? []).some(t => tagFilters.has(t));
+    return matchName && matchCat && matchTags;
   });
 
   if (view === "detail" && selected) {
@@ -456,6 +518,8 @@ export default function Dishes({ dishes, setDishes, userId, dishCategories }) {
           setView("list");
         }}
         onCancel={() => setView("list")}
+        dishCategories={dishCategories}
+        dietaryOptions={dietaryOptions}
       />
     );
   }
@@ -469,39 +533,82 @@ export default function Dishes({ dishes, setDishes, userId, dishCategories }) {
       />
 
       {/* Filters */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap", alignItems: "center" }}>
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="🔍  Search dishes…"
-          style={{
-            flex: 1, minWidth: 200,
-            background: "#fff",
-            border: `1.5px solid ${C.border}`,
-            borderRadius: RADIUS.md,
-            padding: "10px 16px",
-            fontSize: 14, color: C.text,
-          }}
-        />
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {categories.map(c => (
-            <button
-              key={c}
-              onClick={() => setCatFilter(c)}
-              style={{
-                padding: "8px 16px", borderRadius: RADIUS.sm,
-                border: `1.5px solid ${catFilter === c ? C.accent : C.border}`,
-                background: catFilter === c ? C.accentLight : "#fff",
-                color: catFilter === c ? C.accent : C.textSub,
-                fontSize: 13, fontWeight: catFilter === c ? 600 : 400,
-                cursor: "pointer", fontFamily: FONTS.body,
-                transition: "all 0.18s",
-              }}
-            >
-              {c}
-            </button>
-          ))}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="🔍  Search dishes…"
+            style={{
+              flex: 1, minWidth: 200,
+              background: "#fff",
+              border: `1.5px solid ${C.border}`,
+              borderRadius: RADIUS.md,
+              padding: "10px 16px",
+              fontSize: 14, color: C.text,
+            }}
+          />
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {categories.map(c => (
+              <button
+                key={c}
+                onClick={() => setCatFilter(c)}
+                style={{
+                  padding: "8px 16px", borderRadius: RADIUS.sm,
+                  border: `1.5px solid ${catFilter === c ? C.accent : C.border}`,
+                  background: catFilter === c ? C.accentLight : "#fff",
+                  color: catFilter === c ? C.accent : C.textSub,
+                  fontSize: 13, fontWeight: catFilter === c ? 600 : 400,
+                  cursor: "pointer", fontFamily: FONTS.body,
+                  transition: "all 0.18s",
+                }}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {allTags.length > 0 && (
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, letterSpacing: 0.6, textTransform: "uppercase", marginRight: 4 }}>
+              Diet
+            </span>
+            {allTags.map(tag => {
+              const active = tagFilters.has(tag);
+              return (
+                <button
+                  key={tag}
+                  onClick={() => toggleTag(tag)}
+                  style={{
+                    padding: "5px 12px", borderRadius: RADIUS.full,
+                    border: `1.5px solid ${active ? C.sage : C.border}`,
+                    background: active ? C.sage + "22" : "#fff",
+                    color: active ? C.sage : C.textSub,
+                    fontSize: 12, fontWeight: active ? 600 : 400,
+                    cursor: "pointer", fontFamily: FONTS.body,
+                    transition: "all 0.18s",
+                  }}
+                >
+                  {active && "✓ "}{tag}
+                </button>
+              );
+            })}
+            {tagFilters.size > 0 && (
+              <button
+                onClick={() => setTagFilters(new Set())}
+                style={{
+                  padding: "5px 10px", borderRadius: RADIUS.full,
+                  border: `1.5px solid ${C.border}`,
+                  background: "none", color: C.textMuted,
+                  fontSize: 12, cursor: "pointer", fontFamily: FONTS.body,
+                }}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Grid */}
