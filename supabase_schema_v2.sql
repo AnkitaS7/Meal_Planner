@@ -663,26 +663,21 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
 
 -- v_dish_full — dish with ingredients pre-aggregated.
 CREATE VIEW v_dish_full
-  WITH (security_invoker = true)
+            WITH (security_invoker = true)
 AS
 SELECT
-  d.*,
-  COALESCE(
-    ARRAY_AGG(di.ingredient_name ORDER BY di.sort_order)
-      FILTER (WHERE di.type = 'required'),
-    '{}'
-  ) AS req_ingredients,
-  COALESCE(
-    ARRAY_AGG(di.ingredient_name ORDER BY di.sort_order)
-      FILTER (WHERE di.type = 'optional'),
-    '{}'
-  ) AS opt_ingredients
+    d.*,
+    COALESCE(req.servings, opt.servings) AS servings,
+    COALESCE(req.ingredients, '[]'::jsonb) AS req_ingredients,
+    COALESCE(opt.ingredients, '[]'::jsonb) AS opt_ingredients
 FROM dishes d
-LEFT JOIN dish_ingredients di ON di.dish_id = d.id
-GROUP BY d.id;
+         LEFT JOIN dish_ingredients req
+                   ON req.dish_id = d.id AND req.type = 'required'
+         LEFT JOIN dish_ingredients opt
+                   ON opt.dish_id = d.id AND opt.type = 'optional';
 
 COMMENT ON VIEW v_dish_full IS
-  'Dishes with ingredients aggregated into arrays. Use for single-query dish detail fetches.';
+  'Dishes joined with servings and required/optional ingredient arrays. Use for single-query dish detail fetches.';
 
 
 -- v_pantry_expiry_status — pantry items with UI urgency label.

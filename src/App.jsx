@@ -144,7 +144,7 @@ export default function App() {
         padding: isMobile ? "16px 16px 80px" : "36px 40px",
         overflowY: "auto",
         maxHeight: "100vh",
-        maxWidth: 1280,
+        minWidth: 0,
       }}>
         {/* Mobile top bar */}
         {isMobile && (
