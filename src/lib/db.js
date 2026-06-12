@@ -93,13 +93,22 @@ export async function fetchAppEnums() {
 export const UNIVERSAL_USER_ID = "aaaaaaaa-0001-0001-0001-000000000001";
 
 export async function fetchDishes(userId) {
-  const { data, error } = await supabase
-    .from("v_dish_full")
-    .select("*")
-    .in("user_id", [UNIVERSAL_USER_ID, userId])
-    .order("id");
-  if (error) throw error;
-  return data.map(mapDish);
+  const PAGE = 1000;
+  let from = 0;
+  let all = [];
+  while (true) {
+    const { data, error } = await supabase
+      .from("v_dish_full")
+      .select("*")
+      .in("user_id", [UNIVERSAL_USER_ID, userId])
+      .order("id")
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    all = all.concat(data);
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+  return all.map(mapDish);
 }
 
 export async function insertDish(dish, userId) {
