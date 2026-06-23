@@ -92,6 +92,13 @@ export async function fetchAppEnums() {
 
 export const UNIVERSAL_USER_ID = "aaaaaaaa-0001-0001-0001-000000000001";
 
+// Light column set for bulk loading: everything except recipe_text, which is
+// by far the heaviest column (~1 KB/dish) and only needed on the detail view.
+const DISH_LIST_COLUMNS =
+  "id,user_id,name,category,prep_time_min,cook_time_min,total_time_min," +
+  "servings,tags,img_emoji,youtube_url,cal,protein_g,carbs_g,fat_g,fiber_g," +
+  "req_ingredients,opt_ingredients";
+
 export async function fetchDishes(userId) {
   const PAGE = 1000;
   let from = 0;
@@ -99,7 +106,7 @@ export async function fetchDishes(userId) {
   while (true) {
     const { data, error } = await supabase
       .from("v_dish_full")
-      .select("*")
+      .select(DISH_LIST_COLUMNS)
       .in("user_id", [UNIVERSAL_USER_ID, userId])
       .order("id")
       .range(from, from + PAGE - 1);
@@ -109,6 +116,52 @@ export async function fetchDishes(userId) {
     from += PAGE;
   }
   return all.map(mapDish);
+}
+
+// Server-side page for the Dish Database screen: filtering, searching and
+// counting happen in Postgres, so only `pageSize` dishes travel to the client.
+export async function fetchDishesPage(userId, {
+  page = 1, pageSize = 12, search = "", category = "All", tags = [],
+} = {}) {
+  let q = supabase
+    .from("v_dish_full")
+    .select(DISH_LIST_COLUMNS, { count: "exact" })
+    .in("user_id", [UNIVERSAL_USER_ID, userId]);
+
+  if (search.trim())     q = q.ilike("name", `%${search.trim()}%`);
+  if (category !== "All") q = q.eq("category", category);
+  if (tags.length > 0)   q = q.overlaps("tags", tags);
+
+  const from = (page - 1) * pageSize;
+  const { data, error, count } = await q.order("id").range(from, from + pageSize - 1);
+  if (error) throw error;
+  return { dishes: data.map(mapDish), total: count ?? 0 };
+}
+
+// Typeahead over the ingredient reference table (pantry "add item" field).
+export async function searchIngredientAliases(term, limit = 8) {
+  const t = term.trim();
+  if (t.length < 2) return [];
+  const { data, error } = await supabase
+    .from("ingredient_aliases")
+    .select("alias,category,is_canonical")
+    .ilike("alias", `%${t}%`)
+    .order("is_canonical", { ascending: false })
+    .order("alias")
+    .limit(limit);
+  if (error) throw error;
+  return data;
+}
+
+// Lazy-load the recipe text only when a dish detail is opened.
+export async function fetchDishRecipe(dishId) {
+  const { data, error } = await supabase
+    .from("dishes")
+    .select("recipe_text")
+    .eq("id", dishId)
+    .single();
+  if (error) throw error;
+  return data?.recipe_text ?? "";
 }
 
 export async function insertDish(dish, userId) {

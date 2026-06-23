@@ -1,15 +1,86 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { C, FONTS, RADIUS, SHADOW } from "../theme";
 import {
   Card, Btn, Tag, Input, Textarea, Select, Modal,
   Page, PageHeader, Empty, SectionLabel,
 } from "../components/ui";
 
-import { insertDish, deleteDish, UNIVERSAL_USER_ID } from "../lib/db";
+import { insertDish, deleteDish, fetchDishesPage, fetchDishRecipe, UNIVERSAL_USER_ID } from "../lib/db";
 
+const PAGE_SIZE = 12;
 
 // Dish detail
-function DishDetail({ dish, onBack, onDelete }) {
+function DishDetail({ dish: dishProp, onBack, onDelete }) {
+  // recipe_text is excluded from list payloads; fetch it on demand
+  const [dish, setDish] = useState(dishProp);
+  const [servings, setServings] = useState(dishProp.servings || 1);
+
+  useEffect(() => {
+    let alive = true;
+    if (!dishProp.recipe) {
+      fetchDishRecipe(dishProp.id)
+        .then(text => { if (alive && text) setDish(d => ({ ...d, recipe: text })); })
+        .catch(console.error);
+    }
+    return () => { alive = false; };
+  }, [dishProp.id]);
+
+  const baseServings = dish.servings || 1;
+  const scale = servings / baseServings;
+
+  const parseQty = qty => {
+    if (qty == null) return null;
+    if (typeof qty === "number") return qty;
+    const s = String(qty).trim();
+    const mixed = s.match(/^(\d+)\s+(\d+)\/(\d+)$/);
+    if (mixed) return parseInt(mixed[1]) + parseInt(mixed[2]) / parseInt(mixed[3]);
+    const frac = s.match(/^(\d+)\/(\d+)$/);
+    if (frac) return parseInt(frac[1]) / parseInt(frac[2]);
+    return parseFloat(s);
+  };
+
+  const toFraction = num => {
+    const whole = Math.floor(num);
+    const dec = num - whole;
+    if (dec < 0.01) return whole === 0 ? "0" : String(whole);
+    const denoms = [2, 3, 4, 6, 8, 12, 16];
+    let bestN = 1, bestD = 1, bestDiff = Infinity;
+    for (const d of denoms) {
+      const n = Math.round(dec * d);
+      const diff = Math.abs(dec - n / d);
+      if (diff < bestDiff) { bestDiff = diff; bestN = n; bestD = d; }
+    }
+    const gcd = (a, b) => b === 0 ? a : gcd(b, a % b);
+    const g = gcd(bestN, bestD);
+    const n = bestN / g, d = bestD / g;
+    if (n >= d) return String(whole + 1);
+    return whole > 0 ? `${whole} ${n}/${d}` : `${n}/${d}`;
+  };
+
+  const scaleQty = qty => {
+    const n = parseQty(qty);
+    if (n == null || isNaN(n)) return qty;
+    const scaled = n * scale;
+    return Number.isInteger(scaled) ? String(scaled) : toFraction(scaled);
+  };
+
+  const renderIngList = (ingredients, color) => (
+    <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
+      {ingredients.map(i => (
+        <li key={i.name} style={{
+          display: "flex", alignItems: "center", gap: 10,
+          padding: "8px 12px", borderRadius: 8,
+          background: color + "12", borderLeft: `3px solid ${color}`,
+        }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color, minWidth: 72 }}>
+            {i.qty != null ? `${scaleQty(i.qty)}${i.unit ? " " + i.unit : ""}` : "—"}
+          </span>
+          <span style={{ fontSize: 13, color: C.text }}>{i.name}</span>
+        </li>
+      ))}
+    </ul>
+  );
+
   return (
     <Page>
       <button
@@ -40,34 +111,72 @@ function DishDetail({ dish, onBack, onDelete }) {
               {dish.prepTime > 0 && <Tag color={C.sage}>🥄 Prep {dish.prepTime} min</Tag>}
               {dish.cookTime > 0 && <Tag color={C.sage}>🍳 Cook {dish.cookTime} min</Tag>}
               {dish.prepTime === 0 && dish.cookTime === 0 && <Tag color={C.sage}>⏱ {dish.time} min</Tag>}
-              <Tag color={C.gold}>👥 {dish.servings} servings</Tag>
               {dish.tags.map(t => <Tag key={t} color={C.textMuted}>{t}</Tag>)}
             </div>
 
+            {/* Serving size selector */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.textSub, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                Servings
+              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: 0, border: `1.5px solid ${C.border}`, borderRadius: 8, overflow: "hidden" }}>
+                <button
+                  onClick={() => setServings(s => Math.max(1, s - 1))}
+                  style={{
+                    width: 32, height: 32, border: "none", background: C.bg,
+                    color: C.textSub, fontSize: 18, cursor: "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontFamily: FONTS.body,
+                  }}
+                >−</button>
+                <span style={{
+                  minWidth: 36, textAlign: "center", fontSize: 14,
+                  fontWeight: 700, color: C.text, fontFamily: FONTS.display,
+                  borderLeft: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`,
+                  padding: "4px 8px",
+                }}>
+                  {servings}
+                </span>
+                <button
+                  onClick={() => setServings(s => s + 1)}
+                  style={{
+                    width: 32, height: 32, border: "none", background: C.bg,
+                    color: C.textSub, fontSize: 18, cursor: "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontFamily: FONTS.body,
+                  }}
+                >+</button>
+              </div>
+              {servings !== baseServings && (
+                <button
+                  onClick={() => setServings(baseServings)}
+                  style={{
+                    fontSize: 11, color: C.textMuted, background: "none",
+                    border: `1px solid ${C.border}`, borderRadius: 6,
+                    padding: "3px 8px", cursor: "pointer", fontFamily: FONTS.body,
+                  }}
+                >
+                  Reset
+                </button>
+              )}
+            </div>
+
             <SectionLabel>Required Ingredients</SectionLabel>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
-              {dish.reqIngredients.map(i => (
-                <Tag key={i.name} color={C.accent}>
-                  {i.qty != null ? `${i.qty}${i.unit ? " " + i.unit : ""} ` : ""}{i.name}
-                </Tag>
-              ))}
+            <div style={{ marginBottom: 16, marginTop: 6 }}>
+              {renderIngList(dish.reqIngredients, C.accent)}
             </div>
 
             {dish.optIngredients.length > 0 && (
               <>
                 <SectionLabel>Optional Ingredients</SectionLabel>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  {dish.optIngredients.map(i => (
-                    <Tag key={i.name} color={C.textMuted}>
-                      {i.qty != null ? `${i.qty}${i.unit ? " " + i.unit : ""} ` : ""}{i.name}
-                    </Tag>
-                  ))}
+                <div style={{ marginTop: 6 }}>
+                  {renderIngList(dish.optIngredients, C.textMuted)}
                 </div>
               </>
             )}
           </Card>
 
-            {(dish.user_id !== UNIVERSAL_USER_ID) && <Btn variant="danger" onClick={() => onDelete(dish.id)} style={{ alignSelf: "flex-start" }}>
+          {(dish.user_id !== UNIVERSAL_USER_ID) && <Btn variant="danger" onClick={() => onDelete(dish.id)} style={{ alignSelf: "flex-start" }}>
             🗑 Delete Dish
           </Btn>}
         </div>
@@ -470,6 +579,36 @@ function DishCard({ dish, onClick }) {
   );
 }
 
+// Pagination footer
+function Pagination({ page, totalPages, onChange }) {
+  if (totalPages <= 1) return null;
+  const nums = [];
+  for (let p = 1; p <= totalPages; p++) {
+    if (p === 1 || p === totalPages || Math.abs(p - page) <= 1) nums.push(p);
+    else if (nums[nums.length - 1] !== "…") nums.push("…");
+  }
+  const btn = (active = false, disabled = false) => ({
+    minWidth: 34, padding: "7px 11px", borderRadius: RADIUS.sm,
+    border: `1.5px solid ${active ? C.accent : C.border}`,
+    background: active ? C.accentLight : "#fff",
+    color: disabled ? C.textMuted : active ? C.accent : C.textSub,
+    fontSize: 13, fontWeight: active ? 700 : 400,
+    cursor: disabled ? "default" : "pointer", fontFamily: FONTS.body,
+    opacity: disabled ? 0.5 : 1, transition: "all 0.18s",
+  });
+  return (
+    <div style={{ display: "flex", gap: 6, justifyContent: "center", alignItems: "center", marginTop: 28, flexWrap: "wrap" }}>
+      <button style={btn(false, page === 1)} disabled={page === 1} onClick={() => onChange(page - 1)}>← Prev</button>
+      {nums.map((p, i) =>
+        p === "…"
+          ? <span key={`e${i}`} style={{ color: C.textMuted, padding: "0 2px" }}>…</span>
+          : <button key={p} style={btn(p === page)} onClick={() => onChange(p)}>{p}</button>
+      )}
+      <button style={btn(false, page === totalPages)} disabled={page === totalPages} onClick={() => onChange(page + 1)}>Next →</button>
+    </div>
+  );
+}
+
 // Main page
 export default function Dishes({ dishes, setDishes, userId, dishCategories, dietaryOptions }) {
   const [view, setView]       = useState("list");  // list | add | detail
@@ -478,8 +617,46 @@ export default function Dishes({ dishes, setDishes, userId, dishCategories, diet
   const [catFilter, setCatFilter] = useState("All");
   const [tagFilters, setTagFilters] = useState(new Set());
 
-  const categories = ["All", ...new Set(dishes.map(d => d.category))];
-  const allTags = [...new Set(dishes.flatMap(d => d.tags ?? []))].sort();
+  // server-side paging state
+  const [items, setItems]     = useState([]);
+  const [total, setTotal]     = useState(0);
+  const [page, setPage]       = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // debounce the search box so we query while the user types, not per keystroke
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const tagKey = [...tagFilters].sort().join("|");
+
+  // any filter change returns to page 1
+  useEffect(() => { setPage(1); }, [debouncedSearch, catFilter, tagKey]);
+
+  // fetch the current page from the server (only PAGE_SIZE dishes travel)
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    fetchDishesPage(userId, {
+      page, pageSize: PAGE_SIZE,
+      search: debouncedSearch, category: catFilter, tags: [...tagFilters],
+    })
+      .then(({ dishes: d, total: t }) => { if (alive) { setItems(d); setTotal(t); } })
+      .catch(console.error)
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [userId, page, debouncedSearch, catFilter, tagKey, refreshKey]);
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const categories = ["All", ...(dishCategories?.length
+    ? dishCategories
+    : [...new Set(items.map(d => d.category))])];
+  const allTags = (dietaryOptions?.length
+    ? [...dietaryOptions]
+    : [...new Set(items.flatMap(d => d.tags ?? []))]).sort();
 
   const toggleTag = tag =>
     setTagFilters(prev => {
@@ -487,13 +664,6 @@ export default function Dishes({ dishes, setDishes, userId, dishCategories, diet
       next.has(tag) ? next.delete(tag) : next.add(tag);
       return next;
     });
-
-  const filtered = dishes.filter(d => {
-    const matchName = d.name.toLowerCase().includes(search.toLowerCase());
-    const matchCat  = catFilter === "All" || d.category === catFilter;
-    const matchTags = tagFilters.size === 0 || (d.tags ?? []).some(t => tagFilters.has(t));
-    return matchName && matchCat && matchTags;
-  });
 
   if (view === "detail" && selected) {
     return (
@@ -503,6 +673,7 @@ export default function Dishes({ dishes, setDishes, userId, dishCategories, diet
         onDelete={async id => {
           await deleteDish(id).catch(console.error);
           setDishes(ds => ds.filter(d => d.id !== id));
+          setRefreshKey(k => k + 1);
           setView("list"); setSelected(null);
         }}
       />
@@ -514,7 +685,7 @@ export default function Dishes({ dishes, setDishes, userId, dishCategories, diet
       <AddDishForm
         onSave={async dish => {
           const saved = await insertDish(dish, userId).catch(console.error);
-          if (saved) setDishes(ds => [...ds, saved]);
+          if (saved) { setDishes(ds => [...ds, saved]); setRefreshKey(k => k + 1); }
           setView("list");
         }}
         onCancel={() => setView("list")}
@@ -528,7 +699,7 @@ export default function Dishes({ dishes, setDishes, userId, dishCategories, diet
     <Page>
       <PageHeader
         title="Dish Database"
-        subtitle={`${dishes.length} dishes in your collection`}
+        subtitle={loading && total === 0 ? "Loading dishes…" : `${total} dishes in your collection`}
         action={<Btn onClick={() => setView("add")}>+ Add New Dish</Btn>}
       />
 
@@ -612,7 +783,7 @@ export default function Dishes({ dishes, setDishes, userId, dishCategories, diet
       </div>
 
       {/* Grid */}
-      {filtered.length === 0 ? (
+      {!loading && items.length === 0 ? (
         <Empty
           icon="🍽"
           title="No dishes found"
@@ -620,19 +791,28 @@ export default function Dishes({ dishes, setDishes, userId, dishCategories, diet
           action={<Btn onClick={() => setView("add")}>+ Add a Dish</Btn>}
         />
       ) : (
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))",
-          gap: 16,
-        }}>
-          {filtered.map(d => (
-            <DishCard
-              key={d.id}
-              dish={d}
-              onClick={() => { setSelected(d); setView("detail"); }}
-            />
-          ))}
-        </div>
+        <>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))",
+            gap: 16,
+            opacity: loading ? 0.55 : 1,
+            transition: "opacity 0.15s",
+          }}>
+            {items.map(d => (
+              <DishCard
+                key={d.id}
+                dish={d}
+                onClick={() => { setSelected(d); setView("detail"); }}
+              />
+            ))}
+          </div>
+
+          <div style={{ textAlign: "center", marginTop: 16, fontSize: 12, color: C.textMuted }}>
+            {total > 0 && `Showing ${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, total)} of ${total}`}
+          </div>
+          <Pagination page={page} totalPages={totalPages} onChange={p => setPage(p)} />
+        </>
       )}
     </Page>
   );

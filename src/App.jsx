@@ -73,21 +73,27 @@ export default function App() {
       return;
     }
 
+    // Block first paint only on the small, fast queries…
     setDataLoading(true);
     Promise.all([
-      fetchDishes(user.id),
       fetchPantry(user.id),
       fetchProfile(user.id),
       fetchAppEnums(),
     ])
-      .then(([d, p, prof, e]) => {
-        setDishes(d);
+      .then(([p, prof, e]) => {
         setPantry(p);
         setProfile(prof);
         setEnums(e);
       })
       .catch(console.error)
       .finally(() => setDataLoading(false));
+
+    // …and stream the full dish list in the background. The Dish Database
+    // page does its own server-side paging, so nothing waits on this; it
+    // feeds the planner/suggestions/nutrients pages as soon as it lands.
+    fetchDishes(user.id)
+      .then(setDishes)
+      .catch(console.error);
   }, [user?.id]);
 
   if (authLoading || dataLoading) return <LoadingScreen />;

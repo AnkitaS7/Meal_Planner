@@ -1,10 +1,10 @@
-import { useState } from "react";
-import { C, FONTS, RADIUS } from "../theme";
+import { useState, useEffect, useRef } from "react";
+import { C, FONTS, RADIUS, SHADOW } from "../theme";
 import {
   Card, Btn, Input, Select, Page, PageHeader, Empty, SectionLabel,
 } from "../components/ui";
 
-import { insertPantryItem, deletePantryItem } from "../lib/db";
+import { insertPantryItem, deletePantryItem, searchIngredientAliases } from "../lib/db";
 
 const CAT_COLORS = {
   Grains:   C.gold,
@@ -16,6 +16,7 @@ const CAT_COLORS = {
   Seafood:  C.teal,
   Spices:   C.purple,
   Frozen:   "#6B96C4",
+  Groceries: "#8A8FA3",
 };
 
 function daysUntilExpiry(dateStr) {
@@ -39,6 +40,98 @@ function ExpiryLabel({ dateStr }) {
 }
 
 const BLANK = { name: "", qty: "", unit: "g", category: "Produce", expiry: "" };
+
+// Item-name input with typeahead suggestions from the ingredient reference
+// table. Picking a suggestion fills the name AND auto-selects its category;
+// free typing (ignoring the suggestions) still works exactly as before.
+function ItemNameAutocomplete({ value, onChange, onPick, pantryCategories }) {
+  const [suggestions, setSuggestions] = useState([]);
+  const [open, setOpen]   = useState(false);
+  const [hi, setHi]       = useState(-1);     // highlighted index
+  const pickedRef = useRef(false);            // suppress refetch after a pick
+  const boxRef    = useRef(null);
+
+  useEffect(() => {
+    if (pickedRef.current) { pickedRef.current = false; return; }
+    if (value.trim().length < 2) { setSuggestions([]); setOpen(false); return; }
+    let alive = true;
+    const t = setTimeout(() => {
+      searchIngredientAliases(value)
+        .then(rows => { if (alive) { setSuggestions(rows); setOpen(rows.length > 0); setHi(-1); } })
+        .catch(console.error);
+    }, 250);
+    return () => { alive = false; clearTimeout(t); };
+  }, [value]);
+
+  // close when clicking outside
+  useEffect(() => {
+    const close = e => { if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, []);
+
+  const pick = s => {
+    pickedRef.current = true;
+    onPick(s.alias, pantryCategories.includes(s.category) ? s.category : null);
+    setOpen(false);
+  };
+
+  const onKeyDown = e => {
+    if (!open) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); setHi(h => Math.min(h + 1, suggestions.length - 1)); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setHi(h => Math.max(h - 1, 0)); }
+    else if (e.key === "Enter" && hi >= 0) { e.preventDefault(); pick(suggestions[hi]); }
+    else if (e.key === "Escape") setOpen(false);
+  };
+
+  return (
+    <div ref={boxRef} style={{ position: "relative" }} onKeyDown={onKeyDown}>
+      <Input
+        label="Item Name *"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder="e.g. Olive oil"
+      />
+      {open && (
+        <div style={{
+          position: "absolute", top: "100%", left: 0, right: 0, zIndex: 30,
+          marginTop: 4, background: "#fff",
+          border: `1.5px solid ${C.border}`, borderRadius: RADIUS.md,
+          boxShadow: SHADOW.md, overflow: "hidden", maxHeight: 264, overflowY: "auto",
+        }}>
+          {suggestions.map((s, i) => {
+            const color = CAT_COLORS[s.category] ?? C.textSub;
+            return (
+              <div
+                key={s.alias}
+                onMouseDown={e => { e.preventDefault(); pick(s); }}
+                onMouseEnter={() => setHi(i)}
+                style={{
+                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                  gap: 10, padding: "9px 14px", cursor: "pointer",
+                  background: i === hi ? C.accentLight : "#fff",
+                  borderBottom: i < suggestions.length - 1 ? `1px solid ${C.border}55` : "none",
+                }}
+              >
+                <span style={{ fontSize: 13, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {s.alias}
+                </span>
+                <span style={{
+                  fontSize: 10, fontWeight: 700, color, flexShrink: 0,
+                  background: color + "18", border: `1px solid ${color}44`,
+                  borderRadius: RADIUS.full, padding: "2px 8px",
+                  letterSpacing: 0.4, textTransform: "uppercase",
+                }}>
+                  {s.category}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Pantry({ pantry, setPantry, userId, pantryCategories, pantryUnits }) {
   const [showAdd, setShowAdd]  = useState(false);
@@ -114,11 +207,12 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
             display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end",
           }}>
             <div style={{ flex: 2, minWidth: 180 }}>
-              <Input
-                label="Item Name *"
+              <ItemNameAutocomplete
                 value={form.name}
-                onChange={e => set("name", e.target.value)}
-                placeholder="e.g. Olive oil"
+                onChange={v => set("name", v)}
+                onPick={(name, category) =>
+                  setForm(f => ({ ...f, name, category: category ?? f.category }))}
+                pantryCategories={pantryCategories}
               />
             </div>
             <div style={{ width: 90 }}>
