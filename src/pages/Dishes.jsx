@@ -29,15 +29,12 @@ function DishDetail({ dish: dishProp, onBack, onDelete }) {
   const baseServings = dish.servings || 1;
   const scale = servings / baseServings;
 
+  // Quantities are stored numerically; PostgREST may hand them back as a
+  // number (JSONB) or a numeric string, so coerce either to a number.
   const parseQty = qty => {
-    if (qty == null) return null;
-    if (typeof qty === "number") return qty;
-    const s = String(qty).trim();
-    const mixed = s.match(/^(\d+)\s+(\d+)\/(\d+)$/);
-    if (mixed) return parseInt(mixed[1]) + parseInt(mixed[2]) / parseInt(mixed[3]);
-    const frac = s.match(/^(\d+)\/(\d+)$/);
-    if (frac) return parseInt(frac[1]) / parseInt(frac[2]);
-    return parseFloat(s);
+    if (qty == null || qty === "") return null;
+    const n = Number(qty);
+    return isNaN(n) ? null : n;
   };
 
   const toFraction = num => {
@@ -230,7 +227,7 @@ function DishDetail({ dish: dishProp, onBack, onDelete }) {
             </h3>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 8 }}>
               {[
-                ["Calories", dish.nutrients.calories, "kcal"],
+                ["Calories", (Number(dish.nutrients.calories) || 0).toFixed(1), "kcal"],
                 ["Protein",  dish.nutrients.protein,  "g"],
                 ["Carbs",    dish.nutrients.carbs,     "g"],
                 ["Fat",      dish.nutrients.fat,       "g"],
@@ -613,7 +610,7 @@ function DishCard({ dish, onClick }) {
         borderTop: `1px solid ${C.border}`, paddingTop: 12,
       }}>
         <span style={{ fontSize: 12, color: C.textMuted }}>⏱ {dish.time} min</span>
-        <span style={{ fontSize: 12, color: C.textMuted }}>🔥 {dish.nutrients.calories}</span>
+        <span style={{ fontSize: 12, color: C.textMuted }}>🔥 {(Number(dish.nutrients.calories) || 0).toFixed(1)}</span>
         <span style={{ fontSize: 12, color: C.textMuted }}>👥 {dish.servings}</span>
       </div>
     </div>

@@ -4,7 +4,7 @@ import {
   PieChart, Pie, Cell,
 } from "recharts";
 import { C, FONTS, RADIUS } from "../theme";
-import { Card, NutrientBar, Tag, Page, PageHeader } from "../components/ui";
+import { Card, Tag, Page, PageHeader } from "../components/ui";
 import { DAYS } from "../data/mockData";
 import { fetchNutrientTargets, fetchWeeklyPlan, getWeekStart } from "../lib/db";
 
@@ -63,7 +63,7 @@ export default function Nutrients({ dishes, userId }) {
         });
         setWeekData(DAYS.map(day => ({
           day,
-          calories: Math.round(byDay[day].calories),
+          calories: Math.round(byDay[day].calories * 10) / 10,
           protein:  Math.round(byDay[day].protein),
           carbs:    Math.round(byDay[day].carbs),
           fat:      Math.round(byDay[day].fat),
@@ -76,7 +76,9 @@ export default function Nutrients({ dishes, userId }) {
         const nutrientKey = { Calories: "calories", Protein: "protein", Carbs: "carbs", Fat: "fat", Fiber: "fiber" };
         setNutrientData(targets.map(t => ({
           name:    t.nutrient_name,
-          current: Math.round(todayTotals[nutrientKey[t.nutrient_name]] ?? 0),
+          current: t.nutrient_name === "Calories"
+            ? Math.round((todayTotals[nutrientKey[t.nutrient_name]] ?? 0) * 10) / 10
+            : Math.round(todayTotals[nutrientKey[t.nutrient_name]] ?? 0),
           target:  Number(t.target_value),
           unit:    t.unit,
           color:   t.display_color,
@@ -108,6 +110,9 @@ export default function Nutrients({ dishes, userId }) {
       />
 
       {/* Daily target rings */}
+      <h3 style={{ fontFamily: FONTS.display, fontSize: 18, marginBottom: 16, color: C.text, textAlign: "center" }}>
+        Today's Progress
+      </h3>
       <div style={{
         display: "grid",
         gridTemplateColumns: "repeat(5, 1fr)",
@@ -142,7 +147,7 @@ export default function Nutrients({ dishes, userId }) {
                 </div>
               </div>
               <div style={{ fontSize: 22, fontWeight: 700, color: C.text, fontFamily: FONTS.display }}>
-                {n.current}
+                {n.name === "Calories" ? n.current.toFixed(1) : n.current}
               </div>
               <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2, lineHeight: 1.5 }}>
                 {n.unit} {n.name}<br />
@@ -200,16 +205,6 @@ export default function Nutrients({ dishes, userId }) {
           </div>
         </Card>
       </div>
-
-      {/* Daily target bars */}
-      <Card style={{ marginBottom: 20 }}>
-        <h3 style={{ fontFamily: FONTS.display, fontSize: 18, marginBottom: 20, color: C.text }}>
-          Today's Targets
-        </h3>
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {nutrientData.map(n => <NutrientBar key={n.name} {...n} />)}
-        </div>
-      </Card>
 
       {/* Per-dish comparison */}
       <Card>

@@ -23,7 +23,7 @@ function SuggestionCard({ dish, type, onViewDish }) {
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
         <Tag color={C.accent}>{dish.category}</Tag>
         <Tag color={C.sage}>⏱ {dish.time} min</Tag>
-        <Tag color={C.gold}>🔥 {dish.nutrients.calories} kcal</Tag>
+        <Tag color={C.gold}>🔥 {(Number(dish.nutrients.calories) || 0).toFixed(1)} kcal</Tag>
       </div>
 
       {type === "partial" && missing.length > 0 && (

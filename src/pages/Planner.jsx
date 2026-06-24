@@ -87,7 +87,7 @@ export default function Planner({ dishes, userId }) {
   const dayTotal = (day) => parseFloat(MEALS.reduce((sum, meal) => {
         const dish = dishById(plan[day]?.[meal]);
         return sum + (dish?.nutrients.calories ?? 0);
-    }, 0).toFixed(2));
+    }, 0).toFixed(1));
 
   const weekLabel = (() => {
     const dates = Object.values(weekDates);
@@ -208,7 +208,7 @@ export default function Planner({ dishes, userId }) {
           {dish.name}
         </div>
         <div style={{ fontSize: 11, color: C.textMuted, marginTop: 3 }}>
-          {dish.nutrients.calories} kcal
+          {(Number(dish.nutrients.calories) || 0).toFixed(1)} kcal
         </div>
         <button
           onClick={() => remove(day, meal)}
@@ -281,7 +281,7 @@ export default function Planner({ dishes, userId }) {
               <div>
                 <div style={{ fontWeight: 600, color: C.text }}>{d.name}</div>
                 <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
-                  {d.time} min · {d.category} · {d.nutrients.calories} kcal
+                  {d.time} min · {d.category} · {(Number(d.nutrients.calories) || 0).toFixed(1)} kcal
                 </div>
               </div>
             </div>
@@ -355,7 +355,7 @@ export default function Planner({ dishes, userId }) {
                     color: isSelected ? "rgba(255,255,255,0.8)" : C.accent,
                     fontWeight: 500,
                   }}>
-                    {kcal}
+                    {kcal.toFixed(1)}
                   </span>
                 )}
               </button>
@@ -440,7 +440,7 @@ export default function Planner({ dishes, userId }) {
                   <th key={d} style={{ minWidth: 138, padding: "6px 4px" }}>
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
                       <span style={{ fontSize: 13, color: C.text, fontWeight: 600 }}>{d}</span>
-                      {dayTotal(d) > 0 && <Tag color={C.accent}>{dayTotal(d)} kcal</Tag>}
+                      {dayTotal(d) > 0 && <Tag color={C.accent}>{dayTotal(d).toFixed(1)} kcal</Tag>}
                       <button onClick={() => clearDay(d)}
                         style={{
                           fontSize: 10, color: C.textMuted, background: "none",
