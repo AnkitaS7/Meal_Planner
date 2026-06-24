@@ -1,11 +1,15 @@
-import { useState, useEffect } from "react";
-import { C, FONTS } from "../theme";
-import { Card, Btn, Tag, Modal, Page, PageHeader } from "../components/ui";
-import { DAYS, MEALS } from "../data/mockData";
+import {useEffect, useState} from "react";
+import {C, FONTS} from "../theme";
+import {Btn, Modal, Page, PageHeader, Tag} from "../components/ui";
+import {DAYS, MEALS} from "../data/mockData";
 import {
-  fetchWeeklyPlan, buildPlanObject,
-  upsertMealPlan, removeMealPlan, clearDayMealPlan,
-  getWeekStart, getWeekDates,
+    buildPlanObject,
+    clearDayMealPlan,
+    fetchWeeklyPlan,
+    getWeekDates,
+    getWeekStart,
+    removeMealPlan,
+    upsertMealPlan,
 } from "../lib/db";
 
 export default function Planner({ dishes, userId }) {
@@ -80,11 +84,10 @@ export default function Planner({ dishes, userId }) {
     setWeekStart(`${yyyy}-${mm}-${dd}`);
   };
 
-  const dayTotal = (day) =>
-    MEALS.reduce((sum, meal) => {
-      const dish = dishById(plan[day]?.[meal]);
-      return sum + (dish?.nutrients.calories ?? 0);
-    }, 0);
+  const dayTotal = (day) => parseFloat(MEALS.reduce((sum, meal) => {
+        const dish = dishById(plan[day]?.[meal]);
+        return sum + (dish?.nutrients.calories ?? 0);
+    }, 0).toFixed(2));
 
   const weekLabel = (() => {
     const dates = Object.values(weekDates);

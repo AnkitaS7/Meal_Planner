@@ -14,6 +14,7 @@ function DishDetail({ dish: dishProp, onBack, onDelete }) {
   // recipe_text is excluded from list payloads; fetch it on demand
   const [dish, setDish] = useState(dishProp);
   const [servings, setServings] = useState(dishProp.servings || 1);
+  const [unitSystem, setUnitSystem] = useState("metric");
 
   useEffect(() => {
     let alive = true;
@@ -57,27 +58,47 @@ function DishDetail({ dish: dishProp, onBack, onDelete }) {
     return whole > 0 ? `${whole} ${n}/${d}` : `${n}/${d}`;
   };
 
-  const scaleQty = qty => {
+  const METRIC_TO_IMP = {
+    g:  { factor: 0.035274, unit: "oz"    },
+    kg: { factor: 2.20462,  unit: "lb"    },
+    ml: { factor: 0.033814, unit: "fl oz" },
+    L:  { factor: 4.22675,  unit: "cups"  },
+  };
+  const IMP_TO_METRIC = {
+    oz:      { factor: 28.3495,  unit: "g"  },
+    lb:      { factor: 453.592,  unit: "g"  },
+    "fl oz": { factor: 29.5735,  unit: "ml" },
+  };
+
+  const formatIngredient = (qty, unit) => {
     const n = parseQty(qty);
-    if (n == null || isNaN(n)) return qty;
-    const scaled = n * scale;
-    return Number.isInteger(scaled) ? String(scaled) : toFraction(scaled);
+    if (n == null || isNaN(n)) return { qty, unit };
+    let num = n * scale;
+    let u = unit;
+    const map = unitSystem === "imperial" ? METRIC_TO_IMP : IMP_TO_METRIC;
+    const conv = u ? map[u] : null;
+    if (conv) { num = num * conv.factor; u = conv.unit; }
+    const display = Number.isInteger(num) ? String(num) : toFraction(num);
+    return { qty: display, unit: u };
   };
 
   const renderIngList = (ingredients, color) => (
     <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
-      {ingredients.map(i => (
-        <li key={i.name} style={{
-          display: "flex", alignItems: "center", gap: 10,
-          padding: "8px 12px", borderRadius: 8,
-          background: color + "12", borderLeft: `3px solid ${color}`,
-        }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color, minWidth: 72 }}>
-            {i.qty != null ? `${scaleQty(i.qty)}${i.unit ? " " + i.unit : ""}` : "—"}
-          </span>
-          <span style={{ fontSize: 13, color: C.text }}>{i.name}</span>
-        </li>
-      ))}
+      {ingredients.map(i => {
+        const { qty: dQty, unit: dUnit } = formatIngredient(i.qty, i.unit);
+        return (
+          <li key={i.name} style={{
+            display: "flex", alignItems: "center", gap: 10,
+            padding: "8px 12px", borderRadius: 8,
+            background: color + "12", borderLeft: `3px solid ${color}`,
+          }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color, minWidth: 80 }}>
+              {i.qty != null ? `${dQty}${dUnit ? " " + dUnit : ""}` : "—"}
+            </span>
+            <span style={{ fontSize: 13, color: C.text }}>{i.name}</span>
+          </li>
+        );
+      })}
     </ul>
   );
 
@@ -114,8 +135,8 @@ function DishDetail({ dish: dishProp, onBack, onDelete }) {
               {dish.tags.map(t => <Tag key={t} color={C.textMuted}>{t}</Tag>)}
             </div>
 
-            {/* Serving size selector */}
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+            {/* Serving size + unit system controls */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
               <span style={{ fontSize: 12, fontWeight: 700, color: C.textSub, textTransform: "uppercase", letterSpacing: 0.5 }}>
                 Servings
               </span>
@@ -159,6 +180,26 @@ function DishDetail({ dish: dishProp, onBack, onDelete }) {
                   Reset
                 </button>
               )}
+
+              <div style={{ marginLeft: "auto", display: "flex", border: `1.5px solid ${C.border}`, borderRadius: 8, overflow: "hidden" }}>
+                {["metric", "imperial"].map(sys => (
+                  <button
+                    key={sys}
+                    onClick={() => setUnitSystem(sys)}
+                    style={{
+                      padding: "5px 14px", border: "none",
+                      background: unitSystem === sys ? C.accent : C.bg,
+                      color: unitSystem === sys ? "#fff" : C.textSub,
+                      fontSize: 12, fontWeight: unitSystem === sys ? 600 : 400,
+                      cursor: "pointer", fontFamily: FONTS.body,
+                      textTransform: "capitalize",
+                      borderRight: sys === "metric" ? `1px solid ${C.border}` : "none",
+                    }}
+                  >
+                    {sys === "metric" ? "Metric" : "Imperial"}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <SectionLabel>Required Ingredients</SectionLabel>
