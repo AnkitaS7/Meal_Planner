@@ -71,11 +71,6 @@ export default function Suggestions({ dishes, pantry, onViewDish }) {
     && d.reqIngredients.some(i => pantryNames.has(i.name.toLowerCase()))
   );
 
-  const none = annotated.filter(d =>
-    !canMake.some(c => c.id === d.id)
-    && !partial.some(p => p.id === d.id)
-  );
-
   const SectionHead = ({ dot, title, count }) => (
     <h2 style={{
       fontFamily: FONTS.display, fontSize: 22, color: C.text,

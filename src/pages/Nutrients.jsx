@@ -15,6 +15,31 @@ export default function Nutrients({ dishes, userId }) {
   const [weekData, setWeekData]         = useState([]);
   const [loading, setLoading]           = useState(true);
 
+  const [compDishes, setCompDishes]     = useState([]);
+  const [isSearching, setIsSearching]   = useState(false);
+  const [compSearch, setCompSearch]     = useState("");
+
+  const addDish = dish => {
+    if (compDishes.length >= 3) return;
+    setCompDishes(prev => [...prev, dish]);
+    setIsSearching(false);
+    setCompSearch("");
+  };
+  const removeDish = id => setCompDishes(prev => prev.filter(d => d.id !== id));
+
+  const searchResults = dishes
+    .filter(d => !compDishes.some(s => s.id === d.id))
+    .filter(d => d.name.toLowerCase().includes(compSearch.toLowerCase()))
+    .slice(0, 8);
+
+  const maxVals = compDishes.length > 0 ? {
+    calories: Math.max(...compDishes.map(d => d.nutrients.calories), 1),
+    protein:  Math.max(...compDishes.map(d => d.nutrients.protein),  1),
+    carbs:    Math.max(...compDishes.map(d => d.nutrients.carbs),    1),
+    fat:      Math.max(...compDishes.map(d => d.nutrients.fat),      1),
+    fiber:    Math.max(...compDishes.map(d => d.nutrients.fiber),    1),
+  } : { calories: 1, protein: 1, carbs: 1, fat: 1, fiber: 1 };
+
   useEffect(() => {
     const weekStart = getWeekStart();
     Promise.all([
@@ -64,12 +89,6 @@ export default function Nutrients({ dishes, userId }) {
   const macroData = nutrientData
     .filter(n => ["Carbs", "Protein", "Fat"].includes(n.name))
     .map((n, i) => ({ name: n.name, value: n.current, color: MACRO_COLORS[i] }));
-
-  // Per-dish radar data (first 3 dishes)
-  const radarData = ["calories", "protein", "carbs", "fat", "fiber"].map(k => ({
-    nutrient: k.charAt(0).toUpperCase() + k.slice(1),
-    ...Object.fromEntries(dishes.slice(0, 3).map(d => [d.name.split(" ")[0], d.nutrients[k]])),
-  }));
 
   const chartTooltipStyle = {
     contentStyle: {
@@ -192,58 +211,167 @@ export default function Nutrients({ dishes, userId }) {
         </div>
       </Card>
 
-      {/* Per-dish table */}
+      {/* Per-dish comparison */}
       <Card>
-        <h3 style={{ fontFamily: FONTS.display, fontSize: 18, marginBottom: 20, color: C.text }}>
+        <h3 style={{ fontFamily: FONTS.display, fontSize: 18, marginBottom: 6, color: C.text }}>
           Per-Dish Breakdown
         </h3>
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ borderBottom: `2px solid ${C.border}` }}>
-                {["Dish", "Category", "Calories", "Protein", "Carbs", "Fat", "Fiber"].map(h => (
-                  <th key={h} style={{
-                    padding: "10px 14px",
-                    textAlign: h === "Dish" || h === "Category" ? "left" : "center",
-                    fontSize: 11, fontWeight: 700, color: C.textSub,
-                    letterSpacing: 0.5, textTransform: "uppercase",
-                  }}>
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {dishes.map((d, idx) => (
-                <tr key={d.id} style={{
-                  borderBottom: `1px solid ${C.border}`,
-                  background: idx % 2 === 0 ? "#fff" : C.bg,
+        <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 20 }}>
+          Search and compare up to 3 dishes side by side.
+        </p>
+
+        <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
+          {/* Filled dish cards */}
+          {compDishes.map(d => {
+            const NUTRIENTS = [
+              { key: "protein", label: "Protein", unit: "g", color: C.sage   },
+              { key: "carbs",   label: "Carbs",   unit: "g", color: C.gold   },
+              { key: "fat",     label: "Fat",     unit: "g", color: C.accent  },
+              { key: "fiber",   label: "Fiber",   unit: "g", color: C.purple  },
+            ];
+            return (
+              <div key={d.id} style={{
+                width: 200, flexShrink: 0,
+                border: `1.5px solid ${C.border}`, borderRadius: 14,
+                padding: 20, background: "#fff",
+                display: "flex", flexDirection: "column", gap: 12,
+                position: "relative",
+              }}>
+                <button
+                  onClick={() => removeDish(d.id)}
+                  style={{
+                    position: "absolute", top: 10, right: 10,
+                    background: "none", border: "none",
+                    color: C.textMuted, fontSize: 14, cursor: "pointer",
+                    lineHeight: 1, padding: 2,
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.color = C.error; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = C.textMuted; }}
+                >✕</button>
+
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: 44, marginBottom: 8 }}>{d.img}</div>
+                  <div style={{
+                    fontWeight: 700, fontSize: 14, color: C.text,
+                    lineHeight: 1.3, marginBottom: 4,
+                  }}>{d.name}</div>
+                  <Tag color={C.accent}>{d.category}</Tag>
+                </div>
+
+                <div style={{
+                  textAlign: "center", padding: "12px 0",
+                  borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`,
                 }}>
-                  <td style={{ padding: "13px 14px" }}>
-                    <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                      <span style={{ fontSize: 20 }}>{d.img}</span>
-                      <span style={{ fontWeight: 500, color: C.text, fontSize: 14 }}>{d.name}</span>
-                    </div>
-                  </td>
-                  <td style={{ padding: "13px 14px" }}>
-                    <Tag color={C.accent}>{d.category}</Tag>
-                  </td>
-                  {["calories", "protein", "carbs", "fat", "fiber"].map(k => (
-                    <td key={k} style={{
-                      padding: "13px 14px", textAlign: "center", fontSize: 14,
-                      color: k === "calories" ? C.accent : C.text,
-                      fontWeight: k === "calories" ? 700 : 400,
-                    }}>
-                      {d.nutrients[k]}
-                      <span style={{ fontSize: 10, color: C.textMuted, marginLeft: 2 }}>
-                        {k === "calories" ? "kcal" : "g"}
-                      </span>
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  <div style={{ fontSize: 28, fontWeight: 700, color: C.accent, fontFamily: FONTS.display }}>
+                    {d.nutrients.calories}
+                  </div>
+                  <div style={{ fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: 0.5 }}>kcal</div>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {NUTRIENTS.map(({ key, label, unit, color }) => {
+                    const val = d.nutrients[key];
+                    const pct = Math.round((val / maxVals[key]) * 100);
+                    return (
+                      <div key={key}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                          <span style={{ fontSize: 11, color: C.textSub, fontWeight: 600 }}>{label}</span>
+                          <span style={{ fontSize: 11, color: C.text, fontWeight: 700 }}>{val}{unit}</span>
+                        </div>
+                        <div style={{ height: 6, background: C.border, borderRadius: 4, overflow: "hidden" }}>
+                          <div style={{
+                            height: "100%", width: `${pct}%`,
+                            background: color, borderRadius: 4,
+                            transition: "width 0.4s ease",
+                          }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Add / search card */}
+          {compDishes.length < 3 && (
+            <div style={{ width: 200, flexShrink: 0 }}>
+              {isSearching ? (
+                <div style={{
+                  border: `1.5px solid ${C.accent}`, borderRadius: 14,
+                  background: "#fff", overflow: "hidden",
+                }}>
+                  <div style={{ padding: "12px 14px", borderBottom: `1px solid ${C.border}` }}>
+                    <input
+                      autoFocus
+                      value={compSearch}
+                      onChange={e => setCompSearch(e.target.value)}
+                      placeholder="Search dishes…"
+                      style={{
+                        width: "100%", border: "none", outline: "none",
+                        fontSize: 13, color: C.text, background: "transparent",
+                        fontFamily: FONTS.body,
+                      }}
+                    />
+                  </div>
+                  <div style={{ maxHeight: 240, overflowY: "auto" }}>
+                    {searchResults.length === 0 ? (
+                      <div style={{ padding: "14px", fontSize: 13, color: C.textMuted, textAlign: "center" }}>
+                        No matches
+                      </div>
+                    ) : searchResults.map(d => (
+                      <button
+                        key={d.id}
+                        onClick={() => addDish(d)}
+                        style={{
+                          width: "100%", display: "flex", alignItems: "center", gap: 10,
+                          padding: "10px 14px", border: "none", background: "none",
+                          cursor: "pointer", textAlign: "left", fontFamily: FONTS.body,
+                          borderBottom: `1px solid ${C.border}`,
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = C.bg; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "none"; }}
+                      >
+                        <span style={{ fontSize: 20 }}>{d.img}</span>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{d.name}</div>
+                          <div style={{ fontSize: 11, color: C.textMuted }}>{d.nutrients.calories} kcal</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => { setIsSearching(false); setCompSearch(""); }}
+                    style={{
+                      width: "100%", padding: "10px", border: "none",
+                      background: C.bg, color: C.textMuted, fontSize: 12,
+                      cursor: "pointer", fontFamily: FONTS.body,
+                    }}
+                  >Cancel</button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setIsSearching(true)}
+                  style={{
+                    width: "100%", minHeight: 200,
+                    border: `2px dashed ${C.border}`, borderRadius: 14,
+                    background: "none", cursor: "pointer",
+                    display: "flex", flexDirection: "column",
+                    alignItems: "center", justifyContent: "center", gap: 8,
+                    color: C.textMuted, fontFamily: FONTS.body,
+                    transition: "all 0.18s",
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = C.accent; e.currentTarget.style.color = C.accent; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = C.border;  e.currentTarget.style.color = C.textMuted; }}
+                >
+                  <span style={{ fontSize: 28, lineHeight: 1 }}>+</span>
+                  <span style={{ fontSize: 13 }}>
+                    {compDishes.length === 0 ? "Add a dish" : "Compare another"}
+                  </span>
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </Card>
     </Page>
