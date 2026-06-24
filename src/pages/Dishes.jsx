@@ -651,9 +651,17 @@ function Pagination({ page, totalPages, onChange }) {
 }
 
 // Main page
-export default function Dishes({ dishes, setDishes, userId, dishCategories, dietaryOptions }) {
+export default function Dishes({ dishes, setDishes, userId, dishCategories, dietaryOptions, pendingDish, onClearPending }) {
   const [view, setView]       = useState("list");  // list | add | detail
   const [selected, setSelected] = useState(null);
+
+  useEffect(() => {
+    if (pendingDish) {
+      setSelected(pendingDish);
+      setView("detail");
+      onClearPending?.();
+    }
+  }, [pendingDish]);
   const [search, setSearch]   = useState("");
   const [catFilter, setCatFilter] = useState("All");
   const [tagFilters, setTagFilters] = useState(new Set());

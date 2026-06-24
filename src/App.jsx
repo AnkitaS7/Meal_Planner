@@ -40,6 +40,7 @@ export default function App() {
   const [pantry, setPantry] = useState([]);
   const [enums, setEnums]   = useState({ dishCategories: [], pantryCategories: [], pantryUnits: [], dietaryOptions: [] });
   const [page, setPage]     = useState("dashboard");
+  const [pendingDish, setPendingDish] = useState(null);
   const [isMobile, setIsMobile]     = useState(() => window.innerWidth < 700);
   const [showSidebar, setShowSidebar] = useState(false);
 
@@ -110,10 +111,10 @@ export default function App() {
   const PAGES = {
     dashboard:   <Dashboard   {...sharedProps} setPage={setPage} />,
     planner:     <Planner     dishes={dishes} userId={user.id} />,
-    dishes:      <Dishes      dishes={dishes} setDishes={setDishes} userId={user.id} dishCategories={enums.dishCategories} dietaryOptions={enums.dietaryOptions} />,
+    dishes:      <Dishes      dishes={dishes} setDishes={setDishes} userId={user.id} dishCategories={enums.dishCategories} dietaryOptions={enums.dietaryOptions} pendingDish={pendingDish} onClearPending={() => setPendingDish(null)} />,
     pantry:      <Pantry      pantry={pantry} setPantry={setPantry} userId={user.id} pantryCategories={enums.pantryCategories} pantryUnits={enums.pantryUnits} />,
     shopping:    <Shopping    dishes={dishes} pantry={pantry} setPantry={setPantry} userId={user.id} />,
-    suggestions: <Suggestions dishes={dishes} pantry={pantry} />,
+    suggestions: <Suggestions dishes={dishes} pantry={pantry} onViewDish={dish => { setPendingDish(dish); setPage("dishes"); }} />,
     nutrients:   <Nutrients   dishes={dishes} userId={user.id} />,
     scanner:     <Scanner     setPantry={setPantry} />,
     social:      <Social      userId={user.id} />,
