@@ -21,12 +21,21 @@ export default function Dashboard({ setPage, dishes, pantry, userId }) {
 
   useEffect(() => {
     const weekStart = getWeekStart();
-    Promise.all([
+    // Each section is fetched independently so one failing query (e.g. the
+    // shopping view) can't blank out the rest of the dashboard.
+    Promise.allSettled([
       fetchTodayPlan(userId),
       fetchNutrientTargets(userId),
       fetchShoppingNeeded(userId, weekStart),
     ])
-      .then(([planRows, targets, shoppingRows]) => {
+      .then(([planRes, targetsRes, shoppingRes]) => {
+        const planRows = planRes.status === "fulfilled" ? planRes.value : [];
+        const targets  = targetsRes.status === "fulfilled" ? targetsRes.value : [];
+
+        if (planRes.status === "rejected")     console.error(planRes.reason);
+        if (targetsRes.status === "rejected")  console.error(targetsRes.reason);
+        if (shoppingRes.status === "rejected") console.error(shoppingRes.reason);
+
         setTodayMeals(planRows);
 
         // Compute today's intake from plan rows
@@ -48,14 +57,15 @@ export default function Dashboard({ setPage, dishes, pantry, userId }) {
         })));
 
         // Unique missing ingredients for the current week
-        const missing = [...new Set(
-          shoppingRows
-            .filter(r => !r.in_pantry && r.type === "required")
-            .map(r => r.ingredient_name)
-        )];
-        setShoppingNeeded(missing.slice(0, 5));
+        if (shoppingRes.status === "fulfilled") {
+          const missing = [...new Set(
+            shoppingRes.value
+              .filter(r => !r.in_pantry && r.type === "required")
+              .map(r => r.ingredient_name)
+          )];
+          setShoppingNeeded(missing.slice(0, 5));
+        }
       })
-      .catch(console.error)
       .finally(() => setLoading(false));
   }, [userId]);
 
