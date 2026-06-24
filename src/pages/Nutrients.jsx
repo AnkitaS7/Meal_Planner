@@ -215,7 +215,12 @@ export default function Nutrients({ dishes, userId }) {
           Search and compare up to 3 dishes side by side.
         </p>
 
-        <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: `repeat(${compDishes.length + (compDishes.length < 3 ? 1 : 0)}, 1fr)`,
+          gap: 16,
+          alignItems: "start",
+        }}>
           {/* Filled dish cards */}
           {compDishes.map(d => {
             const NUTRIENTS = [
@@ -226,7 +231,6 @@ export default function Nutrients({ dishes, userId }) {
             ];
             return (
               <div key={d.id} style={{
-                width: 200, flexShrink: 0,
                 border: `1.5px solid ${C.border}`, borderRadius: 14,
                 padding: 20, background: "#fff",
                 display: "flex", flexDirection: "column", gap: 12,
@@ -290,7 +294,7 @@ export default function Nutrients({ dishes, userId }) {
 
           {/* Add / search card */}
           {compDishes.length < 3 && (
-            <div style={{ width: 200, flexShrink: 0 }}>
+            <div>
               {isSearching ? (
                 <div style={{
                   border: `1.5px solid ${C.accent}`, borderRadius: 14,
