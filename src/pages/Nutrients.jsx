@@ -4,7 +4,7 @@ import {
   PieChart, Pie, Cell,
 } from "recharts";
 import { C, FONTS, RADIUS } from "../theme";
-import { Card, NutrientBar, Tag, Page, PageHeader } from "../components/ui";
+import { Card, Tag, Page, PageHeader } from "../components/ui";
 import { DAYS } from "../data/mockData";
 import { fetchNutrientTargets, fetchWeeklyPlan, getWeekStart } from "../lib/db";
 
@@ -91,6 +91,9 @@ export default function Nutrients({ dishes, userId }) {
       />
 
       {/* Daily target rings */}
+      <h3 style={{ fontFamily: FONTS.display, fontSize: 18, marginBottom: 16, color: C.text, textAlign: "center" }}>
+        Today's Progress
+      </h3>
       <div style={{
         display: "grid",
         gridTemplateColumns: "repeat(5, 1fr)",
@@ -183,16 +186,6 @@ export default function Nutrients({ dishes, userId }) {
           </div>
         </Card>
       </div>
-
-      {/* Daily target bars */}
-      <Card style={{ marginBottom: 20 }}>
-        <h3 style={{ fontFamily: FONTS.display, fontSize: 18, marginBottom: 20, color: C.text }}>
-          Today's Targets
-        </h3>
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {nutrientData.map(n => <NutrientBar key={n.name} {...n} />)}
-        </div>
-      </Card>
 
       {/* Per-dish table */}
       <Card>
