@@ -74,7 +74,7 @@ export default function Dashboard({ setPage, dishes, pantry, userId }) {
   const stats = [
     { icon: "🍽", value: dishes.filter(d => d.user_id === userId).length, label: "Dishes Saved", color: C.accent, page: "dishes" },
     { icon: "🏺", value: pantry.length,  label: "Pantry Items",   color: C.sage,   page: "pantry"    },
-    { icon: "🔥", value: totalCaloriesToday || "-", label: "Calories Today", color: C.gold, page: "nutrients" },
+    { icon: "🔥", value: totalCaloriesToday ? totalCaloriesToday.toFixed(1) : "-", label: "Calories Today", color: C.gold, page: "nutrients" },
     { icon: "📅", value: todayMeals.length, label: "Meals Today",  color: C.purple, page: "planner"   },
   ];
 
@@ -119,13 +119,13 @@ export default function Dashboard({ setPage, dishes, pantry, userId }) {
                     {row.dish_name ?? "-"}
                   </div>
                 </div>
-                <Tag color={C.accent}>{Math.round(row.cal ?? 0)} kcal</Tag>
+                <Tag color={C.accent}>{(Number(row.cal) || 0).toFixed(1)} kcal</Tag>
               </div>
             ))
           )}
           <div style={{ marginTop: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontSize: 13, color: C.textSub }}>
-              Total: <strong style={{ color: C.accent }}>{totalCaloriesToday} kcal</strong>
+              Total: <strong style={{ color: C.accent }}>{totalCaloriesToday.toFixed(1)} kcal</strong>
             </span>
             <Btn variant="ghost" onClick={() => setPage("planner")}
               style={{ padding: "6px 14px", fontSize: 13 }}>
@@ -172,7 +172,7 @@ export default function Dashboard({ setPage, dishes, pantry, userId }) {
               <div>
                 <div style={{ fontWeight: 500, color: C.text }}>{d.name}</div>
                 <div style={{ fontSize: 12, color: C.textMuted }}>
-                  {d.time} min • {d.nutrients.calories} kcal
+                  {d.time} min • {(Number(d.nutrients.calories) || 0).toFixed(1)} kcal
                 </div>
               </div>
             </div>

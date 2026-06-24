@@ -38,7 +38,7 @@ export default function Nutrients({ dishes, userId }) {
         });
         setWeekData(DAYS.map(day => ({
           day,
-          calories: Math.round(byDay[day].calories),
+          calories: Math.round(byDay[day].calories * 10) / 10,
           protein:  Math.round(byDay[day].protein),
           carbs:    Math.round(byDay[day].carbs),
           fat:      Math.round(byDay[day].fat),
@@ -51,7 +51,9 @@ export default function Nutrients({ dishes, userId }) {
         const nutrientKey = { Calories: "calories", Protein: "protein", Carbs: "carbs", Fat: "fat", Fiber: "fiber" };
         setNutrientData(targets.map(t => ({
           name:    t.nutrient_name,
-          current: Math.round(todayTotals[nutrientKey[t.nutrient_name]] ?? 0),
+          current: t.nutrient_name === "Calories"
+            ? Math.round((todayTotals[nutrientKey[t.nutrient_name]] ?? 0) * 10) / 10
+            : Math.round(todayTotals[nutrientKey[t.nutrient_name]] ?? 0),
           target:  Number(t.target_value),
           unit:    t.unit,
           color:   t.display_color,
@@ -123,7 +125,7 @@ export default function Nutrients({ dishes, userId }) {
                 </div>
               </div>
               <div style={{ fontSize: 22, fontWeight: 700, color: C.text, fontFamily: FONTS.display }}>
-                {n.current}
+                {n.name === "Calories" ? n.current.toFixed(1) : n.current}
               </div>
               <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2, lineHeight: 1.5 }}>
                 {n.unit} {n.name}<br />
@@ -234,7 +236,7 @@ export default function Nutrients({ dishes, userId }) {
                       color: k === "calories" ? C.accent : C.text,
                       fontWeight: k === "calories" ? 700 : 400,
                     }}>
-                      {d.nutrients[k]}
+                      {k === "calories" ? (Number(d.nutrients[k]) || 0).toFixed(1) : d.nutrients[k]}
                       <span style={{ fontSize: 10, color: C.textMuted, marginLeft: 2 }}>
                         {k === "calories" ? "kcal" : "g"}
                       </span>

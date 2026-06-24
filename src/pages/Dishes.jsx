@@ -227,7 +227,7 @@ function DishDetail({ dish: dishProp, onBack, onDelete }) {
             </h3>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 8 }}>
               {[
-                ["Calories", dish.nutrients.calories, "kcal"],
+                ["Calories", (Number(dish.nutrients.calories) || 0).toFixed(1), "kcal"],
                 ["Protein",  dish.nutrients.protein,  "g"],
                 ["Carbs",    dish.nutrients.carbs,     "g"],
                 ["Fat",      dish.nutrients.fat,       "g"],
@@ -610,7 +610,7 @@ function DishCard({ dish, onClick }) {
         borderTop: `1px solid ${C.border}`, paddingTop: 12,
       }}>
         <span style={{ fontSize: 12, color: C.textMuted }}>⏱ {dish.time} min</span>
-        <span style={{ fontSize: 12, color: C.textMuted }}>🔥 {dish.nutrients.calories}</span>
+        <span style={{ fontSize: 12, color: C.textMuted }}>🔥 {(Number(dish.nutrients.calories) || 0).toFixed(1)}</span>
         <span style={{ fontSize: 12, color: C.textMuted }}>👥 {dish.servings}</span>
       </div>
     </div>
