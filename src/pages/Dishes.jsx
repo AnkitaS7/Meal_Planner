@@ -29,15 +29,12 @@ function DishDetail({ dish: dishProp, onBack, onDelete }) {
   const baseServings = dish.servings || 1;
   const scale = servings / baseServings;
 
+  // Quantities are stored numerically; PostgREST may hand them back as a
+  // number (JSONB) or a numeric string, so coerce either to a number.
   const parseQty = qty => {
-    if (qty == null) return null;
-    if (typeof qty === "number") return qty;
-    const s = String(qty).trim();
-    const mixed = s.match(/^(\d+)\s+(\d+)\/(\d+)$/);
-    if (mixed) return parseInt(mixed[1]) + parseInt(mixed[2]) / parseInt(mixed[3]);
-    const frac = s.match(/^(\d+)\/(\d+)$/);
-    if (frac) return parseInt(frac[1]) / parseInt(frac[2]);
-    return parseFloat(s);
+    if (qty == null || qty === "") return null;
+    const n = Number(qty);
+    return isNaN(n) ? null : n;
   };
 
   const toFraction = num => {
