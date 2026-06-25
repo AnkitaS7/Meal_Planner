@@ -283,6 +283,26 @@ export async function fetchNutrientTargets(userId) {
   return data;
 }
 
+// Replaces the user's nutrient targets with a fresh set (e.g. from the DRI
+// calculator). Each target: { nutrient_name, target_value, unit, display_color,
+// sort_order }. Done as delete + insert so it doesn't depend on a unique
+// constraint on (user_id, nutrient_name).
+export async function saveNutrientTargets(userId, targets) {
+  const { error: delErr } = await supabase
+    .from("nutrient_targets")
+    .delete()
+    .eq("user_id", userId);
+  if (delErr) throw delErr;
+
+  const rows = targets.map(t => ({ user_id: userId, ...t }));
+  const { data, error } = await supabase
+    .from("nutrient_targets")
+    .insert(rows)
+    .select();
+  if (error) throw error;
+  return data;
+}
+
 // Meal plan
 
 export async function fetchWeeklyPlan(userId, weekStart) {
