@@ -1,17 +1,9 @@
 import { useState } from "react";
 import { C, FONTS, RADIUS } from "../theme";
-import { Card, Btn, Input, Select } from "./ui";
+import { Btn, Input, Select } from "./ui";
 import { computeDRI, ACTIVITY_LEVELS, lbToKg, ftInToM, cmToM } from "../lib/dri";
 import { saveNutrientTargets } from "../lib/db";
-
-// Display colour + ordering for each saved target, matching the Nutrition page.
-const TARGET_STYLE = {
-  Calories: { color: C.gold,   sort: 1 },
-  Protein:  { color: C.accent, sort: 2 },
-  Carbs:    { color: C.purple, sort: 3 },
-  Fat:      { color: C.teal,   sort: 4 },
-  Fiber:    { color: C.sage,   sort: 5 },
-};
+import { TARGET_STYLE } from "./nutrientTargets";
 
 const SEX_OPTIONS = [
   { value: "female", label: "Female" },
@@ -114,10 +106,7 @@ export default function DriCalculator({ userId }) {
   );
 
   return (
-    <Card>
-      <h3 style={{ fontFamily: FONTS.display, fontSize: 18, marginBottom: 4, color: C.text }}>
-        🧮 DRI Calculator
-      </h3>
+    <>
       <p style={{ fontSize: 13, color: C.textSub, marginBottom: 16, lineHeight: 1.6 }}>
         Estimate your daily calorie & macronutrient targets from the USDA / National
         Academies Dietary Reference Intakes. Inputs are used only for this calculation
@@ -241,6 +230,6 @@ export default function DriCalculator({ userId }) {
           </p>
         </div>
       )}
-    </Card>
+    </>
   );
 }

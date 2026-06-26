@@ -5,7 +5,7 @@ import {
 } from "../components/ui";
 
 import { updateProfile } from "../lib/db";
-import DriCalculator from "../components/DriCalculator";
+import NutritionTargets from "../components/NutritionTargets";
 
 export default function Profile({ profile, setProfile, userId, dishCount, dietaryOptions }) {
   const toAppProfile = (p) => ({
@@ -200,8 +200,8 @@ export default function Profile({ profile, setProfile, userId, dishCount, dietar
             </div>
           </Card>
 
-          {/* DRI calculator */}
-          <DriCalculator userId={userId} />
+          {/* Nutrition targets (DRI calculator + custom) */}
+          <NutritionTargets userId={userId} />
 
           {/* Settings */}
           <Card>
