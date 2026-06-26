@@ -126,6 +126,25 @@ export default function Profile({ profile, setProfile, userId, dishCount, dietar
             </div>
           </Card>
 
+          {/* Bio */}
+          <Card>
+            <h3 style={{ fontFamily: FONTS.display, fontSize: 18, marginBottom: 14, color: C.text }}>
+              About Me
+            </h3>
+            {editing ? (
+              <Textarea
+                value={draft.bio}
+                onChange={e => setD("bio", e.target.value)}
+                placeholder="Tell the community about yourself…"
+                rows={3}
+              />
+            ) : (
+              <p style={{ color: C.textSub, lineHeight: 1.75, fontSize: 14 }}>
+                {displayProfile.bio || "No bio yet."}
+              </p>
+            )}
+          </Card>
+
           {/* Dietary preferences */}
           <Card>
             <div style={{
@@ -162,28 +181,6 @@ export default function Profile({ profile, setProfile, userId, dishCount, dietar
 
         {/* Right column */}
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-          {/* Bio */}
-          <Card>
-            <h3 style={{ fontFamily: FONTS.display, fontSize: 18, marginBottom: 14, color: C.text }}>
-              About Me
-            </h3>
-            {editing ? (
-              <Textarea
-                value={draft.bio}
-                onChange={e => setD("bio", e.target.value)}
-                placeholder="Tell the community about yourself…"
-                rows={3}
-              />
-            ) : (
-              <p style={{ color: C.textSub, lineHeight: 1.75, fontSize: 14 }}>
-                {displayProfile.bio || "No bio yet."}
-              </p>
-            )}
-          </Card>
-
-          {/* DRI calculator */}
-          <DriCalculator userId={userId} />
-
           {/* Activity stats */}
           <Card>
             <h3 style={{ fontFamily: FONTS.display, fontSize: 18, marginBottom: 18, color: C.text }}>
@@ -202,6 +199,9 @@ export default function Profile({ profile, setProfile, userId, dishCount, dietar
               ))}
             </div>
           </Card>
+
+          {/* DRI calculator */}
+          <DriCalculator userId={userId} />
 
           {/* Settings */}
           <Card>
