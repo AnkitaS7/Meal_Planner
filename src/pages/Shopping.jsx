@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { C, FONTS, RADIUS } from "../theme";
-import { Card, Btn, Page, PageHeader } from "../components/ui";
+import { Card, Btn, Page, PageHeader, CheckRow } from "../components/ui";
 import { todayDateStr } from "../lib/db";
 import {
   fetchShoppingNeeded, fetchManualShoppingItems,
@@ -48,9 +48,15 @@ export default function Shopping({ userId, setPantry }) {
           }
         });
 
+        // An ingredient can be required by one dish and optional in another. If
+        // it's required anywhere, treat it as required only — otherwise it shows
+        // in both lists, sharing one check key (double-toggle / double-insert).
+        const requiredNames = new Set(req_needed.map(i => i.name));
+        const opt_filtered  = opt_needed.filter(i => !requiredNames.has(i.name));
+
         setNeeded(req_needed);
         setHave(req_have);
-        setOptNeed(opt_needed);
+        setOptNeed(opt_filtered);
         setManual(manualRows);
       })
       .catch(console.error)
@@ -184,85 +190,61 @@ export default function Shopping({ userId, setPantry }) {
 
   const AutoCheckItem = ({ item }) => {
     const checked = !!autoChecked[item.name];
+    const qtyLabel = item.qty != null ? `${item.qty}${item.unit ? " " + item.unit : ""}` : "";
     return (
-      <div
-        onClick={() => toggleAuto(item.name)}
-        style={{
-          display: "flex", alignItems: "center", gap: 14,
-          padding: "11px 14px", borderRadius: RADIUS.md,
-          background: checked ? C.sageLight : C.bg,
-          cursor: "pointer", transition: "background 0.18s", userSelect: "none",
-        }}
+      <CheckRow
+        checked={checked}
+        onToggle={() => toggleAuto(item.name)}
+        label={`${item.name}${qtyLabel ? `, ${qtyLabel}` : ""}${item.dish ? `, for ${item.dish}` : ""}`}
       >
-        <div style={{
-          width: 20, height: 20, borderRadius: 6, flexShrink: 0,
-          border: `2px solid ${checked ? C.sage : C.borderDark}`,
-          background: checked ? C.sage : "transparent",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          transition: "all 0.18s",
-        }}>
-          {checked && <span style={{ color: "#fff", fontSize: 11 }}>✓</span>}
-        </div>
-        <div style={{ flex: 1 }}>
-          {item.qty != null && (
-            <span style={{
-              fontSize: 13, fontWeight: 600,
-              color: checked ? C.textMuted : C.accent,
-              textDecoration: checked ? "line-through" : "none",
-              marginRight: 4,
-            }}>
-              {item.qty}{item.unit ? " " + item.unit : ""}
-            </span>
-          )}
+        {item.qty != null && (
           <span style={{
-            fontSize: 14, color: checked ? C.textMuted : C.text,
+            fontSize: 13, fontWeight: 600,
+            color: checked ? C.textMuted : C.accent,
             textDecoration: checked ? "line-through" : "none",
+            marginRight: 4,
           }}>
-            {item.name}
+            {item.qty}{item.unit ? " " + item.unit : ""}
           </span>
-          {item.dish && (
-            <span style={{ fontSize: 11, color: C.textMuted, marginLeft: 8 }}>
-              ({item.dish})
-            </span>
-          )}
-        </div>
-      </div>
+        )}
+        <span style={{
+          fontSize: 14, color: checked ? C.textMuted : C.text,
+          textDecoration: checked ? "line-through" : "none",
+        }}>
+          {item.name}
+        </span>
+        {item.dish && (
+          <span style={{ fontSize: 11, color: C.textMuted, marginLeft: 8 }}>
+            ({item.dish})
+          </span>
+        )}
+      </CheckRow>
     );
   };
 
   const ManualCheckItem = ({ item }) => (
-    <div
-      onClick={() => toggleManual(item)}
-      style={{
-        display: "flex", alignItems: "center", gap: 14,
-        padding: "11px 14px", borderRadius: RADIUS.md,
-        background: item.is_checked ? C.sageLight : C.bg,
-        cursor: "pointer", transition: "background 0.18s", userSelect: "none",
-      }}
+    <CheckRow
+      checked={item.is_checked}
+      onToggle={() => toggleManual(item)}
+      label={item.name}
+      trailing={
+        <button
+          onClick={e => { e.stopPropagation(); removeExtra(item.id); }}
+          aria-label={`Remove ${item.name}`}
+          style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 14 }}
+        >
+          ✕
+        </button>
+      }
     >
-      <div style={{
-        width: 20, height: 20, borderRadius: 6, flexShrink: 0,
-        border: `2px solid ${item.is_checked ? C.sage : C.borderDark}`,
-        background: item.is_checked ? C.sage : "transparent",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        transition: "all 0.18s",
-      }}>
-        {item.is_checked && <span style={{ color: "#fff", fontSize: 11 }}>✓</span>}
-      </div>
       <span style={{
-        fontSize: 14, flex: 1,
+        fontSize: 14,
         color: item.is_checked ? C.textMuted : C.text,
         textDecoration: item.is_checked ? "line-through" : "none",
       }}>
         {item.name}
       </span>
-      <button
-        onClick={e => { e.stopPropagation(); removeExtra(item.id); }}
-        style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 14 }}
-      >
-        ✕
-      </button>
-    </div>
+    </CheckRow>
   );
 
   return (
@@ -347,7 +329,7 @@ export default function Shopping({ userId, setPantry }) {
           Loading shopping list…
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, alignItems: "start" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 24, alignItems: "start" }}>
           {/* Left column — primary: what to buy */}
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             {/* Required items to buy */}

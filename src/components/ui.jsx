@@ -117,6 +117,48 @@ export const Input = ({
   </div>
 );
 
+// CheckRow — accessible, keyboard-operable check item used in lists (shopping,
+// etc.). Renders as a real checkbox to assistive tech: focusable, toggles on
+// Enter/Space, exposes aria-checked, and shows a focus ring for keyboard users.
+//   checked   — current state
+//   onToggle  — called on click / Enter / Space
+//   label     — accessible name (screen-reader text)
+//   children  — the visible row content
+//   trailing  — optional element rendered at the end (e.g. a remove button)
+export const CheckRow = ({ checked, onToggle, label, children, trailing }) => (
+  <div
+    role="checkbox"
+    aria-checked={checked}
+    aria-label={label}
+    tabIndex={0}
+    onClick={onToggle}
+    onKeyDown={e => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); }
+    }}
+    onFocus={e => { e.currentTarget.style.boxShadow = `0 0 0 2px ${C.accent}`; }}
+    onBlur={e  => { e.currentTarget.style.boxShadow = "none"; }}
+    style={{
+      display: "flex", alignItems: "center", gap: 14,
+      padding: "11px 14px", borderRadius: RADIUS.md,
+      background: checked ? C.sageLight : C.bg,
+      cursor: "pointer", transition: "background 0.18s", userSelect: "none",
+      outline: "none",
+    }}
+  >
+    <span style={{
+      width: 20, height: 20, borderRadius: 6, flexShrink: 0,
+      border: `2px solid ${checked ? C.sage : C.borderDark}`,
+      background: checked ? C.sage : "transparent",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      transition: "all 0.18s",
+    }}>
+      {checked && <span style={{ color: "#fff", fontSize: 11 }}>✓</span>}
+    </span>
+    <div style={{ flex: 1 }}>{children}</div>
+    {trailing}
+  </div>
+);
+
 // Textarea
 export const Textarea = ({ label, value, onChange, placeholder, rows = 4 }) => (
   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
