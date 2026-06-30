@@ -303,6 +303,32 @@ export async function saveNutrientTargets(userId, targets) {
   return data;
 }
 
+// Activity stats
+
+// Per-user counts for the Profile "Activity Stats" tiles. Each value is a real
+// count from the user's own data (the universal/shared dishes are excluded).
+export async function fetchActivityStats(userId) {
+  const [dishes, meals, shopping, pantry] = await Promise.all([
+    supabase.from("dishes").select("id", { count: "exact", head: true }).eq("user_id", userId),
+    supabase.from("meal_plans").select("id", { count: "exact", head: true }).eq("user_id", userId),
+    supabase.from("shopping_list_items").select("week_start").eq("user_id", userId),
+    supabase.from("pantry_items").select("id", { count: "exact", head: true }).eq("user_id", userId),
+  ]);
+
+  for (const r of [dishes, meals, shopping, pantry]) {
+    if (r.error) throw r.error;
+  }
+
+  const shoppingLists = new Set((shopping.data ?? []).map(r => r.week_start)).size;
+
+  return {
+    dishesCreated: dishes.count ?? 0,
+    mealsPlanned:  meals.count ?? 0,
+    shoppingLists,
+    pantryItems:   pantry.count ?? 0,
+  };
+}
+
 // Meal plan
 
 export async function fetchWeeklyPlan(userId, weekStart) {
