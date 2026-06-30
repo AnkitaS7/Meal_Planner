@@ -29,6 +29,10 @@ export default function Planner({ dishes, userId }) {
 
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 700);
   const todayLabel = new Date().toLocaleString("en-US", { weekday: "short" }).slice(0, 3);
+  const todayDate = (() => {
+    const n = new Date();
+    return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}-${String(n.getDate()).padStart(2,"0")}`;
+  })();
   const [selectedDay, setSelectedDay] = useState(() => DAYS.includes(todayLabel) ? todayLabel : DAYS[0]);
 
   useEffect(() => {
@@ -74,6 +78,8 @@ export default function Planner({ dishes, userId }) {
     });
     await clearDayMealPlan(userId, date).catch(console.error);
   };
+
+  const goToToday = () => setWeekStart(getWeekStart());
 
   const shiftWeek = (delta) => {
     const [y, m, d] = weekStart.split("-").map(Number);
@@ -314,7 +320,18 @@ export default function Planner({ dishes, userId }) {
               onClick={() => shiftWeek(-1)}
               style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: C.accent, padding: "0 4px" }}
             >‹</button>
-            <span style={{ fontSize: 13, color: C.textSub, fontWeight: 500 }}>{weekLabel}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 13, color: C.textSub, fontWeight: 500 }}>{weekLabel}</span>
+              <button
+                onClick={goToToday}
+                style={{
+                  background: C.accentLight, border: `1px solid ${C.accent}`,
+                  borderRadius: 6, padding: "2px 8px",
+                  fontSize: 11, fontWeight: 600, color: C.accent,
+                  cursor: "pointer", fontFamily: FONTS.body,
+                }}
+              >Today</button>
+            </div>
             <button
               onClick={() => shiftWeek(1)}
               style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: C.accent, padding: "0 4px" }}
@@ -414,6 +431,7 @@ export default function Planner({ dishes, userId }) {
         action={
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <Btn variant="secondary" onClick={() => shiftWeek(-1)}>← Previous</Btn>
+            <Btn variant="secondary" onClick={goToToday}>Today</Btn>
             <Btn variant="secondary" onClick={() => shiftWeek(1)}>Next →</Btn>
             <ShareDropdown />
           </div>
@@ -436,21 +454,31 @@ export default function Planner({ dishes, userId }) {
                 }}>
                   MEAL
                 </th>
-                {DAYS.map(d => (
-                  <th key={d} style={{ minWidth: 138, padding: "6px 4px" }}>
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                      <span style={{ fontSize: 13, color: C.text, fontWeight: 600 }}>{d}</span>
-                      {dayTotal(d) > 0 && <Tag color={C.accent}>{dayTotal(d).toFixed(1)} kcal</Tag>}
-                      <button onClick={() => clearDay(d)}
-                        style={{
-                          fontSize: 10, color: C.textMuted, background: "none",
-                          border: "none", cursor: "pointer", fontFamily: FONTS.body,
-                        }}>
-                        clear
-                      </button>
-                    </div>
-                  </th>
-                ))}
+                {DAYS.map(d => {
+                  const isToday = weekDates[d] === todayDate;
+                  return (
+                    <th key={d} style={{
+                      minWidth: 138, padding: "6px 4px",
+                      background: isToday ? C.accentLight : "transparent",
+                      borderRadius: 10,
+                    }}>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                        <span style={{
+                          fontSize: 13, fontWeight: 700,
+                          color: isToday ? C.accent : C.text,
+                        }}>{d}</span>
+                        {dayTotal(d) > 0 && <Tag color={C.accent}>{dayTotal(d).toFixed(1)} kcal</Tag>}
+                        <button onClick={() => clearDay(d)}
+                          style={{
+                            fontSize: 10, color: C.textMuted, background: "none",
+                            border: "none", cursor: "pointer", fontFamily: FONTS.body,
+                          }}>
+                          clear
+                        </button>
+                      </div>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
@@ -463,11 +491,18 @@ export default function Planner({ dishes, userId }) {
                   }}>
                     {meal.toUpperCase()}
                   </td>
-                  {DAYS.map(day => (
-                    <td key={day} style={{ verticalAlign: "top", padding: "4px" }}>
-                      <DishCell day={day} meal={meal} />
-                    </td>
-                  ))}
+                  {DAYS.map(day => {
+                    const isToday = weekDates[day] === todayDate;
+                    return (
+                      <td key={day} style={{
+                        verticalAlign: "top", padding: "4px",
+                        background: isToday ? C.accentLight : "transparent",
+                        borderRadius: 10,
+                      }}>
+                        <DishCell day={day} meal={meal} />
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
             </tbody>
