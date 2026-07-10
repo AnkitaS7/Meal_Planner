@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { C, FONTS, RADIUS } from "../theme";
 import { Card, Btn, Page, PageHeader } from "../components/ui";
 import { insertPantryItem } from "../lib/db";
+import { supabase } from "../lib/supabase";
 
 const FALLBACK_CATEGORIES = ["Produce","Dairy","Grains","Meat","Seafood","Bakery","Spices","Frozen","Pantry","Groceries"];
 const FALLBACK_UNITS = ["g","kg","ml","L","pcs","bunch","pack","can","box","bag","bottle","jar"];
@@ -14,73 +15,60 @@ const CAT_COLORS = {
 
 const SCAN_STEPS = ["Reading image…", "Sending to AI…", "Extracting items…"];
 
-function toBase64(file) {
+// Downscale large photos before upload so the request stays under the
+// serverless body-size limit (~4.5MB; base64 inflates size ~33%). We render
+// onto a canvas capped at MAX_DIMENSION and re-encode as JPEG.
+const MAX_DIMENSION = 1500;
+const JPEG_QUALITY  = 0.85;
+
+function fileToResizedBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload  = () => resolve(reader.result.split(",")[1]);
     reader.onerror = reject;
+    reader.onload  = () => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload  = () => {
+        const scale = Math.min(1, MAX_DIMENSION / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width  * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width  = w;
+        canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", JPEG_QUALITY).split(",")[1]);
+      };
+      img.src = reader.result;
+    };
     reader.readAsDataURL(file);
   });
 }
 
-const GEMINI_MODEL = "gemini-3.5-flash";
-
 async function extractItemsFromReceipt(file, onStep) {
-  const key = import.meta.env.VITE_GEMINI_API_KEY;
-  if (!key) throw new Error("NO_API_KEY");
-
   onStep(0);
-  const base64   = await toBase64(file);
-  const mimeType = ["image/jpeg","image/png","image/webp","image/gif"].includes(file.type)
-    ? file.type : "image/jpeg";
+  const base64   = await fileToResizedBase64(file);
+  const mimeType = "image/jpeg";
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("NOT_LOGGED_IN");
 
   onStep(1);
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
-    {
-      method: "POST",
-      headers: {
-        "x-goog-api-key": key,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            { inline_data: { mime_type: mimeType, data: base64 } },
-            {
-              text: `You are a grocery receipt parser. Extract all food and grocery items from this receipt image.
-Return ONLY a JSON array with no explanation or markdown. Each object must have:
-- "name": clean item name (string)
-- "qty": numeric quantity (number, e.g. 1, 250, 2.5)
-- "unit": one of exactly: g, kg, ml, L, pcs, bunch, pack, can, box, bag, bottle, jar
-- "category": one of exactly: Produce, Dairy, Grains, Meat, Seafood, Bakery, Spices, Frozen, Pantry, Groceries
-
-Rules:
-- Skip prices, discounts, totals, store name, tax lines, and non-food items
-- If quantity is unclear, default to 1 pcs
-- Infer category from item type
-
-Example: [{"name":"Whole Milk","qty":1,"unit":"L","category":"Dairy"},{"name":"Garlic","qty":3,"unit":"pcs","category":"Produce"}]`,
-            }
-          ]
-        }],
-        generationConfig: { responseMimeType: "application/json" },
-      }),
-    }
-  );
+  const res = await fetch("/api/scan-receipt", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({ imageBase64: base64, mimeType }),
+  });
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error?.message ?? `API error ${res.status}`);
+    throw new Error(err.error ?? `API error ${res.status}`);
   }
 
   onStep(2);
-  const data  = await res.json();
-  const text  = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-  const match = text.match(/\[[\s\S]*\]/);
-  if (!match) throw new Error("Could not find any items in the receipt response.");
-
-  const items = JSON.parse(match[0]);
+  const { items } = await res.json();
   if (!Array.isArray(items) || items.length === 0)
     throw new Error("No grocery items were found on this receipt.");
   return items;
@@ -99,8 +87,6 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
   const [saving, setSaving]     = useState(false);
   const fileRef = useRef();
 
-  const hasKey = !!import.meta.env.VITE_GEMINI_API_KEY;
-
   const handleFile = async (file) => {
     if (!file) return;
     if (!["image/jpeg","image/png","image/webp","image/gif"].includes(file.type)) {
@@ -117,8 +103,8 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
       setStage("result");
     } catch (err) {
       setErrorMsg(
-        err.message === "NO_API_KEY"
-          ? "No API key configured. Add VITE_GEMINI_API_KEY=... to your .env file and restart the dev server."
+        err.message === "NOT_LOGGED_IN"
+          ? "Please sign in to scan receipts."
           : err.message
       );
       setStage("error");
@@ -169,17 +155,6 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
 
           <div>
-            {!hasKey && (
-              <div style={{
-                background: "#FFF8E1", border: "1px solid #FFD54F",
-                borderRadius: RADIUS.md, padding: "12px 16px",
-                fontSize: 13, color: "#6D4C41", marginBottom: 16, lineHeight: 1.7,
-              }}>
-                <strong>⚠ API key not configured.</strong><br />
-                Add <code style={{ background: "#FFF3E0", padding: "1px 5px", borderRadius: 3 }}>VITE_GEMINI_API_KEY=…</code> to your <code>.env</code> file and restart the dev server.
-              </div>
-            )}
-
             <div
               onDragOver={e  => { e.preventDefault(); setDrag(true);  }}
               onDragLeave={  () => setDrag(false)}
@@ -220,7 +195,7 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
             </h3>
             {[
               ["📸", "Upload",       "Take a photo or scan of your grocery receipt"],
-              ["🤖", "AI Reads",     "Claude AI identifies items, quantities, and categories from the image"],
+              ["🤖", "AI Reads",     "AI identifies items, quantities, and categories from the image"],
               ["✏️", "Review & Edit","Adjust any quantities, units, or categories before adding"],
               ["🏺", "Done!",        "Selected items are saved directly to your pantry"],
             ].map(([icon, title, desc], i) => (
