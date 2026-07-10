@@ -116,7 +116,7 @@ export default function App() {
     shopping:    <Shopping    dishes={dishes} pantry={pantry} setPantry={setPantry} userId={user.id} />,
     suggestions: <Suggestions dishes={dishes} pantry={pantry} onViewDish={dish => { setPendingDish(dish); setPage("dishes"); }} />,
     nutrients:   <Nutrients   dishes={dishes} userId={user.id} />,
-    scanner:     <Scanner     setPantry={setPantry} />,
+    scanner:     <Scanner     setPantry={setPantry} userId={user.id} pantryCategories={enums.pantryCategories} pantryUnits={enums.pantryUnits} />,
     social:      <Social      userId={user.id} />,
     profile:     profile ? <Profile profile={profile} setProfile={setProfile} userId={user.id} dishCount={dishes.length} dietaryOptions={enums.dietaryOptions} /> : <LoadingScreen />,
   };
