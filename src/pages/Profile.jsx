@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { C, FONTS, RADIUS } from "../theme";
 import {
   Card, Btn, Input, Textarea, Avatar, Toggle, Page, PageHeader, Divider,
 } from "../components/ui";
 
-import { updateProfile } from "../lib/db";
+import { fetchActivityStats, updateProfile } from "../lib/db";
 import NutritionTargets from "../components/NutritionTargets";
 
 export default function Profile({ profile, setProfile, userId, dishCount, dietaryOptions }) {
@@ -54,13 +54,21 @@ export default function Profile({ profile, setProfile, userId, dishCount, dietar
 
   const cancel = () => { setDraft(displayProfile); setEditing(false); };
 
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    fetchActivityStats(userId)
+      .then(s => { if (active) setStats(s); })
+      .catch(console.error);
+    return () => { active = false; };
+  }, [userId]);
+
   const activityStats = [
-    ["🍽", "Dishes Created",      displayProfile.dishes,    C.accent ],
-    ["📅", "Meals Planned",       128,                       C.sage   ],
-    ["🛒", "Shopping Lists",       23,                       C.gold   ],
-    ["✨", "Recipes Shared",        19,                       C.purple ],
-    ["👥", "Friends' Plans Viewed", 84,                      C.teal   ],
-    ["🏺", "Pantry Items",          12,                      C.success],
+    ["🍽", "Dishes Created", stats?.dishesCreated ?? dishCount,  C.accent ],
+    ["📅", "Meals Planned",  stats?.mealsPlanned,                 C.sage   ],
+    ["🛒", "Shopping Lists", stats?.shoppingLists,                C.gold   ],
+    ["🏺", "Pantry Items",   stats?.pantryItems,                  C.success],
   ];
 
   return (
@@ -186,14 +194,16 @@ export default function Profile({ profile, setProfile, userId, dishCount, dietar
             <h3 style={{ fontFamily: FONTS.display, fontSize: 18, marginBottom: 18, color: C.text }}>
               Activity Stats
             </h3>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 12 }}>
               {activityStats.map(([icon, label, val, color]) => (
                 <div key={label} style={{
                   background: C.bg, borderRadius: RADIUS.md,
                   padding: "16px 14px", textAlign: "center",
                 }}>
                   <div style={{ fontSize: 20, marginBottom: 4 }}>{icon}</div>
-                  <div style={{ fontSize: 22, fontWeight: 700, color, fontFamily: FONTS.display }}>{val}</div>
+                  <div style={{ fontSize: 22, fontWeight: 700, color, fontFamily: FONTS.display }}>
+                    {val ?? "—"}
+                  </div>
                   <div style={{ fontSize: 11, color: C.textSub, marginTop: 4, lineHeight: 1.4 }}>{label}</div>
                 </div>
               ))}

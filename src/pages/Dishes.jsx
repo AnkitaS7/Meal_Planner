@@ -223,7 +223,7 @@ function DishDetail({ dish: dishProp, onBack, onDelete }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <Card>
             <h3 style={{ fontFamily: FONTS.display, fontSize: 18, marginBottom: 16, color: C.text }}>
-              Nutrition per serving
+              Nutrition per Serving
             </h3>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 8 }}>
               {[
