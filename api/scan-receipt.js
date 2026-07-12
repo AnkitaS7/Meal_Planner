@@ -11,13 +11,22 @@ const PROMPT = `You are a grocery receipt parser. Extract all food and grocery i
 Return ONLY a JSON array with no explanation or markdown. Each object must have:
 - "name": clean item name (string)
 - "qty": numeric quantity (number, e.g. 1, 250, 2.5)
-- "unit": one of exactly: g, kg, ml, L, pcs, bunch, pack, can, box, bag, bottle, jar
-- "category": one of exactly: Produce, Dairy, Grains, Meat, Seafood, Bakery, Spices, Frozen, Pantry, Groceries
+- "unit": one of exactly: g, kg, ml, L, oz, lb, pcs, loaf, cartons, tbsp, tsp, cups, bunch
+- "category": one of exactly: Produce, Dairy, Grains, Pantry, Bakery, Meat, Seafood, Spices, Frozen
 
 Rules:
 - Skip prices, discounts, totals, store name, tax lines, and non-food items
-- If quantity is unclear, default to 1 pcs
-- Infer category from item type
+- If the receipt shows an explicit quantity and unit, use those
+- unit and category MUST be exactly one of the values listed above — no other words
+- Pick the unit that best matches how the item is measured/sold, not always "pcs":
+    * liquids (milk, juice, oil, water, cream, soda) -> ml, L, or oz
+    * items sold by weight (onions, potatoes, meat, cheese, rice, flour) -> g, kg, lb, or oz
+    * items counted individually (eggs, apples, cans, yogurt cups) -> pcs
+    * herbs / leafy greens -> bunch; bread -> loaf
+- Only use "pcs" when the item is genuinely counted as whole pieces
+- For package types not in the list (jar, can, bottle, box, bag, pack), use "pcs"
+- If quantity is unclear, default to 1 with the most natural unit for the item
+- For any item that isn't clearly Dairy/Produce/Meat/Seafood/Bakery/Grains/Spices/Frozen, use "Pantry"
 
 Example: [{"name":"Whole Milk","qty":1,"unit":"L","category":"Dairy"},{"name":"Garlic","qty":3,"unit":"pcs","category":"Produce"}]`;
 

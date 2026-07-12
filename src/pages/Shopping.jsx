@@ -5,7 +5,7 @@ import { todayDateStr } from "../lib/db";
 import {
   fetchShoppingNeeded, fetchManualShoppingItems,
   addManualShoppingItem, toggleManualShoppingItem, deleteManualShoppingItem,
-  insertPantryItem, getWeekStart,
+  insertPantryItem, getWeekStart, mergePantryRows,
 } from "../lib/db";
 
 export default function Shopping({ userId, setPantry }) {
@@ -86,12 +86,12 @@ export default function Shopping({ userId, setPantry }) {
     setAddingToPantry(true);
     const results = await Promise.all(
       allChecked.map(item =>
-        insertPantryItem({ name: item.name, qty: item.qty ?? 1, unit: item.unit ?? "", category: "Groceries", expiry: "" }, userId)
+        insertPantryItem({ name: item.name, qty: item.qty ?? 1, unit: item.unit || "pcs", category: "Pantry", expiry: "" }, userId)
           .catch(console.error)
       )
     ).finally(() => setAddingToPantry(false));
     const inserted = results.filter(Boolean);
-    if (inserted.length) setPantry(p => [...p, ...inserted]);
+    if (inserted.length) setPantry(p => mergePantryRows(p, inserted));
   };
 
   // Progress tracks required + custom items only — optional extras shouldn't

@@ -4,7 +4,7 @@ import {
   Card, Btn, Input, Select, Page, PageHeader, Empty, SectionLabel,
 } from "../components/ui";
 
-import { insertPantryItem, deletePantryItem, searchIngredientAliases } from "../lib/db";
+import { insertPantryItem, deletePantryItem, searchIngredientAliases, mergePantryRows } from "../lib/db";
 
 const CAT_COLORS = {
   Grains:   C.gold,
@@ -145,7 +145,7 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
     if (!form.name || !form.qty) return;
     const item = { name: form.name, qty: parseFloat(form.qty), unit: form.unit, category: form.category, expiry: form.expiry };
     const saved = await insertPantryItem(item, userId).catch(console.error);
-    if (saved) setPantry(p => [...p, saved]);
+    if (saved) setPantry(p => mergePantryRows(p, [saved]));
     setForm(BLANK);
     setShowAdd(false);
   };

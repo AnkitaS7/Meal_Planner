@@ -153,6 +153,38 @@ export async function searchIngredientAliases(term, limit = 8) {
   return data;
 }
 
+// Fuzzy-match a (possibly messy) receipt item name against the ingredient
+// alias dictionary. Returns up to `limit` candidates scoring >= `threshold`
+// (0..1), best first. Powered by the match_ingredient_aliases RPC (pg_trgm).
+export async function matchIngredientAliases(name, { threshold = 0.7, limit = 3 } = {}) {
+  const t = (name ?? "").trim();
+  if (!t) return [];
+  const { data, error } = await supabase.rpc("match_ingredient_aliases", {
+    query_text:      t,
+    match_threshold: threshold,
+    max_results:     limit,
+  });
+  if (error) throw error;
+  return data ?? [];
+}
+
+// Add a brand-new ingredient to the shared catalog with manually entered
+// per-100g macros, returning its ingredient_id. Idempotent server-side: an
+// existing name resolves to its current id. Powered by the SECURITY DEFINER
+// add_catalog_ingredient RPC.
+export async function addCatalogIngredient({ name, cal, protein, carbs, fat, fiber }) {
+  const { data, error } = await supabase.rpc("add_catalog_ingredient", {
+    p_name:    name,
+    p_cal:     cal     ?? null,
+    p_protein: protein ?? null,
+    p_carbs:   carbs   ?? null,
+    p_fat:     fat     ?? null,
+    p_fiber:   fiber   ?? null,
+  });
+  if (error) throw error;
+  return data;
+}
+
 // Lazy-load the recipe text only when a dish detail is opened.
 export async function fetchDishRecipe(dishId) {
   const { data, error } = await supabase
@@ -227,6 +259,31 @@ export async function fetchPantry(userId) {
 }
 
 export async function insertPantryItem(item, userId) {
+  // Merge into an existing row with the same name (case-insensitive) AND the
+  // same unit by summing quantity; otherwise insert a new row. Rows with a
+  // different unit stay separate (e.g. "3 lb potatoes" vs "2 pcs potatoes").
+  const { data: candidates, error: findErr } = await supabase
+    .from("pantry_items")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("unit", item.unit)
+    .ilike("name", item.name);            // coarse, case-insensitive prefilter
+  if (findErr) throw findErr;
+
+  const key = String(item.name).trim().toLowerCase();
+  const existing = (candidates ?? []).find(r => r.name.trim().toLowerCase() === key);
+
+  if (existing) {
+    const { data, error } = await supabase
+      .from("pantry_items")
+      .update({ quantity: Number(existing.quantity) + Number(item.qty) })
+      .eq("id", existing.id)
+      .select()
+      .single();
+    if (error) throw error;
+    return mapPantryItem(data);
+  }
+
   const { data, error } = await supabase
     .from("pantry_items")
     .insert({
@@ -241,6 +298,16 @@ export async function insertPantryItem(item, userId) {
     .single();
   if (error) throw error;
   return mapPantryItem(data);
+}
+
+// Merge freshly saved pantry rows into an existing list by id: rows that were
+// updated (e.g. after a quantity merge) replace their old copy in place, new
+// rows are appended. Callers use this instead of blindly appending, since
+// insertPantryItem may return an updated existing row rather than a new one.
+export function mergePantryRows(list, rows) {
+  const byId = new Map(list.map(r => [r.id, r]));
+  for (const r of rows) if (r) byId.set(r.id, r);
+  return Array.from(byId.values());
 }
 
 export async function deletePantryItem(id) {

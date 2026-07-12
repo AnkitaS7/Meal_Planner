@@ -1,11 +1,11 @@
 import { useState, useRef } from "react";
 import { C, FONTS, RADIUS } from "../theme";
 import { Card, Btn, Page, PageHeader } from "../components/ui";
-import { insertPantryItem } from "../lib/db";
+import { insertPantryItem, matchIngredientAliases, addCatalogIngredient, mergePantryRows } from "../lib/db";
 import { supabase } from "../lib/supabase";
 
-const FALLBACK_CATEGORIES = ["Produce","Dairy","Grains","Meat","Seafood","Bakery","Spices","Frozen","Pantry","Groceries"];
-const FALLBACK_UNITS = ["g","kg","ml","L","pcs","bunch","pack","can","box","bag","bottle","jar"];
+const FALLBACK_CATEGORIES = ["Produce","Dairy","Grains","Pantry","Bakery","Meat","Seafood","Spices","Frozen"];
+const FALLBACK_UNITS = ["g","kg","ml","L","oz","lb","pcs","loaf","cartons","tbsp","tsp","cups","bunch"];
 
 const CAT_COLORS = {
   Grains:"#D4A843", Dairy:"#7BAE8A", Produce:"#5BA37B",
@@ -13,13 +13,20 @@ const CAT_COLORS = {
   Seafood:"#4A9BAF", Spices:"#9B7BC2", Frozen:"#6B96C4", Groceries:"#8A8FA3",
 };
 
-const SCAN_STEPS = ["Reading image…", "Sending to AI…", "Extracting items…"];
+const SCAN_STEPS = ["Reading image…", "Sending to AI…", "Extracting items…", "Matching to pantry…"];
 
 // Downscale large photos before upload so the request stays under the
 // serverless body-size limit (~4.5MB; base64 inflates size ~33%). We render
 // onto a canvas capped at MAX_DIMENSION and re-encode as JPEG.
 const MAX_DIMENSION = 1500;
 const JPEG_QUALITY  = 0.85;
+
+// Empty string → null; otherwise a finite number (for optional macro inputs).
+function numOrNull(v) {
+  if (v === "" || v == null) return null;
+  const n = parseFloat(v);
+  return Number.isFinite(n) ? n : null;
+}
 
 function fileToResizedBase64(file) {
   return new Promise((resolve, reject) => {
@@ -76,7 +83,9 @@ async function extractItemsFromReceipt(file, onStep) {
 
 export default function Scanner({ setPantry, userId, pantryCategories, pantryUnits }) {
   const categories = (pantryCategories?.length ? pantryCategories : FALLBACK_CATEGORIES);
-  const units      = (pantryUnits?.length      ? pantryUnits      : FALLBACK_UNITS);
+  // Union server units with the fallback so oz/lb are always selectable even if
+  // get_app_enums hasn't been refreshed to include them.
+  const units      = Array.from(new Set([...(pantryUnits ?? []), ...FALLBACK_UNITS]));
 
   const [stage, setStage]       = useState("idle");   // idle | scanning | result | error
   const [drag, setDrag]         = useState(false);
@@ -85,6 +94,7 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
   const [scanStep, setScanStep] = useState(0);
   const [errorMsg, setErrorMsg] = useState("");
   const [saving, setSaving]     = useState(false);
+  const [saveError, setSaveError] = useState("");
   const fileRef = useRef();
 
   const handleFile = async (file) => {
@@ -95,11 +105,33 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
       return;
     }
     setScanStep(0);
+    setSaveError("");
     setStage("scanning");
     try {
       const extracted = await extractItemsFromReceipt(file, setScanStep);
-      setItems(extracted);
-      setSelected(Object.fromEntries(extracted.map(i => [i.name, true])));
+
+      // Fuzzy-match each scanned name against the ingredient dictionary. Attach
+      // the top candidates and default the chosen name to the best match (or
+      // the original name when nothing clears the threshold).
+      setScanStep(3);
+      const withMatches = await Promise.all(extracted.map(async (it) => {
+        let matches = [];
+        try {
+          matches = await matchIngredientAliases(it.name);
+        } catch (err) {
+          console.error("Alias match failed for", it.name, err);
+        }
+        return {
+          ...it,
+          matches,
+          chosenName: matches[0]?.alias ?? it.name,
+          addToCatalog: false,
+          nutrients: { cal: "", protein: "", carbs: "", fat: "", fiber: "" },
+        };
+      }));
+
+      setItems(withMatches);
+      setSelected(Object.fromEntries(withMatches.map((_, i) => [i, true])));
       setStage("result");
     } catch (err) {
       setErrorMsg(
@@ -114,34 +146,61 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
   const updateItem = (index, updated) =>
     setItems(prev => prev.map((it, i) => (i === index ? updated : it)));
 
-  const toggleItem = (name) =>
-    setSelected(s => ({ ...s, [name]: !s[name] }));
+  const toggleItem = (index) =>
+    setSelected(s => ({ ...s, [index]: !s[index] }));
 
-  const selectAll   = () => setSelected(Object.fromEntries(items.map(i => [i.name, true])));
-  const deselectAll = () => setSelected(Object.fromEntries(items.map(i => [i.name, false])));
+  const selectAll   = () => setSelected(Object.fromEntries(items.map((_, i) => [i, true])));
+  const deselectAll = () => setSelected(Object.fromEntries(items.map((_, i) => [i, false])));
 
   const addToPantry = async () => {
-    const toAdd = items.filter(i => selected[i.name]);
-    if (!toAdd.length) return;
+    const indices = items.map((_, i) => i).filter(i => selected[i]);
+    if (!indices.length) return;
     setSaving(true);
-    const saved = [];
-    for (const item of toAdd) {
+    setSaveError("");
+    const saved  = [];
+    const failed = [];
+    for (const i of indices) {
+      const item = items[i];
+      const chosenIsNew = !(item.matches ?? []).some(m => m.alias === item.chosenName);
       try {
-        const s = await insertPantryItem({ ...item, expiry: "" }, userId);
+        // Optionally register a not-found item in the shared ingredient catalog
+        // first (idempotent server-side), then add it to the pantry.
+        if (item.addToCatalog && chosenIsNew) {
+          const n = item.nutrients ?? {};
+          await addCatalogIngredient({
+            name:    item.chosenName,
+            cal:     numOrNull(n.cal),
+            protein: numOrNull(n.protein),
+            carbs:   numOrNull(n.carbs),
+            fat:     numOrNull(n.fat),
+            fiber:   numOrNull(n.fiber),
+          });
+        }
+        const s = await insertPantryItem({ ...item, name: item.chosenName, expiry: "" }, userId);
         saved.push(s);
       } catch (err) {
-        console.error("Failed to save", item.name, err);
+        console.error("Failed to save", item.chosenName, err);
+        failed.push(item);
       }
     }
-    setPantry(p => [...p, ...saved]);
+    if (saved.length) setPantry(p => mergePantryRows(p, saved));
     setSaving(false);
-    setStage("idle");
-    setItems([]);
+
+    if (!failed.length) {
+      setStage("idle");
+      setItems([]);
+    } else {
+      // Keep the failures on screen so the user can adjust and retry instead of
+      // having them silently disappear.
+      setItems(failed);
+      setSelected(Object.fromEntries(failed.map((_, i) => [i, true])));
+      setSaveError(`${saved.length} added. ${failed.length} couldn't be saved — check their unit/category and try again.`);
+    }
   };
 
   const selectedCount = Object.values(selected).filter(Boolean).length;
 
-  const reset = () => { setStage("idle"); setItems([]); setErrorMsg(""); };
+  const reset = () => { setStage("idle"); setItems([]); setErrorMsg(""); setSaveError(""); };
 
   return (
     <Page>
@@ -305,6 +364,16 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
                 </Btn>
               </div>
             </div>
+
+            {saveError && (
+              <div style={{
+                marginTop: 14, background: "#FDECEA", border: "1px solid #F5C6CB",
+                borderRadius: RADIUS.md, padding: "10px 14px",
+                fontSize: 13, color: "#B0413E", lineHeight: 1.6,
+              }}>
+                ⚠ {saveError}
+              </div>
+            )}
           </Card>
 
           <div style={{
@@ -313,8 +382,24 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
             gap: 12,
           }}>
             {items.map((item, index) => {
-              const isSel  = !!selected[item.name];
+              const isSel  = !!selected[index];
               const color  = CAT_COLORS[item.category] ?? C.textSub;
+
+              // "Add as" choices: matched aliases (deduped) + a keep-original
+              // option, unless the original is already one of the matches.
+              const opts = [];
+              const seen = new Set();
+              for (const m of (item.matches ?? [])) {
+                if (seen.has(m.alias)) continue;
+                seen.add(m.alias);
+                opts.push({ value: m.alias, score: m.score });
+              }
+              if (!seen.has(item.name)) opts.push({ value: item.name, score: null, original: true });
+
+              // The chosen name is "new" (not in the catalog) when it isn't one
+              // of the fuzzy matches — only then can it be added to the catalog.
+              const chosenIsNew = !(item.matches ?? []).some(m => m.alias === item.chosenName);
+
               return (
                 <div key={index} style={{
                   border: `2px solid ${isSel ? C.sage : C.border}`,
@@ -324,13 +409,14 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
                   transition: "border-color 0.18s, background 0.18s",
                 }}>
 
-                  {/* Name + checkbox */}
+                  {/* Scanned name + checkbox */}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-                    <div style={{ fontWeight: 600, color: C.text, fontSize: 14, flex: 1, lineHeight: 1.3 }}>
-                      {item.name}
+                    <div style={{ flex: 1, lineHeight: 1.3 }}>
+                      <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 2 }}>Scanned</div>
+                      <div style={{ fontWeight: 600, color: C.text, fontSize: 14 }}>{item.name}</div>
                     </div>
                     <div
-                      onClick={() => toggleItem(item.name)}
+                      onClick={() => toggleItem(index)}
                       style={{
                         width: 22, height: 22, borderRadius: 6, flexShrink: 0,
                         border: `2px solid ${isSel ? C.sage : C.borderDark}`,
@@ -342,6 +428,95 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
                       {isSel && <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>✓</span>}
                     </div>
                   </div>
+
+                  {/* Add as: matched ingredient options */}
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>
+                      Add as{item.matches?.length ? "" : " · no close match"}
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      {opts.map(o => {
+                        const active = item.chosenName === o.value;
+                        return (
+                          <div
+                            key={o.value}
+                            onClick={() => updateItem(index, { ...item, chosenName: o.value })}
+                            style={{
+                              display: "flex", alignItems: "center", gap: 8,
+                              padding: "6px 8px", borderRadius: RADIUS.sm, cursor: "pointer",
+                              border: `1.5px solid ${active ? C.sage : C.border}`,
+                              background: active ? "#fff" : "transparent",
+                            }}
+                          >
+                            <span style={{
+                              width: 14, height: 14, borderRadius: "50%", flexShrink: 0,
+                              border: `2px solid ${active ? C.sage : C.borderDark}`,
+                              background: active ? C.sage : "transparent",
+                            }} />
+                            <span style={{ fontSize: 13, color: C.text, flex: 1 }}>
+                              {o.original ? `Keep “${o.value}”` : o.value}
+                            </span>
+                            {o.score != null && (
+                              <span style={{ fontSize: 11, fontWeight: 700, color: C.sage }}>
+                                {Math.round(o.score * 100)}%
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Add a not-found item to the shared ingredient catalog */}
+                  {chosenIsNew && (
+                    <div style={{
+                      marginBottom: 10, padding: "8px 10px",
+                      background: C.bg, borderRadius: RADIUS.sm,
+                      border: `1px dashed ${C.border}`,
+                    }}>
+                      <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                        <input
+                          type="checkbox"
+                          checked={!!item.addToCatalog}
+                          onChange={e => updateItem(index, { ...item, addToCatalog: e.target.checked })}
+                        />
+                        <span style={{ fontSize: 12, color: C.text }}>
+                          Also add to ingredient database
+                        </span>
+                      </label>
+
+                      {item.addToCatalog && (
+                        <div style={{ marginTop: 8 }}>
+                          <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 5 }}>
+                            Nutrition per 100 g (optional)
+                          </div>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
+                            {[
+                              ["cal", "Cal"], ["protein", "Protein g"],
+                              ["carbs", "Carbs g"], ["fat", "Fat g"], ["fiber", "Fiber g"],
+                            ].map(([key, label]) => (
+                              <input
+                                key={key}
+                                type="number"
+                                min="0"
+                                placeholder={label}
+                                value={item.nutrients?.[key] ?? ""}
+                                onChange={e => updateItem(index, {
+                                  ...item,
+                                  nutrients: { ...item.nutrients, [key]: e.target.value },
+                                })}
+                                style={{
+                                  width: "100%", padding: "5px 7px",
+                                  border: `1.5px solid ${C.border}`, borderRadius: RADIUS.sm,
+                                  fontSize: 12, color: C.text, background: "#fff", outline: "none",
+                                }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Qty + unit row */}
                   <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
