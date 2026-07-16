@@ -120,13 +120,18 @@ export async function fetchDishes(userId) {
 
 // Server-side page for the Dish Database screen: filtering, searching and
 // counting happen in Postgres, so only `pageSize` dishes travel to the client.
+// `scope` selects which owners to include: "all" (universal + the user's own,
+// the default) or "mine" (only dishes the user has added).
 export async function fetchDishesPage(userId, {
-  page = 1, pageSize = 12, search = "", category = "All", tags = [],
+  page = 1, pageSize = 12, search = "", category = "All", tags = [], scope = "all",
 } = {}) {
   let q = supabase
     .from("v_dish_full")
-    .select(DISH_LIST_COLUMNS, { count: "exact" })
-    .in("user_id", [UNIVERSAL_USER_ID, userId]);
+    .select(DISH_LIST_COLUMNS, { count: "exact" });
+
+  q = scope === "mine"
+    ? q.eq("user_id", userId)
+    : q.in("user_id", [UNIVERSAL_USER_ID, userId]);
 
   if (search.trim())     q = q.ilike("name", `%${search.trim()}%`);
   if (category !== "All") q = q.eq("category", category);

@@ -617,6 +617,49 @@ function DishCard({ dish, onClick }) {
   );
 }
 
+// Tabs for the Dish Database screen.
+//   explore   — every dish available to the user (universal + their own)
+//   yours     — only dishes the user has added
+//   suggested — recommendations based on frequently used dishes (coming soon)
+const TABS = [
+  { id: "explore",   label: "Explore Dishes",   icon: "🧭" },
+  { id: "yours",     label: "Your Dishes",      icon: "📖" },
+  { id: "suggested", label: "Suggested Dishes", icon: "✨" },
+];
+
+function TabBar({ active, onChange }) {
+  return (
+    <div style={{
+      display: "flex", marginBottom: 24,
+      borderBottom: `1.5px solid ${C.border}`,
+    }}>
+      {TABS.map(t => {
+        const on = active === t.id;
+        return (
+          <button
+            key={t.id}
+            onClick={() => onChange(t.id)}
+            style={{
+              flex: 1,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+              background: "none", border: "none", cursor: "pointer",
+              padding: "12px 16px", marginBottom: -1.5,
+              borderBottom: `2.5px solid ${on ? C.accent : "transparent"}`,
+              color: on ? C.accent : C.textSub,
+              fontSize: 14, fontWeight: on ? 700 : 500,
+              fontFamily: FONTS.body, transition: "color 0.18s",
+            }}
+            onMouseEnter={e => { if (!on) e.currentTarget.style.color = C.text; }}
+            onMouseLeave={e => { if (!on) e.currentTarget.style.color = C.textSub; }}
+          >
+            <span>{t.icon}</span>{t.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // Pagination footer
 function Pagination({ page, totalPages, onChange }) {
   if (totalPages <= 1) return null;
@@ -650,6 +693,7 @@ function Pagination({ page, totalPages, onChange }) {
 // Main page
 export default function Dishes({ dishes, setDishes, userId, dishCategories, dietaryOptions, pendingDish, onClearPending }) {
   const [view, setView]       = useState("list");  // list | add | detail
+  const [tab, setTab]         = useState("explore"); // explore | yours | suggested
   const [selected, setSelected] = useState(null);
 
   useEffect(() => {
@@ -679,22 +723,25 @@ export default function Dishes({ dishes, setDishes, userId, dishCategories, diet
 
   const tagKey = [...tagFilters].sort().join("|");
 
-  // any filter change returns to page 1
-  useEffect(() => { setPage(1); }, [debouncedSearch, catFilter, tagKey]);
+  // any filter change (or tab switch) returns to page 1
+  useEffect(() => { setPage(1); }, [debouncedSearch, catFilter, tagKey, tab]);
 
-  // fetch the current page from the server (only PAGE_SIZE dishes travel)
+  // fetch the current page from the server (only PAGE_SIZE dishes travel).
+  // The "suggested" tab has no backend yet, so it skips fetching entirely.
   useEffect(() => {
+    if (tab === "suggested") { setItems([]); setTotal(0); setLoading(false); return; }
     let alive = true;
     setLoading(true);
     fetchDishesPage(userId, {
       page, pageSize: PAGE_SIZE,
       search: debouncedSearch, category: catFilter, tags: [...tagFilters],
+      scope: tab === "yours" ? "mine" : "all",
     })
       .then(({ dishes: d, total: t }) => { if (alive) { setItems(d); setTotal(t); } })
       .catch(console.error)
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [userId, page, debouncedSearch, catFilter, tagKey, refreshKey]);
+  }, [userId, page, debouncedSearch, catFilter, tagKey, refreshKey, tab]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const categories = ["All", ...(dishCategories?.length
@@ -741,14 +788,32 @@ export default function Dishes({ dishes, setDishes, userId, dishCategories, diet
     );
   }
 
+  const subtitle = tab === "suggested"
+    ? "Personalized picks based on your habits"
+    : loading && total === 0
+      ? "Loading dishes…"
+      : tab === "yours"
+        ? `${total} dish${total === 1 ? "" : "es"} you've added`
+        : `${total} dish${total === 1 ? "" : "es"} available to you`;
+
   return (
     <Page>
       <PageHeader
         title="Dish Database"
-        subtitle={loading && total === 0 ? "Loading dishes…" : `${total} dishes in your collection`}
+        subtitle={subtitle}
         action={<Btn onClick={() => setView("add")}>+ Add New Dish</Btn>}
       />
 
+      <TabBar active={tab} onChange={setTab} />
+
+      {tab === "suggested" ? (
+        <Empty
+          icon="✨"
+          title="Suggestions coming soon"
+          subtitle="We'll recommend dishes here based on the ones you cook most often."
+        />
+      ) : (
+      <>
       {/* Filters */}
       <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
@@ -832,8 +897,10 @@ export default function Dishes({ dishes, setDishes, userId, dishCategories, diet
       {!loading && items.length === 0 ? (
         <Empty
           icon="🍽"
-          title="No dishes found"
-          subtitle="Try adjusting your search or add your first dish."
+          title={tab === "yours" ? "You haven't added any dishes yet" : "No dishes found"}
+          subtitle={tab === "yours"
+            ? "Dishes you create will show up here."
+            : "Try adjusting your search or add your first dish."}
           action={<Btn onClick={() => setView("add")}>+ Add a Dish</Btn>}
         />
       ) : (
@@ -859,6 +926,8 @@ export default function Dishes({ dishes, setDishes, userId, dishCategories, diet
           </div>
           <Pagination page={page} totalPages={totalPages} onChange={p => setPage(p)} />
         </>
+      )}
+      </>
       )}
     </Page>
   );
