@@ -1,4 +1,28 @@
+import { useEffect, useRef } from "react";
 import { C, FONTS, RADIUS, SHADOW, alpha } from "../theme";
+
+// Chrome icons — quiet round-cap strokes on currentColor, so they inherit
+// each button's hover color. Food art stays in art.jsx; these are the only
+// glyphs allowed in UI chrome (never emoji / text symbols).
+const STROKE = { fill: "none", stroke: "currentColor", strokeLinecap: "round", strokeLinejoin: "round" };
+
+export const IconX = ({ size = 14, strokeWidth = 2 }) => (
+  <svg viewBox="0 0 16 16" width={size} height={size} aria-hidden="true" style={{ display: "block" }}>
+    <path d="M4 4 l8 8 M12 4 l-8 8" {...STROKE} strokeWidth={strokeWidth} />
+  </svg>
+);
+
+export const IconCheck = ({ size = 12, strokeWidth = 2.6 }) => (
+  <svg viewBox="0 0 16 16" width={size} height={size} aria-hidden="true" style={{ display: "block" }}>
+    <path d="M3 8.5 L6.5 12 L13 4.5" {...STROKE} strokeWidth={strokeWidth} />
+  </svg>
+);
+
+export const IconMenu = ({ size = 18, strokeWidth = 1.8 }) => (
+  <svg viewBox="0 0 18 18" width={size} height={size} aria-hidden="true" style={{ display: "block" }}>
+    <path d="M2.5 5 h13 M2.5 9 h13 M2.5 13 h13" {...STROKE} strokeWidth={strokeWidth} />
+  </svg>
+);
 
 // Tag
 export const Tag = ({ children, color = C.sage }) => (
@@ -149,10 +173,11 @@ export const CheckRow = ({ checked, onToggle, label, children, trailing }) => (
       width: 20, height: 20, borderRadius: 6, flexShrink: 0,
       border: `2px solid ${checked ? C.sage : C.borderDark}`,
       background: checked ? C.sage : "transparent",
+      color: "var(--on-accent)",
       display: "flex", alignItems: "center", justifyContent: "center",
       transition: "all 0.18s",
     }}>
-      {checked && <span style={{ color: "var(--on-accent)", fontSize: 11 }}>✓</span>}
+      {checked && <IconCheck />}
     </span>
     <div style={{ flex: 1 }}>{children}</div>
     {trailing}
@@ -249,30 +274,6 @@ export const Avatar = ({ initials, size = 40, color = C.accent }) => (
   </div>
 );
 
-// NutrientBar
-export const NutrientBar = ({ name, current, target, unit, color }) => {
-  const pct = target > 0 ? Math.min((current / target) * 100, 100) : 0;
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-        <span style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{name}</span>
-        <span style={{ fontSize: 12, color: C.textMuted }}>
-          {current} / {target} {unit}
-        </span>
-      </div>
-      <div style={{ height: 7, background: C.border, borderRadius: 4, overflow: "hidden" }}>
-        <div style={{
-          height: "100%",
-          width: `${pct}%`,
-          background: color,
-          borderRadius: 4,
-          transition: "width 0.6s cubic-bezier(0.22,1,0.36,1)",
-        }} />
-      </div>
-    </div>
-  );
-};
-
 // Toggle
 export const Toggle = ({ on, onChange, label }) => (
   <button
@@ -336,8 +337,42 @@ export const Empty = ({ icon = EmptyDefaultIcon, title, subtitle, action }) => (
   </div>
 );
 
-// Modal
-export const Modal = ({ open, onClose, children, width = 520 }) => {
+// Modal — a real dialog to assistive tech: focus moves into the panel on
+// open (and back where it was on close), Tab is trapped inside, Escape and
+// the backdrop both close it.
+export const Modal = ({ open, onClose, children, width = 520, label = "Dialog" }) => {
+  const panelRef = useRef(null);
+  const restoreRef = useRef(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+
+  useEffect(() => {
+    if (!open) return;
+    restoreRef.current = document.activeElement;
+    panelRef.current?.focus();
+    const onKey = e => { if (e.key === "Escape") closeRef.current?.(); };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      restoreRef.current?.focus?.();
+    };
+  }, [open]);
+
+  const trapTab = e => {
+    if (e.key !== "Tab") return;
+    const nodes = panelRef.current?.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    const list = [...(nodes ?? [])].filter(n => !n.disabled && n.offsetParent != null);
+    if (!list.length) return;
+    const first = list[0], last = list[list.length - 1];
+    if (e.shiftKey && (document.activeElement === first || document.activeElement === panelRef.current)) {
+      e.preventDefault(); last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault(); first.focus();
+    }
+  };
+
   if (!open) return null;
   return (
     <div
@@ -352,7 +387,13 @@ export const Modal = ({ open, onClose, children, width = 520 }) => {
       }}
     >
       <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={label}
+        tabIndex={-1}
         onClick={e => e.stopPropagation()}
+        onKeyDown={trapTab}
         style={{
           background: C.card,
           borderRadius: RADIUS.xl,
@@ -364,6 +405,7 @@ export const Modal = ({ open, onClose, children, width = 520 }) => {
           overflowY: "auto",
           boxShadow: SHADOW.xl,
           animation: "fadeUp 0.28s cubic-bezier(0.22,1,0.36,1)",
+          outline: "none",
         }}
       >
         {children}
@@ -402,32 +444,4 @@ export const PageHeader = ({ title, subtitle, action }) => (
     </div>
     {action && <div style={{ flexShrink: 0 }}>{action}</div>}
   </div>
-);
-
-// StatTile
-export const StatTile = ({ icon, value, label, color, onClick }) => (
-  <Card
-    onClick={onClick}
-    style={{
-      cursor: onClick ? "pointer" : "default",
-      transition: "transform 0.2s, box-shadow 0.2s",
-    }}
-    onMouseEnter={onClick ? e => {
-      e.currentTarget.style.transform = "translateY(-2px)";
-      e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.10)";
-    } : undefined}
-    onMouseLeave={onClick ? e => {
-      e.currentTarget.style.transform = "";
-      e.currentTarget.style.boxShadow = "";
-    } : undefined}
-  >
-    <div style={{ fontSize: 26, marginBottom: 10 }}>{icon}</div>
-    <div style={{
-      fontSize: 28, fontWeight: 700, color,
-      fontFamily: FONTS.display,
-    }}>
-      {value}
-    </div>
-    <div style={{ fontSize: 13, color: C.textSub, marginTop: 4 }}>{label}</div>
-  </Card>
 );

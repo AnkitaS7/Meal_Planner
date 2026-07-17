@@ -6,6 +6,7 @@ import { supabase } from "./lib/supabase";
 initThemeMode();
 import { fetchDishes, fetchPantry, fetchProfile, fetchAppEnums } from "./lib/db";
 import Sidebar     from "./components/Sidebar";
+import { IconMenu } from "./components/ui";
 import Login       from "./pages/Login";
 import Dashboard   from "./pages/Dashboard";
 import Planner     from "./pages/Planner";
@@ -67,6 +68,14 @@ export default function App() {
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
   }, []);
+
+  // Escape dismisses the mobile drawer, mirroring the backdrop tap
+  useEffect(() => {
+    if (!showSidebar) return;
+    const onKey = e => { if (e.key === "Escape") setShowSidebar(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showSidebar]);
 
   // Load data when user authenticates
   useEffect(() => {
@@ -165,13 +174,16 @@ export default function App() {
           }}>
             <button
               onClick={() => setShowSidebar(v => !v)}
+              aria-label={showSidebar ? "Close navigation" : "Open navigation"}
+              aria-expanded={showSidebar}
               style={{
                 background: "none", border: `1px solid ${C.border}`,
-                borderRadius: 8, padding: "8px 12px", cursor: "pointer",
-                fontSize: 18, color: C.text,
+                borderRadius: 8, width: 44, height: 44, cursor: "pointer",
+                color: C.text, display: "inline-flex",
+                alignItems: "center", justifyContent: "center",
               }}
             >
-              ☰
+              <IconMenu />
             </button>
             <span style={{
               fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 15,
@@ -179,7 +191,7 @@ export default function App() {
             }}>
               Season
             </span>
-            <div style={{ width: 42 }} />
+            <div style={{ width: 44 }} />
           </div>
         )}
         {PAGES[page] ?? <Dashboard {...sharedProps} setPage={setPage} />}

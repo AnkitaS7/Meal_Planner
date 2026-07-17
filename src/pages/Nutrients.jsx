@@ -4,7 +4,7 @@ import {
   PieChart, Pie, Cell,
 } from "recharts";
 import { C, FONTS, alpha } from "../theme";
-import { Tag, Page, PageHeader } from "../components/ui";
+import { Tag, Page, PageHeader, IconX } from "../components/ui";
 import { DishArt, SpiceMound, SPICE, NUTRIENT_SPICE } from "../components/art";
 import { DAYS } from "../data/mockData";
 import { fetchNutrientTargets, fetchWeeklyPlan, getWeekStart } from "../lib/db";
@@ -333,14 +333,14 @@ export default function Nutrients({ dishes, userId }) {
                     onClick={() => removeDish(d.id)}
                     aria-label={`Remove ${d.name} from comparison`}
                     style={{
-                      position: "absolute", top: 10, right: 10,
+                      position: "absolute", top: 8, right: 8,
                       background: "none", border: "none",
-                      color: C.textMuted, fontSize: 14, cursor: "pointer",
+                      color: C.textMuted, cursor: "pointer",
                       lineHeight: 1, padding: 8,
                     }}
                     onMouseEnter={e => { e.currentTarget.style.color = C.error; }}
                     onMouseLeave={e => { e.currentTarget.style.color = C.textMuted; }}
-                  >✕</button>
+                  ><IconX /></button>
 
                   <div style={{ textAlign: "center" }}>
                     <DishArt dish={d} size={56} style={{ margin: "0 auto 8px", display: "block" }} />

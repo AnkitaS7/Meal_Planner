@@ -1,7 +1,7 @@
 import {useEffect, useState} from "react";
 import {C, FONTS} from "../theme";
 import {DishArt, Watermark} from "../components/art";
-import {Btn, Modal, Page, PageHeader, Tag} from "../components/ui";
+import {Btn, IconX, Modal, Page, PageHeader, Tag} from "../components/ui";
 import {DAYS, MEALS} from "../data/mockData";
 import {
     buildPlanObject,
@@ -222,12 +222,14 @@ export default function Planner({ dishes, userId }) {
           onClick={() => remove(day, meal)}
           aria-label={`Remove ${dish.name} from ${day} ${meal}`}
           style={{
-            position: "absolute", top: 6, right: 6,
+            position: "absolute", top: 4, right: 4,
             background: "none", border: "none",
-            color: C.textMuted, fontSize: 13, cursor: "pointer",
-            lineHeight: 1, padding: 6,
+            color: C.textMuted, cursor: "pointer",
+            lineHeight: 1, padding: 8,
           }}
-        >✕</button>
+          onMouseEnter={e => { e.currentTarget.style.color = "var(--c2)"; }}
+          onMouseLeave={e => { e.currentTarget.style.color = "var(--faint)"; }}
+        ><IconX size={13} /></button>
       </div>
     ) : (
       <button
@@ -423,7 +425,12 @@ export default function Planner({ dishes, userId }) {
           </div>
         )}
 
-        <Modal open={!!modal} onClose={() => setModal(null)} width={500}>
+        <Modal
+          open={!!modal}
+          onClose={() => setModal(null)}
+          width={500}
+          label={modal ? `Add a dish for ${modal.day} ${modal.meal}` : "Add a dish"}
+        >
           {modal && <ModalContent />}
         </Modal>
       </Page>
@@ -521,7 +528,12 @@ export default function Planner({ dishes, userId }) {
         </div>
       )}
 
-      <Modal open={!!modal} onClose={() => setModal(null)} width={500}>
+      <Modal
+        open={!!modal}
+        onClose={() => setModal(null)}
+        width={500}
+        label={modal ? `Add a dish for ${modal.day} ${modal.meal}` : "Add a dish"}
+      >
         {modal && <ModalContent />}
       </Modal>
     </Page>

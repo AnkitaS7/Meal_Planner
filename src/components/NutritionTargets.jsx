@@ -5,8 +5,8 @@ import DriCalculator from "./DriCalculator";
 import CustomTargets from "./CustomTargets";
 
 const TABS = [
-  { value: "calculator", label: "🧮 DRI Calculator" },
-  { value: "custom",     label: "✏️ Custom Nutritional Targets" },
+  { value: "calculator", label: "DRI Calculator" },
+  { value: "custom",     label: "Custom Targets" },
 ];
 
 // Tabbed card on the Profile page: compute targets from the DRI calculator, or
@@ -23,6 +23,7 @@ export default function NutritionTargets({ userId }) {
             <button
               key={t.value}
               onClick={() => setTab(t.value)}
+              aria-pressed={active}
               style={{
                 flex: 1, padding: "9px 12px", fontSize: 14, fontWeight: 600,
                 cursor: "pointer", fontFamily: FONTS.body,

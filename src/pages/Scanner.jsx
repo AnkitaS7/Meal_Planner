@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { C, FONTS, RADIUS, alpha } from "../theme";
-import { Card, Btn, Page, PageHeader } from "../components/ui";
+import { Card, Btn, Page, PageHeader, IconCheck } from "../components/ui";
 import { Watermark } from "../components/art";
 import { insertPantryItem, matchIngredientAliases, addCatalogIngredient, mergePantryRows } from "../lib/db";
 import { supabase } from "../lib/supabase";
@@ -442,7 +442,7 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
                         transition: "all 0.18s", marginLeft: 10, cursor: "pointer",
                       }}
                     >
-                      {isSel && <span style={{ color: "var(--on-accent)", fontSize: 12, fontWeight: 700 }}>✓</span>}
+                      {isSel && <span style={{ color: "var(--on-accent)", display: "flex" }}><IconCheck size={13} /></span>}
                     </button>
                   </div>
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { C, FONTS, RADIUS } from "../theme";
-import { Btn, Page, PageHeader, CheckRow } from "../components/ui";
+import { Btn, Page, PageHeader, CheckRow, IconX, IconCheck } from "../components/ui";
 import { IngredientArt, Watermark } from "../components/art";
 import { todayDateStr } from "../lib/db";
 import {
@@ -232,9 +232,11 @@ export default function Shopping({ userId, setPantry }) {
         <button
           onClick={e => { e.stopPropagation(); removeExtra(item.id); }}
           aria-label={`Remove ${item.name}`}
-          style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 14, padding: "6px 8px" }}
+          style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", padding: 8 }}
+          onMouseEnter={e => { e.currentTarget.style.color = "var(--c2)"; }}
+          onMouseLeave={e => { e.currentTarget.style.color = "var(--faint)"; }}
         >
-          ✕
+          <IconX />
         </button>
       }
     >
@@ -466,7 +468,7 @@ export default function Shopping({ userId, setPantry }) {
                       padding: "6px 12px", borderRadius: RADIUS.full,
                       background: C.sageLight, fontSize: 13, color: C.sageDark,
                     }}>
-                      <span style={{ color: C.sage, fontSize: 11 }}>✓</span>
+                      <span style={{ color: C.sage, display: "flex" }} aria-hidden="true"><IconCheck size={11} /></span>
                       {name}
                     </span>
                   ))}

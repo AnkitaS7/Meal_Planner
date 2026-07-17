@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { C, FONTS, RADIUS, SHADOW, alpha } from "../theme";
 import { IngredientArt, Watermark } from "../components/art";
 import {
-  Card, Btn, Input, Select, Page, PageHeader, Empty, SectionLabel,
+  Card, Btn, Input, Select, Page, PageHeader, Empty, SectionLabel, IconX,
 } from "../components/ui";
 
 import { insertPantryItem, deletePantryItem, searchIngredientAliases, mergePantryRows } from "../lib/db";
@@ -201,7 +201,7 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
         subtitle={`${pantry.length} items tracked`}
         action={
           <Btn onClick={() => setShowAdd(v => !v)}>
-            {showAdd ? "✕ Cancel" : "+ Add Item"}
+            {showAdd ? "Cancel" : "+ Add Item"}
           </Btn>
         }
       />
@@ -363,12 +363,13 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
                             aria-label={`Remove ${item.name} from pantry`}
                             style={{
                               background: "none", border: "none", color: C.textMuted,
-                              cursor: "pointer", fontSize: 11, marginLeft: 4, padding: "4px 6px",
+                              cursor: "pointer", marginLeft: 4, padding: 6,
+                              display: "inline-flex", verticalAlign: "middle",
                             }}
                             onMouseEnter={e => { e.currentTarget.style.color = "var(--c2)"; }}
                             onMouseLeave={e => { e.currentTarget.style.color = "var(--faint)"; }}
                           >
-                            ✕
+                            <IconX size={11} />
                           </button>
                         </div>
                       </div>

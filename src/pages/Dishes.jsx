@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { C, FONTS, RADIUS, alpha } from "../theme";
 import { DishArt, dishSymbol, DISH_TINT, Watermark } from "../components/art";
 import {
-  Card, Btn, Tag, Input, Textarea, Select, Modal,
+  Card, Btn, Tag, Input, Textarea, Select, IconX,
   Page, PageHeader, Empty, SectionLabel,
 } from "../components/ui";
 
@@ -339,14 +339,15 @@ function IngredientRow({ ing, onChange, onRemove }) {
       </datalist>
       <button
         onClick={onRemove}
+        aria-label="Remove ingredient"
         style={{
           background: "none", border: "none", color: C.textMuted,
-          cursor: "pointer", fontSize: 15, padding: "4px 6px",
+          cursor: "pointer", padding: 8,
           borderRadius: 6, flexShrink: 0, lineHeight: 1,
         }}
         onMouseEnter={e => { e.currentTarget.style.color = C.error; e.currentTarget.style.background = alpha(C.error, 10); }}
         onMouseLeave={e => { e.currentTarget.style.color = C.textMuted; e.currentTarget.style.background = "none"; }}
-      >✕</button>
+      ><IconX /></button>
     </div>
   );
 }
