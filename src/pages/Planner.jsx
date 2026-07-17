@@ -1,4 +1,4 @@
-import {useEffect, useState} from "react";
+import {useEffect, useMemo, useState} from "react";
 import {C, FONTS} from "../theme";
 import {DishArt, Watermark} from "../components/art";
 import {Btn, IconX, Modal, Page, PageHeader, Tag} from "../components/ui";
@@ -10,8 +10,13 @@ import {
     getWeekDates,
     getWeekStart,
     removeMealPlan,
+    todayDateStr,
     upsertMealPlan,
 } from "../lib/db";
+
+// Cap the dish-picker list: the catalog holds thousands of dishes and the
+// modal only needs enough rows to pick from — typing narrows the rest.
+const PICKER_LIMIT = 40;
 
 export default function Planner({ dishes, userId }) {
   const [weekStart, setWeekStart] = useState(getWeekStart);
@@ -30,10 +35,7 @@ export default function Planner({ dishes, userId }) {
 
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 700);
   const todayLabel = new Date().toLocaleString("en-US", { weekday: "short" }).slice(0, 3);
-  const todayDate = (() => {
-    const n = new Date();
-    return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}-${String(n.getDate()).padStart(2,"0")}`;
-  })();
+  const todayDate = todayDateStr();
   const [selectedDay, setSelectedDay] = useState(() => DAYS.includes(todayLabel) ? todayLabel : DAYS[0]);
 
   useEffect(() => {
@@ -53,7 +55,10 @@ export default function Planner({ dishes, userId }) {
       .finally(() => setLoading(false));
   }, [userId, weekStart]);
 
-  const dishById = id => dishes.find(d => d.id === id) ?? null;
+  // The catalog holds thousands of dishes and the grid looks one up per cell,
+  // so index by id once instead of scanning the array every time.
+  const dishMap = useMemo(() => new Map(dishes.map(d => [d.id, d])), [dishes]);
+  const dishById = id => dishMap.get(id) ?? null;
 
   const assign = async (dish) => {
     if (!modal) return;
@@ -159,8 +164,9 @@ export default function Planner({ dishes, userId }) {
     window.open(`https://wa.me/?text=${encodeURIComponent(buildPlanText())}`, "_blank");
   };
 
-  // Share dropdown
-  const ShareDropdown = () => (
+  // Share dropdown — plain JSX (not a nested component) so React reconciles
+  // it in place instead of remounting it on every parent render.
+  const shareDropdown = (
     <div style={{ position: "relative" }}>
       <Btn onClick={() => setShowExport(v => !v)}>Share ↗</Btn>
       {showExport && (
@@ -200,8 +206,9 @@ export default function Planner({ dishes, userId }) {
     </div>
   );
 
-  // Dish cell, shared between mobile and desktop layouts
-  const DishCell = ({ day, meal }) => {
+  // Dish cell, shared between mobile and desktop layouts (called as a plain
+  // function so the cells keep their DOM between renders)
+  const renderDishCell = (day, meal) => {
     const dish = dishById(plan[day]?.[meal]);
     return dish ? (
       <div style={{
@@ -252,14 +259,24 @@ export default function Planner({ dishes, userId }) {
     );
   };
 
-  // Dish picker modal
-  const ModalContent = () => (
+  // Dish picker modal. The list stops at PICKER_LIMIT rows — searching
+  // narrows it — so opening the picker never renders the whole catalog.
+  const pickerMatches = [];
+  if (modal) {
+    const q = modalSearch.trim().toLowerCase();
+    for (const d of dishes) {
+      if (pickerMatches.length >= PICKER_LIMIT) break;
+      if (!q || d.name.toLowerCase().includes(q)) pickerMatches.push(d);
+    }
+  }
+
+  const modalContent = modal && (
     <>
       <h3 style={{ fontFamily: FONTS.display, fontSize: 22, color: C.text, marginBottom: 4 }}>
-        Add {modal?.meal}
+        Add {modal.meal}
       </h3>
       <p style={{ color: C.textSub, fontSize: 13, marginBottom: 16 }}>
-        {modal?.day} · Select a dish from your database
+        {modal.day} · Select a dish from your database
       </p>
       <input
         autoFocus
@@ -276,9 +293,7 @@ export default function Planner({ dishes, userId }) {
         onBlur={e  => { e.target.style.borderColor = C.border; }}
       />
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {dishes
-          .filter(d => d.name.toLowerCase().includes(modalSearch.toLowerCase()))
-          .map(d => (
+        {pickerMatches.map(d => (
             <button
               type="button"
               key={d.id}
@@ -301,7 +316,12 @@ export default function Planner({ dishes, userId }) {
                 </div>
               </div>
             </button>
-          ))}
+        ))}
+        {pickerMatches.length >= PICKER_LIMIT && (
+          <p style={{ fontSize: 12, color: C.textMuted, textAlign: "center", margin: "6px 0 0" }}>
+            Showing the first {PICKER_LIMIT} — keep typing to narrow the list.
+          </p>
+        )}
       </div>
     </>
   );
@@ -319,7 +339,7 @@ export default function Planner({ dishes, userId }) {
             <h1 style={{ fontFamily: FONTS.display, fontSize: 22, color: C.text }}>
               Weekly Planner
             </h1>
-            <ShareDropdown />
+            {shareDropdown}
           </div>
           <div style={{
             display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -418,7 +438,7 @@ export default function Planner({ dishes, userId }) {
                   {meal.toUpperCase()}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <DishCell day={selectedDay} meal={meal} />
+                  {renderDishCell(selectedDay, meal)}
                 </div>
               </div>
             ))}
@@ -431,7 +451,7 @@ export default function Planner({ dishes, userId }) {
           width={500}
           label={modal ? `Add a dish for ${modal.day} ${modal.meal}` : "Add a dish"}
         >
-          {modal && <ModalContent />}
+          {modalContent}
         </Modal>
       </Page>
     );
@@ -448,7 +468,7 @@ export default function Planner({ dishes, userId }) {
             <Btn variant="secondary" onClick={() => shiftWeek(-1)}>← Previous</Btn>
             <Btn variant="secondary" onClick={goToToday}>Today</Btn>
             <Btn variant="secondary" onClick={() => shiftWeek(1)}>Next →</Btn>
-            <ShareDropdown />
+            {shareDropdown}
           </div>
         }
       />
@@ -516,7 +536,7 @@ export default function Planner({ dishes, userId }) {
                         background: isToday ? C.accentLight : "transparent",
                         borderRadius: 10,
                       }}>
-                        <DishCell day={day} meal={meal} />
+                        {renderDishCell(day, meal)}
                       </td>
                     );
                   })}
@@ -534,7 +554,7 @@ export default function Planner({ dishes, userId }) {
         width={500}
         label={modal ? `Add a dish for ${modal.day} ${modal.meal}` : "Add a dish"}
       >
-        {modal && <ModalContent />}
+        {modalContent}
       </Modal>
     </Page>
   );

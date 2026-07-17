@@ -189,11 +189,14 @@ export default function Shopping({ userId, setPantry }) {
     window.open(`https://wa.me/?text=${encodeURIComponent(buildListText())}`, "_blank");
   };
 
-  const AutoCheckItem = ({ item }) => {
+  // Rows are plain render functions (not nested components), so React keeps
+  // their DOM between renders — toggling one no longer drops keyboard focus.
+  const renderAutoItem = (item) => {
     const checked = !!autoChecked[item.name];
     const qtyLabel = item.qty != null ? `${item.qty}${item.unit ? " " + item.unit : ""}` : "";
     return (
       <CheckRow
+        key={item.name}
         checked={checked}
         onToggle={() => toggleAuto(item.name)}
         label={`${item.name}${qtyLabel ? `, ${qtyLabel}` : ""}${item.dish ? `, for ${item.dish}` : ""}`}
@@ -223,7 +226,7 @@ export default function Shopping({ userId, setPantry }) {
     );
   };
 
-  const ManualCheckItem = ({ item }) => (
+  const renderManualItem = (item) => (
     <CheckRow
       checked={item.is_checked}
       onToggle={() => toggleManual(item)}
@@ -406,7 +409,7 @@ export default function Shopping({ userId, setPantry }) {
                   Everything this week's plan needs is already on your shelves.
                 </p>
               ) : (
-                needed.map(item => <AutoCheckItem key={item.name} item={item} />)
+                needed.map(renderAutoItem)
               )}
             </div>
 
@@ -419,7 +422,7 @@ export default function Shopping({ userId, setPantry }) {
                   Optional · nice to have
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {optNeed.map(item => <AutoCheckItem key={item.name} item={item} />)}
+                  {optNeed.map(renderAutoItem)}
                 </div>
               </div>
             )}
@@ -431,7 +434,7 @@ export default function Shopping({ userId, setPantry }) {
               <h3 className="sr-panel-h"><span>Your own additions</span></h3>
               {manual.map(item => (
                 <div key={item.id} style={{ marginBottom: 6 }}>
-                  <ManualCheckItem item={item} />
+                  {renderManualItem(item)}
                 </div>
               ))}
               <div style={{ display: "flex", gap: 8, marginTop: 10 }}>

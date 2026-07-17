@@ -50,34 +50,34 @@ export function mapPantryItem(row) {
 
 // Week helpers
 
+// Local-time yyyy-mm-dd (the app's canonical date-string format)
+export function fmtDate(dt) {
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+}
+
+// weekStart ("yyyy-mm-dd") + N days, as a date string
+function weekStartPlus(weekStart, days) {
+  const [y, m, d] = weekStart.split("-").map(Number);
+  return fmtDate(new Date(y, m - 1, d + days));
+}
+
 export function getWeekStart(date = new Date()) {
   const d = new Date(date);
   const day = d.getDay();
   const diff = day === 0 ? -6 : 1 - day;
   d.setDate(d.getDate() + diff);
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
+  return fmtDate(d);
 }
 
 export function getWeekDates(weekStart) {
   const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  const [y, m, d] = weekStart.split("-").map(Number);
   const result = {};
-  DAYS.forEach((day, i) => {
-    const dt = new Date(y, m - 1, d + i);
-    const yyyy = dt.getFullYear();
-    const mm   = String(dt.getMonth() + 1).padStart(2, "0");
-    const dd   = String(dt.getDate()).padStart(2, "0");
-    result[day] = `${yyyy}-${mm}-${dd}`;
-  });
+  DAYS.forEach((day, i) => { result[day] = weekStartPlus(weekStart, i); });
   return result;
 }
 
 export function todayDateStr() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  return fmtDate(new Date());
 }
 
 // App enums
@@ -101,19 +101,28 @@ const DISH_LIST_COLUMNS =
 
 export async function fetchDishes(userId) {
   const PAGE = 1000;
-  let from = 0;
-  let all = [];
-  while (true) {
-    const { data, error } = await supabase
-      .from("v_dish_full")
-      .select(DISH_LIST_COLUMNS)
-      .in("user_id", [UNIVERSAL_USER_ID, userId])
-      .order("id")
-      .range(from, from + PAGE - 1);
-    if (error) throw error;
-    all = all.concat(data);
-    if (data.length < PAGE) break;
-    from += PAGE;
+  const pageQuery = from => supabase
+    .from("v_dish_full")
+    .select(DISH_LIST_COLUMNS, from === 0 ? { count: "exact" } : undefined)
+    .in("user_id", [UNIVERSAL_USER_ID, userId])
+    .order("id")
+    .range(from, from + PAGE - 1);
+
+  // First page also returns the total count, so the remaining pages can be
+  // fetched in parallel instead of one after another.
+  const { data: first, error, count } = await pageQuery(0);
+  if (error) throw error;
+
+  let all = first;
+  const total = count ?? first.length;
+  if (total > PAGE) {
+    const rest = [];
+    for (let from = PAGE; from < total; from += PAGE) rest.push(pageQuery(from));
+    const results = await Promise.all(rest);
+    for (const r of results) {
+      if (r.error) throw r.error;
+      all = all.concat(r.data);
+    }
   }
   return all.map(mapDish);
 }
@@ -404,9 +413,7 @@ export async function fetchActivityStats(userId) {
 // Meal plan
 
 export async function fetchWeeklyPlan(userId, weekStart) {
-  const [y, m, d] = weekStart.split("-").map(Number);
-  const end = new Date(y, m - 1, d + 6);
-  const weekEnd = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, "0")}-${String(end.getDate()).padStart(2, "0")}`;
+  const weekEnd = weekStartPlus(weekStart, 6);
 
   const { data, error } = await supabase
     .from("v_weekly_plan")
@@ -518,9 +525,7 @@ export async function unfollowUser(followerId, followingId) {
 // Shopping
 
 export async function fetchShoppingNeeded(userId, weekStart) {
-  const [y, m, d] = weekStart.split("-").map(Number);
-  const end = new Date(y, m - 1, d + 6);
-  const weekEnd = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, "0")}-${String(end.getDate()).padStart(2, "0")}`;
+  const weekEnd = weekStartPlus(weekStart, 6);
 
   const { data, error } = await supabase
     .from("v_shopping_needed")

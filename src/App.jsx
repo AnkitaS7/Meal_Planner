@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { C, initThemeMode } from "./theme";
 import { SvgDefs } from "./components/art";
 import { supabase } from "./lib/supabase";
@@ -9,15 +9,19 @@ import Sidebar     from "./components/Sidebar";
 import { IconMenu } from "./components/ui";
 import Login       from "./pages/Login";
 import Dashboard   from "./pages/Dashboard";
-import Planner     from "./pages/Planner";
-import Dishes      from "./pages/Dishes";
-import Pantry      from "./pages/Pantry";
-import Shopping    from "./pages/Shopping";
-import Suggestions from "./pages/Suggestions";
-import Nutrients   from "./pages/Nutrients";
-import Scanner     from "./pages/Scanner";
-import Social      from "./pages/Social";
-import Profile     from "./pages/Profile";
+
+// Every page beyond the two first-paint ones loads on demand. This keeps
+// heavyweight page-only dependencies (recharts lives solely in Nutrients)
+// out of the initial bundle.
+const Planner     = lazy(() => import("./pages/Planner"));
+const Dishes      = lazy(() => import("./pages/Dishes"));
+const Pantry      = lazy(() => import("./pages/Pantry"));
+const Shopping    = lazy(() => import("./pages/Shopping"));
+const Suggestions = lazy(() => import("./pages/Suggestions"));
+const Nutrients   = lazy(() => import("./pages/Nutrients"));
+const Scanner     = lazy(() => import("./pages/Scanner"));
+const Social      = lazy(() => import("./pages/Social"));
+const Profile     = lazy(() => import("./pages/Profile"));
 
 function LoadingScreen() {
   return (
@@ -194,7 +198,13 @@ export default function App() {
             <div style={{ width: 44 }} />
           </div>
         )}
-        {PAGES[page] ?? <Dashboard {...sharedProps} setPage={setPage} />}
+        <Suspense fallback={
+          <div style={{ padding: "48px 0", textAlign: "center", fontSize: 14, color: C.textMuted }}>
+            Loading…
+          </div>
+        }>
+          {PAGES[page] ?? <Dashboard {...sharedProps} setPage={setPage} />}
+        </Suspense>
       </main>
     </div>
   );

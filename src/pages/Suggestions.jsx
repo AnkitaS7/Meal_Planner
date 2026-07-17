@@ -1,17 +1,22 @@
+import { useMemo } from "react";
 import { C, FONTS, alpha } from "../theme";
 import { Btn, Tag, Page, PageHeader, Empty } from "../components/ui";
 import { DishArt, IngredientArt, Watermark, dishSymbol, DISH_TINT } from "../components/art";
 
-function SuggestionCard({ dish, type, onViewDish }) {
-  const missing = dish.reqIngredients.filter(
-    i => !dish._pantryHas?.includes(i.name.toLowerCase())
-  );
+// Cap both grids: with a big catalog almost every dish shares one common
+// ingredient (and dishes without listed ingredients count as cookable), so
+// rendering every match at once can mean thousands of cards.
+const FULL_LIMIT    = 48;
+const PARTIAL_LIMIT = 24;
+
+function SuggestionCard({ dish, missing, onViewDish }) {
+  const full = missing.length === 0;
   const tint = DISH_TINT[dishSymbol(dish)] ?? "#D89540";
 
   return (
     <div style={{
       background: C.card,
-      border: `1px solid ${type === "full" ? alpha(C.success, 40) : C.border}`,
+      border: `1px solid ${full ? alpha(C.success, 40) : C.border}`,
       borderRadius: 14, overflow: "hidden",
       boxShadow: "var(--shadow)",
       display: "flex", flexDirection: "column",
@@ -19,10 +24,10 @@ function SuggestionCard({ dish, type, onViewDish }) {
       {/* Cover — the dish leads */}
       <div style={{
         height: 84, display: "grid", placeItems: "center", position: "relative",
-        background: `color-mix(in srgb, ${tint} ${type === "full" ? 26 : 16}%, var(--panel))`,
+        background: `color-mix(in srgb, ${tint} ${full ? 26 : 16}%, var(--panel))`,
       }}>
         <DishArt dish={dish} size={68} style={{ transform: "translateY(13px)" }} />
-        {type === "full" && (
+        {full && (
           <span style={{ position: "absolute", top: 10, right: 10 }}>
             <Tag color={C.success}>Ready to cook</Tag>
           </span>
@@ -40,7 +45,7 @@ function SuggestionCard({ dish, type, onViewDish }) {
           <Tag color={C.gold}>{(Number(dish.nutrients.calories) || 0).toFixed(1)} kcal</Tag>
         </div>
 
-        {type === "partial" && missing.length > 0 && (
+        {missing.length > 0 && (
           <div style={{ marginBottom: 14 }}>
             <div style={{
               fontSize: 10, color: C.textMuted, fontWeight: 700,
@@ -56,11 +61,11 @@ function SuggestionCard({ dish, type, onViewDish }) {
 
         <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 14, marginTop: "auto", display: "flex", gap: 8 }}>
           <Btn
-            variant={type === "full" ? "sage" : "ghost"}
+            variant={full ? "sage" : "ghost"}
             style={{ flex: 1 }}
             onClick={() => onViewDish(dish)}
           >
-            {type === "full" ? "Cook now" : "View recipe"}
+            {full ? "Cook now" : "View recipe"}
           </Btn>
         </div>
       </div>
@@ -69,27 +74,31 @@ function SuggestionCard({ dish, type, onViewDish }) {
 }
 
 export default function Suggestions({ dishes, pantry, onViewDish }) {
-  const pantryNames = new Set(pantry.map(p => p.name.toLowerCase()));
-
-  // Annotate dishes with pantry membership
-  const annotated = dishes.map(d => ({
-    ...d,
-    _pantryHas: d.reqIngredients.filter(i => pantryNames.has(i.name.toLowerCase())).map(i => i.name.toLowerCase()),
-  }));
-
-  const canMake = annotated.filter(d =>
-    d.reqIngredients.every(i => pantryNames.has(i.name.toLowerCase()))
-  );
-
-  // Ranked by how few ingredients stand between you and the dish
-  const partial = annotated
-    .filter(d =>
-      !canMake.some(c => c.id === d.id)
-      && d.reqIngredients.some(i => pantryNames.has(i.name.toLowerCase()))
-    )
-    .sort((a, b) =>
-      (a.reqIngredients.length - a._pantryHas.length) - (b.reqIngredients.length - b._pantryHas.length)
-    );
+  // One pass over the catalog: split each dish's required ingredients into
+  // have/missing against the pantry, then classify. Memoized — this only
+  // reruns when the dish list or pantry actually changes.
+  const { canMake, canMakeTotal, partial, partialTotal } = useMemo(() => {
+    const pantryNames = new Set(pantry.map(p => p.name.toLowerCase()));
+    const allFull = [], allPartial = [];
+    for (const dish of dishes) {
+      const missing = [];
+      let have = 0;
+      for (const ing of dish.reqIngredients) {
+        if (pantryNames.has(ing.name.toLowerCase())) have++;
+        else missing.push(ing);
+      }
+      if (missing.length === 0) allFull.push({ dish, missing });
+      else if (have > 0) allPartial.push({ dish, missing });
+    }
+    // Ranked by how few ingredients stand between you and the dish
+    allPartial.sort((a, b) => a.missing.length - b.missing.length);
+    return {
+      canMake:      allFull.slice(0, FULL_LIMIT),
+      canMakeTotal: allFull.length,
+      partial:      allPartial.slice(0, PARTIAL_LIMIT),
+      partialTotal: allPartial.length,
+    };
+  }, [dishes, pantry]);
 
   const SectionHead = ({ dot, title, count }) => (
     <h2 style={{
@@ -109,7 +118,7 @@ export default function Suggestions({ dishes, pantry, onViewDish }) {
         subtitle={`What your pantry of ${pantry.length} items can already cook`}
       />
 
-      {canMake.length === 0 && partial.length === 0 && (
+      {canMakeTotal === 0 && partialTotal === 0 && (
         <Empty
           icon={<IngredientArt name="chili" size={56} />}
           title="Pantry looks bare"
@@ -120,20 +129,32 @@ export default function Suggestions({ dishes, pantry, onViewDish }) {
       <div style={{ position: "relative" }}>
         <Watermark symbol="i-chili" size={220} style={{ right: -10, top: -40, transform: "rotate(-18deg)" }} />
 
-        {canMake.length > 0 && (
+        {canMakeTotal > 0 && (
           <section style={{ marginBottom: 36, position: "relative" }}>
-            <SectionHead dot={C.success} title="Ready to cook" count={canMake.length} />
+            <SectionHead
+              dot={C.success}
+              title="Ready to cook"
+              count={canMakeTotal > canMake.length ? `first ${canMake.length} of ${canMakeTotal}` : canMakeTotal}
+            />
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px,1fr))", gap: 16 }}>
-              {canMake.map(d => <SuggestionCard key={d.id} dish={d} type="full" onViewDish={onViewDish} />)}
+              {canMake.map(({ dish, missing }) => (
+                <SuggestionCard key={dish.id} dish={dish} missing={missing} onViewDish={onViewDish} />
+              ))}
             </div>
           </section>
         )}
 
-        {partial.length > 0 && (
+        {partialTotal > 0 && (
           <section style={{ marginBottom: 36, position: "relative" }}>
-            <SectionHead dot={C.warning} title="Almost there" count={partial.length} />
+            <SectionHead
+              dot={C.warning}
+              title="Almost there"
+              count={partialTotal > partial.length ? `closest ${partial.length} of ${partialTotal}` : partialTotal}
+            />
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px,1fr))", gap: 16 }}>
-              {partial.map(d => <SuggestionCard key={d.id} dish={d} type="partial" onViewDish={onViewDish} />)}
+              {partial.map(({ dish, missing }) => (
+                <SuggestionCard key={dish.id} dish={dish} missing={missing} onViewDish={onViewDish} />
+              ))}
             </div>
           </section>
         )}

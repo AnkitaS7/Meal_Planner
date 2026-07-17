@@ -65,10 +65,18 @@ export default function Nutrients({ dishes, userId }) {
   };
   const removeDish = id => setCompDishes(prev => prev.filter(d => d.id !== id));
 
-  const searchResults = dishes
-    .filter(d => !compDishes.some(s => s.id === d.id))
-    .filter(d => d.name.toLowerCase().includes(compSearch.toLowerCase()))
-    .slice(0, 8);
+  // Stop scanning the catalog as soon as 8 matches are found (and skip the
+  // whole walk when the search card isn't open).
+  const searchResults = [];
+  if (isSearching) {
+    const q = compSearch.toLowerCase();
+    for (const d of dishes) {
+      if (searchResults.length >= 8) break;
+      if (!compDishes.some(s => s.id === d.id) && d.name.toLowerCase().includes(q)) {
+        searchResults.push(d);
+      }
+    }
+  }
 
   const maxVals = compDishes.length > 0 ? {
     calories: Math.max(...compDishes.map(d => d.nutrients.calories), 1),
