@@ -1213,7 +1213,7 @@ export function SvgDefs() {
           <g transform="rotate(6 30 30)">
             <rect x="22" y="8" width="16" height="44" fill="#F2CC60" />
             <path d="M24 8 v 44 M28 8 v 44 M32 8 v 44 M36 8 v 44" stroke="#D9A82C" strokeWidth="1.4" />
-            <rect x="18" y="24" width="24" height="14" rx="2" fill="#2F55B0" />
+            <rect x="18" y="24" width="24" height="14" rx="2" fill="#4238A6" />
             <ellipse cx="30" cy="31" rx="7" ry="4.5" fill="#F2E4C8" />
           </g>
         </symbol>

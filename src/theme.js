@@ -14,17 +14,17 @@ export const C = {
   sidebar:     "var(--head)",
   sidebarHover:"var(--line)",
 
-  // Primary — c1, brand/evening blueberry
+  // Primary — c1, brand/evening indigo
   accent:      "var(--c1)",
   accentLight: "var(--c1-soft)",
   accentDark:  "var(--c1)",
 
-  // Secondary — c4, noon green
+  // Secondary — c4, mint
   sage:        "var(--c4)",
   sageDark:    "var(--c4)",
   sageLight:   "var(--c4-soft)",
 
-  // Tertiary — c3, checklist gold
+  // Tertiary — c3, saffron gold
   gold:        "var(--c3)",
   goldLight:   "var(--c3-soft)",
 

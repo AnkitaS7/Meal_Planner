@@ -1,35 +1,36 @@
 /* ============================================================
    Season — Spice Route design system
-   Palette A "Blueberry, Tomato & Lemon": cool grounds, four
-   working colors (c1 brand/evening · c2 sunrise/emphasis ·
-   c3 checklist gold · c4 noon green), colored dark for night.
+   Palette B "Indigo, Saffron & Mint": mint-milk grounds, four
+   working colors (c1 brand/evening indigo · c2 saffron thread,
+   emphasis · c3 saffron gold, checklist · c4 mint), indigo
+   night. Neutrals keep Palette A lightness — contrast holds.
    ============================================================ */
 
 :root {
-  --bg:          #F5F8F8;
+  --bg:          #F5F8F6;
   --panel:       #FCFDFD;
-  --head:        #1E2530;
-  --ink:         #2A3240;
-  --soft:        #5C6878;
-  --faint:       #66727E; /* ≥4.5:1 on panel & bg — used for small labels */
-  --line:        #DFE5E7;
-  --line-strong: #B9C4C9;
-  --mound:       #E9EEEE;
+  --head:        #1E2233;
+  --ink:         #2A2F44;
+  --soft:        #5C6378;
+  --faint:       #666D80; /* ≥4.5:1 on panel & bg — used for small labels */
+  --line:        #DFE5E2;
+  --line-strong: #B9C4BF;
+  --mound:       #E9EEEB;
 
-  --c1: #2F55B0;
-  --c2: #CE3D20;
-  --c3: #91690A;
-  --c4: #2A7A4E;
+  --c1: #4238A6;
+  --c2: #BC4B0C;
+  --c3: #9A6A06;
+  --c4: #0F7E5C;
 
   --on-accent: #FFFFFF; /* text on solid c1–c4 fills */
 
-  --c1-soft: #E7EDF8;
-  --c2-soft: #FAE8E3;
-  --c3-soft: #F5EEDB;
-  --c4-soft: #E3F0E9;
+  --c1-soft: #E9E8F8;
+  --c2-soft: #FAECDF;
+  --c3-soft: #F5EED8;
+  --c4-soft: #E1F1EA;
 
-  --shadow:      0 14px 34px -18px rgba(40, 60, 90, 0.35);
-  --shadow-lift: 0 18px 40px -18px rgba(40, 60, 90, 0.45);
+  --shadow:      0 14px 34px -18px rgba(45, 45, 95, 0.35);
+  --shadow-lift: 0 18px 40px -18px rgba(45, 45, 95, 0.45);
 
   --font-display: "Optima", "Alegreya Sans", "Gill Sans", sans-serif;
   --font-serif:   "Palatino", "Lora", "Book Antiqua", Georgia, serif;
@@ -37,27 +38,27 @@
 }
 
 .night {
-  --bg:          #12161F;
-  --panel:       #1A2030;
-  --head:        #EAEDF5;
-  --ink:         #DCE1EC;
-  --soft:        #9AA5B8;
-  --faint:       #8791A9;
-  --line:        #2A3147;
-  --line-strong: #45507A;
-  --mound:       #232B45;
+  --bg:          #131322;
+  --panel:       #1B1C31;
+  --head:        #ECEDF7;
+  --ink:         #DDDFEE;
+  --soft:        #9CA2BC;
+  --faint:       #8A90AC;
+  --line:        #2B2C4A;
+  --line-strong: #474D7E;
+  --mound:       #252648;
 
-  --c1: #7C9AE8;
-  --c2: #F0704F;
-  --c3: #EFC94C;
-  --c4: #5FBE8A;
+  --c1: #9DA2F2;
+  --c2: #F5944E;
+  --c3: #EDC44F;
+  --c4: #63D6AC;
 
-  --on-accent: #12161F; /* night accents are light — dark text keeps ≥6:1 */
+  --on-accent: #131322; /* night accents are light — dark text keeps ≥6:1 */
 
-  --c1-soft: #232B45;
-  --c2-soft: #3A2530;
-  --c3-soft: #38301C;
-  --c4-soft: #1F3A2E;
+  --c1-soft: #252648;
+  --c2-soft: #3B2A1E;
+  --c3-soft: #383018;
+  --c4-soft: #1C3A2F;
 
   --shadow:      0 16px 36px -16px rgba(0, 0, 0, 0.6);
   --shadow-lift: 0 20px 42px -16px rgba(0, 0, 0, 0.7);
