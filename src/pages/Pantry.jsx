@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { C, FONTS, RADIUS, SHADOW } from "../theme";
+import { C, FONTS, RADIUS, SHADOW, alpha } from "../theme";
+import { IngredientArt, Watermark } from "../components/art";
 import {
   Card, Btn, Input, Select, Page, PageHeader, Empty, SectionLabel,
 } from "../components/ui";
@@ -19,23 +20,51 @@ const CAT_COLORS = {
   Groceries: "#8A8FA3",
 };
 
+// Items are shelved by whatever their category column holds — categories we
+// haven't met before still get a stable color of their own.
+const catOf = item => item.category || "Uncategorized";
+
+function catColor(category) {
+  category = category || "Uncategorized";
+  if (CAT_COLORS[category]) return CAT_COLORS[category];
+  let h = 0;
+  for (let i = 0; i < category.length; i++) h = (h * 31 + category.charCodeAt(i)) >>> 0;
+  return ["var(--c1)", "var(--c2)", "var(--c3)", "var(--c4)"][h % 4];
+}
+
+// Distinct categories present on the rows themselves, in a stable order:
+// known enum categories first (enum order), then the rest alphabetically.
+function categoriesOf(items, pantryCategories) {
+  return [...new Set(items.map(catOf))].sort((a, b) => {
+    const ia = pantryCategories.indexOf(a), ib = pantryCategories.indexOf(b);
+    if (ia !== -1 && ib !== -1) return ia - ib;
+    if (ia !== -1) return -1;
+    if (ib !== -1) return 1;
+    return a.localeCompare(b);
+  });
+}
+
 function daysUntilExpiry(dateStr) {
   if (!dateStr) return null;
   return Math.ceil((new Date(dateStr) - Date.now()) / (1000 * 60 * 60 * 24));
 }
 
-function ExpiryLabel({ dateStr }) {
+// Expiry as a small badge perched on the shelf item (V2 language)
+function ExpiryBadge({ dateStr }) {
   const days = daysUntilExpiry(dateStr);
-  if (days === null) return null;
-  const color = days < 0 ? C.error : days < 3 ? C.error : days < 7 ? C.warning : C.textMuted;
-  const text  = days < 0 ? "⚠ Expired" : days === 0 ? "⚠ Expires today" : `Expires in ${days}d`;
+  if (days === null || days > 7) return null;
+  const color = days < 3 ? C.error : C.warning;
+  const text  = days < 0 ? "expired" : days === 0 ? "today" : `${days} d`;
   return (
-    <div style={{
-      fontSize: 11, fontWeight: days < 7 ? 700 : 400,
-      color, marginTop: 10,
+    <span style={{
+      position: "absolute", top: 0, right: 2,
+      background: alpha(color, 12), color,
+      border: `1px solid ${alpha(color, 35)}`,
+      fontSize: 9, fontWeight: 700, borderRadius: 999,
+      padding: "1px 7px", letterSpacing: "0.06em",
     }}>
       {text}
-    </div>
+    </span>
   );
 }
 
@@ -95,12 +124,12 @@ function ItemNameAutocomplete({ value, onChange, onPick, pantryCategories }) {
       {open && (
         <div style={{
           position: "absolute", top: "100%", left: 0, right: 0, zIndex: 30,
-          marginTop: 4, background: "#fff",
+          marginTop: 4, background: C.card,
           border: `1.5px solid ${C.border}`, borderRadius: RADIUS.md,
           boxShadow: SHADOW.md, overflow: "hidden", maxHeight: 264, overflowY: "auto",
         }}>
           {suggestions.map((s, i) => {
-            const color = CAT_COLORS[s.category] ?? C.textSub;
+            const color = catColor(s.category);
             return (
               <div
                 key={s.alias}
@@ -109,8 +138,8 @@ function ItemNameAutocomplete({ value, onChange, onPick, pantryCategories }) {
                 style={{
                   display: "flex", justifyContent: "space-between", alignItems: "center",
                   gap: 10, padding: "9px 14px", cursor: "pointer",
-                  background: i === hi ? C.accentLight : "#fff",
-                  borderBottom: i < suggestions.length - 1 ? `1px solid ${C.border}55` : "none",
+                  background: i === hi ? C.accentLight : C.card,
+                  borderBottom: i < suggestions.length - 1 ? `1px solid ${alpha(C.border, 33)}` : "none",
                 }}
               >
                 <span style={{ fontSize: 13, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -118,7 +147,7 @@ function ItemNameAutocomplete({ value, onChange, onPick, pantryCategories }) {
                 </span>
                 <span style={{
                   fontSize: 10, fontWeight: 700, color, flexShrink: 0,
-                  background: color + "18", border: `1px solid ${color}44`,
+                  background: alpha(color, 10), border: `1px solid ${alpha(color, 27)}`,
                   borderRadius: RADIUS.full, padding: "2px 8px",
                   letterSpacing: 0.4, textTransform: "uppercase",
                 }}>
@@ -155,15 +184,15 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
     setPantry(p => p.filter(i => i.id !== id));
   };
 
-  const categories = ["All", ...new Set(pantry.map(p => p.category))];
+  const categories = ["All", ...categoriesOf(pantry, pantryCategories)];
 
   const filtered = pantry.filter(
-    p => (cat === "All" || p.category === cat)
+    p => (cat === "All" || catOf(p) === cat)
       && p.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Summary by category
-  const summary = pantryCategories.filter(c => pantry.some(p => p.category === c));
+  // Summary by category — straight from the items' own category column
+  const summary = categoriesOf(pantry, pantryCategories);
 
   return (
     <Page>
@@ -171,24 +200,21 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
         title="Pantry"
         subtitle={`${pantry.length} items tracked`}
         action={
-          <div style={{ display: "flex", gap: 8 }}>
-            <Btn variant="secondary" onClick={() => {}}>📷 Scan Bill</Btn>
-            <Btn onClick={() => setShowAdd(v => !v)}>
-              {showAdd ? "✕ Cancel" : "+ Add Item"}
-            </Btn>
-          </div>
+          <Btn onClick={() => setShowAdd(v => !v)}>
+            {showAdd ? "✕ Cancel" : "+ Add Item"}
+          </Btn>
         }
       />
 
       {/* Summary chips */}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
         {summary.map(c => {
-          const count = pantry.filter(p => p.category === c).length;
-          const color = CAT_COLORS[c] ?? C.textSub;
+          const count = pantry.filter(p => catOf(p) === c).length;
+          const color = catColor(c);
           return (
             <div key={c} style={{
               padding: "5px 14px", borderRadius: RADIUS.full,
-              background: color + "18", color, border: `1px solid ${color}44`,
+              background: alpha(color, 10), color, border: `1px solid ${alpha(color, 27)}`,
               fontSize: 12, fontWeight: 500,
             }}>
               {c} · {count}
@@ -259,10 +285,10 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="🔍  Search pantry…"
+          placeholder="Search pantry…"
           style={{
             flex: 1, minWidth: 200,
-            background: "#fff", border: `1.5px solid ${C.border}`,
+            background: C.card, border: `1.5px solid ${C.border}`,
             borderRadius: RADIUS.md, padding: "10px 16px",
             fontSize: 14, color: C.text,
           }}
@@ -275,7 +301,7 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
               style={{
                 padding: "8px 14px", borderRadius: RADIUS.sm,
                 border: `1.5px solid ${cat === c ? C.accent : C.border}`,
-                background: cat === c ? C.accentLight : "#fff",
+                background: cat === c ? C.accentLight : C.card,
                 color: cat === c ? C.accent : C.textSub,
                 fontSize: 13, cursor: "pointer", fontFamily: FONTS.body,
                 fontWeight: cat === c ? 600 : 400, transition: "all 0.18s",
@@ -287,66 +313,70 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
         </div>
       </div>
 
-      {/* Items grid */}
+      {/* The shelves — everything you own, standing in rows (V2 language) */}
       {filtered.length === 0 ? (
         <Empty
-          icon="🏺"
+          icon={<IngredientArt name="jar" size={56} />}
           title="No items found"
           subtitle="Add your first pantry item or try a different search."
           action={<Btn onClick={() => setShowAdd(true)}>+ Add Item</Btn>}
         />
       ) : (
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))",
-          gap: 14,
-        }}>
-          {filtered.map(item => {
-            const color = CAT_COLORS[item.category] ?? C.textMuted;
-            return (
-              <div key={item.id} style={{
-                background: "#fff", border: `1px solid ${C.border}`,
-                borderRadius: RADIUS.lg, padding: 18, position: "relative",
-              }}>
-                <button
-                  onClick={() => removeItem(item.id)}
-                  style={{
-                    position: "absolute", top: 12, right: 12,
-                    background: "none", border: "none",
-                    color: C.textMuted, cursor: "pointer", fontSize: 14,
-                  }}
-                >
-                  ✕
-                </button>
+        <div className="sr-panel clip" style={{ paddingBottom: 10 }}>
+          <Watermark symbol="i-garlic" size={170} style={{ left: -32, top: -22 }} />
+          <Watermark symbol="i-herb" size={190} style={{ right: -28, bottom: -36, transform: "rotate(14deg)" }} />
 
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <span style={{ width: 9, height: 9, borderRadius: "50%", background: color }} />
-                  <span style={{
-                    fontSize: 10, fontWeight: 700, color,
-                    letterSpacing: 0.5, textTransform: "uppercase",
+          {categoriesOf(filtered, pantryCategories)
+            .map(category => {
+              const color = catColor(category);
+              const shelfItems = filtered.filter(p => catOf(p) === category);
+              return (
+                <div key={category} style={{ marginBottom: 22, position: "relative" }}>
+                  <div style={{
+                    fontSize: 10, letterSpacing: "0.24em", textTransform: "uppercase",
+                    color: C.textMuted, marginBottom: 2, display: "flex", gap: 8, alignItems: "center",
                   }}>
-                    {item.category}
-                  </span>
+                    <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: color }} />
+                    {category} · {shelfItems.length}
+                  </div>
+                  <div className="sr-shelf">
+                    {shelfItems.map(item => (
+                      <div key={item.id} className="sr-pitem" tabIndex={0}>
+                        <ExpiryBadge dateStr={item.expiry} />
+                        <IngredientArt
+                          name={item.name}
+                          category={item.category}
+                          size={44}
+                          jarColor={color}
+                        />
+                        <div className="truncate" style={{
+                          fontSize: 12, color: C.text, marginTop: 5, maxWidth: 110,
+                        }}>
+                          {item.name}
+                        </div>
+                        <div style={{
+                          fontSize: 10, color: C.textMuted, fontVariantNumeric: "tabular-nums",
+                        }}>
+                          {item.qty} {item.unit}
+                          <button
+                            onClick={() => removeItem(item.id)}
+                            aria-label={`Remove ${item.name} from pantry`}
+                            style={{
+                              background: "none", border: "none", color: C.textMuted,
+                              cursor: "pointer", fontSize: 11, marginLeft: 6, padding: "0 2px",
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.color = "var(--c2)"; }}
+                            onMouseLeave={e => { e.currentTarget.style.color = "var(--faint)"; }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-
-                <div style={{ fontWeight: 600, fontSize: 15, color: C.text, marginBottom: 8 }}>
-                  {item.name}
-                </div>
-
-                <div style={{
-                  fontSize: 22, fontWeight: 700, color,
-                  fontFamily: FONTS.display,
-                }}>
-                  {item.qty}{" "}
-                  <span style={{ fontSize: 13, color: C.textMuted, fontFamily: FONTS.body }}>
-                    {item.unit}
-                  </span>
-                </div>
-
-                <ExpiryLabel dateStr={item.expiry} />
-              </div>
-            );
-          })}
+              );
+            })}
         </div>
       )}
     </Page>

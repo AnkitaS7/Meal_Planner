@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
-import { C, FONTS, RADIUS } from "../theme";
+import { C, FONTS, RADIUS, alpha } from "../theme";
 import { Card, Btn, Page, PageHeader } from "../components/ui";
+import { Watermark } from "../components/art";
 import { insertPantryItem, matchIngredientAliases, addCatalogIngredient, mergePantryRows } from "../lib/db";
 import { supabase } from "../lib/supabase";
 
@@ -225,11 +226,14 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
                 padding: "64px 40px",
                 textAlign: "center",
                 cursor: "pointer",
-                background: drag ? C.accentLight : "#fff",
+                background: drag ? C.accentLight : C.card,
                 transition: "all 0.22s",
-                boxShadow: drag ? `0 0 0 4px ${C.accent}22` : "none",
+                boxShadow: drag ? `0 0 0 4px ${alpha(C.accent, 13)}` : "none",
+                position: "relative",
+                overflow: "hidden",
               }}
             >
+              <Watermark symbol="w-receipt" size={190} style={{ right: -40, bottom: -50, transform: "rotate(10deg)" }} />
               <input
                 ref={fileRef}
                 type="file"
@@ -237,7 +241,9 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
                 style={{ display: "none" }}
                 onChange={e => handleFile(e.target.files[0])}
               />
-              <div style={{ fontSize: 56, marginBottom: 20 }}>📸</div>
+              <svg viewBox="0 0 60 60" width={56} height={56} style={{ color: C.textMuted, margin: "0 auto 20px", display: "block" }} aria-hidden="true">
+                <use href="#w-receipt" />
+              </svg>
               <h3 style={{ fontFamily: FONTS.display, fontSize: 24, color: C.text, marginBottom: 10 }}>
                 Upload Your Receipt
               </h3>
@@ -253,18 +259,18 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
               How It Works
             </h3>
             {[
-              ["📸", "Upload",       "Take a photo or scan of your grocery receipt"],
-              ["🤖", "AI Reads",     "AI identifies items, quantities, and categories from the image"],
-              ["✏️", "Review & Edit","Adjust any quantities, units, or categories before adding"],
-              ["🏺", "Done!",        "Selected items are saved directly to your pantry"],
-            ].map(([icon, title, desc], i) => (
+              ["Upload",       "Take a photo or scan of your grocery receipt"],
+              ["AI reads",     "AI identifies items, quantities, and categories from the image"],
+              ["Review & edit","Adjust any quantities, units, or categories before adding"],
+              ["Done",         "Selected items are saved directly to your pantry"],
+            ].map(([title, desc], i) => (
               <div key={i} style={{ display: "flex", gap: 14, marginBottom: 18, alignItems: "flex-start" }}>
                 <div style={{
                   width: 32, height: 32, borderRadius: "50%",
                   background: C.accentLight, flexShrink: 0,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 16,
-                }}>{icon}</div>
+                  fontFamily: FONTS.serif, fontSize: 15, color: C.accent,
+                }}>{i + 1}</div>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: 14, color: C.text }}>{title}</div>
                   <div style={{ fontSize: 13, color: C.textSub, marginTop: 3, lineHeight: 1.5 }}>{desc}</div>
@@ -276,7 +282,7 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
               padding: 14, marginTop: 6,
               fontSize: 12, color: C.textMuted, lineHeight: 1.6,
             }}>
-              🔒 Your receipt image is sent directly to the Google Gemini API and is not stored by this app.
+              Your receipt image is sent directly to the Google Gemini API and is not stored by this app.
             </div>
           </Card>
         </div>
@@ -285,12 +291,13 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
       {/* ── Scanning ── */}
       {stage === "scanning" && (
         <Card style={{ textAlign: "center", padding: "80px 40px" }}>
-          <div style={{
-            width: 80, height: 80, borderRadius: "50%",
-            background: C.accentLight, margin: "0 auto 24px",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 36, animation: "spin 2s linear infinite",
-          }}>⚙️</div>
+          <div aria-hidden="true" style={{
+            width: 64, height: 64, borderRadius: "50%",
+            margin: "0 auto 24px",
+            border: `5px solid ${C.accentLight}`,
+            borderTopColor: C.accent,
+            animation: "spin 1.1s linear infinite",
+          }} />
           <h3 style={{ fontFamily: FONTS.display, fontSize: 26, color: C.text, marginBottom: 10 }}>
             Analyzing your receipt…
           </h3>
@@ -321,7 +328,13 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
       {/* ── Error ── */}
       {stage === "error" && (
         <Card style={{ textAlign: "center", padding: "60px 40px" }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
+          <div aria-hidden="true" style={{
+            width: 56, height: 56, borderRadius: "50%",
+            margin: "0 auto 16px",
+            background: alpha(C.error, 12), border: `2px solid ${alpha(C.error, 35)}`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontFamily: FONTS.serif, fontSize: 28, color: C.error,
+          }}>!</div>
           <h3 style={{ fontFamily: FONTS.display, fontSize: 22, color: C.text, marginBottom: 12 }}>
             Scan Failed
           </h3>
@@ -345,7 +358,7 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
             }}>
               <div>
                 <h3 style={{ fontFamily: FONTS.display, fontSize: 22, color: C.text }}>
-                  ✅ Scan Complete
+                  Scan complete
                 </h3>
                 <p style={{ color: C.textSub, fontSize: 13, marginTop: 4 }}>
                   {items.length} items detected · {selectedCount} selected
@@ -369,9 +382,9 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
               <div style={{
                 marginTop: 14, background: "#FDECEA", border: "1px solid #F5C6CB",
                 borderRadius: RADIUS.md, padding: "10px 14px",
-                fontSize: 13, color: "#B0413E", lineHeight: 1.6,
+                fontSize: 13, color: C.error, lineHeight: 1.6,
               }}>
-                ⚠ {saveError}
+                {saveError}
               </div>
             )}
           </Card>
@@ -405,7 +418,7 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
                   border: `2px solid ${isSel ? C.sage : C.border}`,
                   borderRadius: RADIUS.md,
                   padding: 14,
-                  background: isSel ? C.sageLight : "#fff",
+                  background: isSel ? C.sageLight : C.card,
                   transition: "border-color 0.18s, background 0.18s",
                 }}>
 
@@ -445,7 +458,7 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
                               display: "flex", alignItems: "center", gap: 8,
                               padding: "6px 8px", borderRadius: RADIUS.sm, cursor: "pointer",
                               border: `1.5px solid ${active ? C.sage : C.border}`,
-                              background: active ? "#fff" : "transparent",
+                              background: active ? C.card : "transparent",
                             }}
                           >
                             <span style={{
@@ -508,7 +521,7 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
                                 style={{
                                   width: "100%", padding: "5px 7px",
                                   border: `1.5px solid ${C.border}`, borderRadius: RADIUS.sm,
-                                  fontSize: 12, color: C.text, background: "#fff", outline: "none",
+                                  fontSize: 12, color: C.text, background: C.card, outline: "none",
                                 }}
                               />
                             ))}
@@ -528,7 +541,7 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
                       style={{
                         width: 68, padding: "5px 8px",
                         border: `1.5px solid ${C.border}`, borderRadius: RADIUS.sm,
-                        fontSize: 13, color: C.text, background: "#fff",
+                        fontSize: 13, color: C.text, background: C.card,
                         outline: "none",
                       }}
                     />
@@ -538,7 +551,7 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
                       style={{
                         flex: 1, padding: "5px 6px",
                         border: `1.5px solid ${C.border}`, borderRadius: RADIUS.sm,
-                        fontSize: 12, color: C.text, background: "#fff",
+                        fontSize: 12, color: C.text, background: C.card,
                         outline: "none", cursor: "pointer",
                       }}
                     >
@@ -552,10 +565,10 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
                     onChange={e => updateItem(index, { ...item, category: e.target.value })}
                     style={{
                       width: "100%", padding: "5px 8px",
-                      border: `1.5px solid ${color}55`,
+                      border: `1.5px solid ${alpha(color, 33)}`,
                       borderRadius: RADIUS.sm,
                       fontSize: 12, fontWeight: 600,
-                      color, background: color + "14",
+                      color, background: alpha(color, 8),
                       outline: "none", cursor: "pointer",
                     }}
                   >

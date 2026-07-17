@@ -96,7 +96,7 @@ export default function DriCalculator({ userId }) {
         flex: 1, padding: "8px 12px", fontSize: 13, fontWeight: 600,
         cursor: "pointer", fontFamily: FONTS.body,
         border: `1.5px solid ${units === value ? C.accent : C.border}`,
-        background: units === value ? C.accentLight : "#fff",
+        background: units === value ? C.accentLight : C.card,
         color: units === value ? C.accentDark : C.textMuted,
         borderRadius: RADIUS.md,
       }}

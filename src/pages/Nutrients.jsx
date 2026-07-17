@@ -3,12 +3,50 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
 } from "recharts";
-import { C, FONTS, RADIUS } from "../theme";
-import { Card, Tag, Page, PageHeader } from "../components/ui";
+import { C, FONTS, alpha } from "../theme";
+import { Tag, Page, PageHeader } from "../components/ui";
+import { DishArt, SpiceMound, SPICE, NUTRIENT_SPICE } from "../components/art";
 import { DAYS } from "../data/mockData";
 import { fetchNutrientTargets, fetchWeeklyPlan, getWeekStart } from "../lib/db";
 
-const MACRO_COLORS = [C.gold, C.sage, C.accent, C.purple, C.teal];
+// Which spice each nutrient is sold as at the stall.
+const SPICE_NAME = {
+  Calories: "saffron", Protein: "paprika", Carbs: "turmeric",
+  Fat: "cardamom", Fiber: "matcha", Fibre: "matcha",
+};
+const WEEK_KEY = {
+  Calories: "calories", Protein: "protein", Carbs: "carbs",
+  Fat: "fat", Fiber: "fiber", Fibre: "fiber",
+};
+const DAY_FULL = {
+  Mon: "Monday", Tue: "Tuesday", Wed: "Wednesday", Thu: "Thursday",
+  Fri: "Friday", Sat: "Saturday", Sun: "Sunday",
+};
+
+// Seven tiny bars under a mound — the week's history, today emphasized.
+function WeekSpark({ values, todayIdx, color }) {
+  const max = Math.max(...values, 1);
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        display: "flex", gap: 3, alignItems: "flex-end",
+        justifyContent: "center", height: 22, marginTop: 8,
+      }}
+    >
+      {values.map((v, i) => (
+        <span
+          key={i}
+          style={{
+            width: 6, borderRadius: 2,
+            height: Math.max(3, Math.round((v / max) * 20)),
+            background: i === todayIdx ? color : alpha(color, 25),
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
 export default function Nutrients({ dishes, userId }) {
   const [nutrientData, setNutrientData] = useState([]);
@@ -67,6 +105,7 @@ export default function Nutrients({ dishes, userId }) {
           protein:  Math.round(byDay[day].protein),
           carbs:    Math.round(byDay[day].carbs),
           fat:      Math.round(byDay[day].fat),
+          fiber:    Math.round(byDay[day].fiber),
         })));
 
         // Today's totals
@@ -81,7 +120,7 @@ export default function Nutrients({ dishes, userId }) {
             : Math.round(todayTotals[nutrientKey[t.nutrient_name]] ?? 0),
           target:  Number(t.target_value),
           unit:    t.unit,
-          color:   t.display_color,
+          color:   NUTRIENT_SPICE[t.nutrient_name] ?? t.display_color,
         })));
       })
       .catch(console.error)
@@ -90,81 +129,127 @@ export default function Nutrients({ dishes, userId }) {
 
   const macroData = nutrientData
     .filter(n => ["Carbs", "Protein", "Fat"].includes(n.name))
-    .map((n, i) => ({ name: n.name, value: n.current, color: MACRO_COLORS[i] }));
+    .map(n => ({ name: n.name, value: n.current, color: n.color }));
 
   const chartTooltipStyle = {
     contentStyle: {
       borderRadius: 10,
       border: `1px solid ${C.border}`,
-      background: "#fff",
+      background: C.card,
       fontFamily: FONTS.body,
       fontSize: 13,
     },
   };
 
+  // ---- The read of the day (written from real numbers, not a stat wall) ----
+  const todayIdx = DAYS.indexOf(new Date().toLocaleString("en-US", { weekday: "short" }).slice(0, 3));
+  const dateStr = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  const calRow = nutrientData.find(n => n.name === "Calories");
+  const calPct = calRow && calRow.target > 0 ? Math.round((calRow.current / calRow.target) * 100) : null;
+  const weekPlanned = weekData.some(d => d.calories > 0);
+  const bestProtein = weekPlanned
+    ? weekData.reduce((a, b) => (b.protein > a.protein ? b : a))
+    : null;
+  const behind = nutrientData
+    .filter(n => n.target > 0)
+    .map(n => ({ ...n, pct: Math.round((n.current / n.target) * 100) }))
+    .sort((a, b) => a.pct - b.pct)[0];
+
   return (
     <Page>
       <PageHeader
-        title="Nutrition Dashboard"
-        subtitle="Your daily and weekly nutritional tracking"
+        title="The spice stall"
+        subtitle={`${dateStr}${calPct != null ? ` · ${calPct}% of today's calories` : ""}`}
       />
 
-      {/* Daily target rings */}
-      <h3 style={{ fontFamily: FONTS.display, fontSize: 18, marginBottom: 16, color: C.text, textAlign: "center" }}>
-        Today's Progress
-      </h3>
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(5, 1fr)",
-        gap: 14,
-        marginBottom: 28,
-      }}>
-        {loading ? (
-          <div style={{ gridColumn: "1/-1", color: C.textMuted, fontSize: 13 }}>Loading targets…</div>
-        ) : nutrientData.map(n => {
-          const pct = n.target > 0 ? Math.min(100, Math.round((n.current / n.target) * 100)) : 0;
-          const circumference = 2 * Math.PI * 26;
-          const dashOffset = circumference * (1 - pct / 100);
-          return (
-            <Card key={n.name} style={{ textAlign: "center", padding: 20 }}>
-              <div style={{ position: "relative", width: 68, height: 68, margin: "0 auto 12px" }}>
-                <svg width={68} height={68} style={{ transform: "rotate(-90deg)" }}>
-                  <circle cx={34} cy={34} r={26} fill="none" stroke={C.border} strokeWidth={6} />
-                  <circle cx={34} cy={34} r={26}
-                    fill="none" stroke={n.color} strokeWidth={6}
-                    strokeDasharray={circumference}
-                    strokeDashoffset={dashOffset}
-                    strokeLinecap="round"
-                    style={{ transition: "stroke-dashoffset 0.8s ease" }}
-                  />
-                </svg>
-                <div style={{
-                  position: "absolute", inset: 0,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 13, fontWeight: 700, color: n.color,
-                }}>
-                  {pct}%
-                </div>
-              </div>
-              <div style={{ fontSize: 22, fontWeight: 700, color: C.text, fontFamily: FONTS.display }}>
-                {n.name === "Calories" ? n.current.toFixed(1) : n.current}
-              </div>
-              <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2, lineHeight: 1.5 }}>
-                {n.unit} {n.name}<br />
-                <span style={{ color: C.border }}>of {n.target}</span>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
+      <div className="sr-grid">
+        {/* ---- HERO: the stall — five mounds, a week under each ---- */}
+        <section className="sr-panel clip sp-12">
+          <svg
+            className="sr-wm" viewBox="0 0 120 70" width={360} height={210}
+            style={{ left: -64, bottom: -52 }} aria-hidden="true"
+          >
+            <use href="#moundShape" fill="currentColor" />
+          </svg>
 
-      {/* Charts row */}
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 20, marginBottom: 20 }}>
-        {/* Weekly calories bar */}
-        <Card>
-          <h3 style={{ fontFamily: FONTS.display, fontSize: 18, marginBottom: 20, color: C.text }}>
-            Weekly Calorie Intake
+          <h3 className="sr-panel-h">
+            <span>Today's intake</span>
+            <span>a week under each mound</span>
           </h3>
+
+          {loading ? (
+            <div style={{ color: C.textMuted, fontSize: 13 }}>Loading targets…</div>
+          ) : nutrientData.length === 0 ? (
+            <p style={{ fontFamily: FONTS.serif, fontStyle: "italic", fontSize: 14, color: C.textSub }}>
+              Set nutrition targets in your profile to raise the stall.
+            </p>
+          ) : (
+            <div style={{
+              display: "flex", gap: 18, alignItems: "flex-end",
+              flexWrap: "wrap", position: "relative",
+            }}>
+              {nutrientData.map((n, i) => (
+                <div key={n.name} style={{ flex: "1 1 128px", minWidth: 108, maxWidth: 210 }}>
+                  <SpiceMound
+                    name={n.name} current={n.current} target={n.target}
+                    unit={n.unit} color={n.color} sub={SPICE_NAME[n.name]}
+                    pourDelay={0.15 + i * 0.12}
+                    style={{ flex: "none", width: "100%", minWidth: 0, maxWidth: "none" }}
+                  />
+                  <WeekSpark
+                    values={weekData.map(d => d[WEEK_KEY[n.name]] ?? 0)}
+                    todayIdx={todayIdx}
+                    color={n.color}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* The read of the day */}
+          {!loading && nutrientData.length > 0 && (
+            <div style={{
+              borderTop: `1px solid ${C.border}`, marginTop: 18, paddingTop: 14,
+              position: "relative",
+            }}>
+              <div style={{
+                fontSize: 10, letterSpacing: "0.24em", textTransform: "uppercase",
+                color: C.textMuted, fontWeight: 600, marginBottom: 6,
+              }}>
+                Read of the day
+              </div>
+              <p style={{
+                margin: 0, fontFamily: FONTS.serif, fontStyle: "italic",
+                fontSize: 15, lineHeight: 1.55, color: C.textSub, maxWidth: "64ch",
+              }}>
+                {!weekPlanned ? (
+                  <>Nothing planned this week yet — fill the planner and the mounds rise with it.</>
+                ) : (
+                  <>
+                    {bestProtein && bestProtein.protein > 0 && (
+                      <>
+                        Protein peaks at{" "}
+                        <b style={{ color: C.success, fontStyle: "normal" }}>
+                          {bestProtein.protein} g on {DAY_FULL[bestProtein.day] ?? bestProtein.day}
+                        </b>
+                        {" "}— the week's strongest plate.{" "}
+                      </>
+                    )}
+                    {behind && (behind.pct < 100 ? (
+                      <>{behind.name} sits furthest from today's target, at {behind.pct}%.</>
+                    ) : (
+                      <>Every mound is full today.</>
+                    ))}
+                  </>
+                )}
+              </p>
+            </div>
+          )}
+        </section>
+
+        {/* ---- Weekly calories ---- */}
+        <section className="sr-panel sp-7">
+          <h3 className="sr-panel-h"><span>The week in calories</span></h3>
           <ResponsiveContainer width="100%" height={210}>
             <BarChart data={weekData} barSize={28}>
               <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
@@ -174,205 +259,218 @@ export default function Nutrients({ dishes, userId }) {
               <Bar dataKey="calories" fill={C.accent} radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
-        </Card>
+        </section>
 
-        {/* Macro pie */}
-        <Card style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <h3 style={{ fontFamily: FONTS.display, fontSize: 18, marginBottom: 8, alignSelf: "flex-start", color: C.text }}>
-            Macro Split
+        {/* ---- Macro split ---- */}
+        <section className="sr-panel sp-5" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <h3 className="sr-panel-h" style={{ alignSelf: "stretch" }}>
+            <span>Macro split · today</span>
           </h3>
-          <PieChart width={180} height={180}>
-            <Pie
-              data={macroData}
-              cx={90} cy={90}
-              innerRadius={52} outerRadius={82}
-              dataKey="value"
-              paddingAngle={4}
-            >
-              {macroData.map((entry, i) => (
-                <Cell key={i} fill={entry.color} />
-              ))}
-            </Pie>
-            <Tooltip {...chartTooltipStyle} />
-          </PieChart>
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
-            {macroData.map(m => (
-              <div key={m.name} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ width: 10, height: 10, borderRadius: 3, background: m.color }} />
-                <span style={{ fontSize: 12, color: C.textSub }}>{m.name} · {m.value}g</span>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
-
-      {/* Per-dish comparison */}
-      <Card>
-        <h3 style={{ fontFamily: FONTS.display, fontSize: 18, marginBottom: 6, color: C.text }}>
-          Per-Dish Breakdown
-        </h3>
-        <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 20 }}>
-          Search and compare up to 3 dishes side by side.
-        </p>
-
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: `repeat(${compDishes.length + (compDishes.length < 3 ? 1 : 0)}, 1fr)`,
-          gap: 16,
-          alignItems: "start",
-        }}>
-          {/* Filled dish cards */}
-          {compDishes.map(d => {
-            const NUTRIENTS = [
-              { key: "protein", label: "Protein", unit: "g", color: C.sage   },
-              { key: "carbs",   label: "Carbs",   unit: "g", color: C.gold   },
-              { key: "fat",     label: "Fat",     unit: "g", color: C.accent  },
-              { key: "fiber",   label: "Fiber",   unit: "g", color: C.purple  },
-            ];
-            return (
-              <div key={d.id} style={{
-                border: `1.5px solid ${C.border}`, borderRadius: 14,
-                padding: 20, background: "#fff",
-                display: "flex", flexDirection: "column", gap: 12,
-                position: "relative",
-              }}>
-                <button
-                  onClick={() => removeDish(d.id)}
-                  style={{
-                    position: "absolute", top: 10, right: 10,
-                    background: "none", border: "none",
-                    color: C.textMuted, fontSize: 14, cursor: "pointer",
-                    lineHeight: 1, padding: 2,
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.color = C.error; }}
-                  onMouseLeave={e => { e.currentTarget.style.color = C.textMuted; }}
-                >✕</button>
-
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: 44, marginBottom: 8 }}>{d.img}</div>
-                  <div style={{
-                    fontWeight: 700, fontSize: 14, color: C.text,
-                    lineHeight: 1.3, marginBottom: 4,
-                  }}>{d.name}</div>
-                  <Tag color={C.accent}>{d.category}</Tag>
-                </div>
-
-                <div style={{
-                  textAlign: "center", padding: "12px 0",
-                  borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`,
-                }}>
-                  <div style={{ fontSize: 28, fontWeight: 700, color: C.accent, fontFamily: FONTS.display }}>
-                    {d.nutrients.calories}
-                  </div>
-                  <div style={{ fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: 0.5 }}>kcal</div>
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {NUTRIENTS.map(({ key, label, unit, color }) => {
-                    const val = d.nutrients[key];
-                    const pct = Math.round((val / maxVals[key]) * 100);
-                    return (
-                      <div key={key}>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                          <span style={{ fontSize: 11, color: C.textSub, fontWeight: 600 }}>{label}</span>
-                          <span style={{ fontSize: 11, color: C.text, fontWeight: 700 }}>{val}{unit}</span>
-                        </div>
-                        <div style={{ height: 6, background: C.border, borderRadius: 4, overflow: "hidden" }}>
-                          <div style={{
-                            height: "100%", width: `${pct}%`,
-                            background: color, borderRadius: 4,
-                            transition: "width 0.4s ease",
-                          }} />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Add / search card */}
-          {compDishes.length < 3 && (
-            <div>
-              {isSearching ? (
-                <div style={{
-                  border: `1.5px solid ${C.accent}`, borderRadius: 14,
-                  background: "#fff", overflow: "hidden",
-                }}>
-                  <div style={{ padding: "12px 14px", borderBottom: `1px solid ${C.border}` }}>
-                    <input
-                      autoFocus
-                      value={compSearch}
-                      onChange={e => setCompSearch(e.target.value)}
-                      placeholder="Search dishes…"
-                      style={{
-                        width: "100%", border: "none", outline: "none",
-                        fontSize: 13, color: C.text, background: "transparent",
-                        fontFamily: FONTS.body,
-                      }}
-                    />
-                  </div>
-                  <div style={{ maxHeight: 240, overflowY: "auto" }}>
-                    {searchResults.length === 0 ? (
-                      <div style={{ padding: "14px", fontSize: 13, color: C.textMuted, textAlign: "center" }}>
-                        No matches
-                      </div>
-                    ) : searchResults.map(d => (
-                      <button
-                        key={d.id}
-                        onClick={() => addDish(d)}
-                        style={{
-                          width: "100%", display: "flex", alignItems: "center", gap: 10,
-                          padding: "10px 14px", border: "none", background: "none",
-                          cursor: "pointer", textAlign: "left", fontFamily: FONTS.body,
-                          borderBottom: `1px solid ${C.border}`,
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.background = C.bg; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = "none"; }}
-                      >
-                        <span style={{ fontSize: 20 }}>{d.img}</span>
-                        <div>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{d.name}</div>
-                          <div style={{ fontSize: 11, color: C.textMuted }}>{d.nutrients.calories} kcal</div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                  <button
-                    onClick={() => { setIsSearching(false); setCompSearch(""); }}
-                    style={{
-                      width: "100%", padding: "10px", border: "none",
-                      background: C.bg, color: C.textMuted, fontSize: 12,
-                      cursor: "pointer", fontFamily: FONTS.body,
-                    }}
-                  >Cancel</button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setIsSearching(true)}
-                  style={{
-                    width: "100%", minHeight: 200,
-                    border: `2px dashed ${C.border}`, borderRadius: 14,
-                    background: "none", cursor: "pointer",
-                    display: "flex", flexDirection: "column",
-                    alignItems: "center", justifyContent: "center", gap: 8,
-                    color: C.textMuted, fontFamily: FONTS.body,
-                    transition: "all 0.18s",
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = C.accent; e.currentTarget.style.color = C.accent; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = C.border;  e.currentTarget.style.color = C.textMuted; }}
+          {macroData.every(m => !m.value) ? (
+            <p style={{
+              fontFamily: FONTS.serif, fontStyle: "italic", fontSize: 14,
+              color: C.textSub, margin: "auto 0", textAlign: "center",
+            }}>
+              No macros on the plate yet today.
+            </p>
+          ) : (
+            <>
+              <PieChart width={180} height={180}>
+                <Pie
+                  data={macroData}
+                  cx={90} cy={90}
+                  innerRadius={52} outerRadius={82}
+                  dataKey="value"
+                  paddingAngle={4}
                 >
-                  <span style={{ fontSize: 28, lineHeight: 1 }}>+</span>
-                  <span style={{ fontSize: 13 }}>
-                    {compDishes.length === 0 ? "Add a dish" : "Compare another"}
-                  </span>
-                </button>
-              )}
-            </div>
+                  {macroData.map((entry, i) => (
+                    <Cell key={i} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip {...chartTooltipStyle} />
+              </PieChart>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
+                {macroData.map(m => (
+                  <div key={m.name} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ width: 10, height: 10, borderRadius: 3, background: m.color }} />
+                    <span style={{ fontSize: 12, color: C.textSub }}>{m.name} · {m.value}g</span>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
-        </div>
-      </Card>
+        </section>
+
+        {/* ---- Per-dish comparison ---- */}
+        <section className="sr-panel sp-12">
+          <h3 className="sr-panel-h">
+            <span>Compare dishes</span>
+            <span>{compDishes.length}/3</span>
+          </h3>
+
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${compDishes.length + (compDishes.length < 3 ? 1 : 0)}, 1fr)`,
+            gap: 16,
+            alignItems: "start",
+          }}>
+            {/* Filled dish cards */}
+            {compDishes.map(d => {
+              const NUTRIENTS = [
+                { key: "protein", label: "Protein", unit: "g", color: SPICE.paprika  },
+                { key: "carbs",   label: "Carbs",   unit: "g", color: SPICE.turmeric },
+                { key: "fat",     label: "Fat",     unit: "g", color: SPICE.cardamom },
+                { key: "fiber",   label: "Fiber",   unit: "g", color: SPICE.matcha   },
+              ];
+              return (
+                <div key={d.id} style={{
+                  border: `1.5px solid ${C.border}`, borderRadius: 14,
+                  padding: 20, background: C.card,
+                  display: "flex", flexDirection: "column", gap: 12,
+                  position: "relative",
+                }}>
+                  <button
+                    onClick={() => removeDish(d.id)}
+                    aria-label={`Remove ${d.name} from comparison`}
+                    style={{
+                      position: "absolute", top: 10, right: 10,
+                      background: "none", border: "none",
+                      color: C.textMuted, fontSize: 14, cursor: "pointer",
+                      lineHeight: 1, padding: 2,
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.color = C.error; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = C.textMuted; }}
+                  >✕</button>
+
+                  <div style={{ textAlign: "center" }}>
+                    <DishArt dish={d} size={56} style={{ margin: "0 auto 8px", display: "block" }} />
+                    <div style={{
+                      fontFamily: FONTS.serif, fontSize: 15, color: C.head,
+                      lineHeight: 1.3, marginBottom: 4,
+                    }}>{d.name}</div>
+                    <Tag color={C.accent}>{d.category}</Tag>
+                  </div>
+
+                  <div style={{
+                    textAlign: "center", padding: "12px 0",
+                    borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`,
+                  }}>
+                    <div style={{
+                      fontSize: 28, fontWeight: 700, color: SPICE.saffron,
+                      fontFamily: FONTS.display, fontVariantNumeric: "tabular-nums",
+                    }}>
+                      {d.nutrients.calories}
+                    </div>
+                    <div style={{ fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: 0.5 }}>kcal</div>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {NUTRIENTS.map(({ key, label, unit, color }) => {
+                      const val = d.nutrients[key];
+                      const pct = Math.round((val / maxVals[key]) * 100);
+                      return (
+                        <div key={key}>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                            <span style={{ fontSize: 11, color: C.textSub, fontWeight: 600 }}>{label}</span>
+                            <span style={{ fontSize: 11, color: C.text, fontWeight: 700 }}>{val}{unit}</span>
+                          </div>
+                          <div style={{ height: 6, background: "var(--mound)", borderRadius: 4, overflow: "hidden" }}>
+                            <div style={{
+                              height: "100%", width: `${pct}%`,
+                              background: color, borderRadius: 4,
+                              transition: "width 0.4s ease",
+                            }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Add / search card */}
+            {compDishes.length < 3 && (
+              <div>
+                {isSearching ? (
+                  <div style={{
+                    border: `1.5px solid ${C.accent}`, borderRadius: 14,
+                    background: C.card, overflow: "hidden",
+                  }}>
+                    <div style={{ padding: "12px 14px", borderBottom: `1px solid ${C.border}` }}>
+                      <input
+                        autoFocus
+                        value={compSearch}
+                        onChange={e => setCompSearch(e.target.value)}
+                        placeholder="Search dishes…"
+                        style={{
+                          width: "100%", border: "none", outline: "none",
+                          fontSize: 13, color: C.text, background: "transparent",
+                          fontFamily: FONTS.body,
+                        }}
+                      />
+                    </div>
+                    <div style={{ maxHeight: 240, overflowY: "auto" }}>
+                      {searchResults.length === 0 ? (
+                        <div style={{ padding: "14px", fontSize: 13, color: C.textMuted, textAlign: "center" }}>
+                          No matches
+                        </div>
+                      ) : searchResults.map(d => (
+                        <button
+                          key={d.id}
+                          onClick={() => addDish(d)}
+                          style={{
+                            width: "100%", display: "flex", alignItems: "center", gap: 10,
+                            padding: "10px 14px", border: "none", background: "none",
+                            cursor: "pointer", textAlign: "left", fontFamily: FONTS.body,
+                            borderBottom: `1px solid ${C.border}`,
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.background = C.bg; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "none"; }}
+                        >
+                          <DishArt dish={d} size={28} />
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{d.name}</div>
+                            <div style={{ fontSize: 11, color: C.textMuted }}>{d.nutrients.calories} kcal</div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => { setIsSearching(false); setCompSearch(""); }}
+                      style={{
+                        width: "100%", padding: "10px", border: "none",
+                        background: C.bg, color: C.textMuted, fontSize: 12,
+                        cursor: "pointer", fontFamily: FONTS.body,
+                      }}
+                    >Cancel</button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setIsSearching(true)}
+                    style={{
+                      width: "100%", minHeight: 200,
+                      border: `2px dashed ${C.border}`, borderRadius: 14,
+                      background: "none", cursor: "pointer",
+                      display: "flex", flexDirection: "column",
+                      alignItems: "center", justifyContent: "center", gap: 8,
+                      color: C.textMuted, fontFamily: FONTS.body,
+                      transition: "all 0.18s",
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = C.accent; e.currentTarget.style.color = C.accent; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = C.border;  e.currentTarget.style.color = C.textMuted; }}
+                  >
+                    <span style={{ fontSize: 28, lineHeight: 1 }}>+</span>
+                    <span style={{ fontSize: 13 }}>
+                      {compDishes.length === 0 ? "Add a dish" : "Compare another"}
+                    </span>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
     </Page>
   );
 }

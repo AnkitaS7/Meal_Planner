@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { C, FONTS, RADIUS, SHADOW } from "../theme";
+import { C, FONTS, RADIUS, alpha } from "../theme";
+import { DishArt, dishSymbol, DISH_TINT, Watermark } from "../components/art";
 import {
   Card, Btn, Tag, Input, Textarea, Select, Modal,
   Page, PageHeader, Empty, SectionLabel,
@@ -87,7 +88,7 @@ function DishDetail({ dish: dishProp, onBack, onDelete }) {
           <li key={i.name} style={{
             display: "flex", alignItems: "center", gap: 10,
             padding: "8px 12px", borderRadius: 8,
-            background: color + "12", borderLeft: `3px solid ${color}`,
+            background: alpha(color, 7), borderLeft: `3px solid ${color}`,
           }}>
             <span style={{ fontSize: 13, fontWeight: 600, color, minWidth: 80 }}>
               {i.qty != null ? `${dQty}${dUnit ? " " + dUnit : ""}` : "—"}
@@ -117,18 +118,18 @@ function DishDetail({ dish: dishProp, onBack, onDelete }) {
         {/* Left */}
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <Card>
-            <span style={{ fontSize: 56 }}>{dish.img}</span>
+            <DishArt dish={dish} size={84} />
             <h2 style={{
-              fontFamily: FONTS.display, fontSize: 28,
-              color: C.text, marginTop: 14, marginBottom: 10,
+              fontFamily: FONTS.serif, fontSize: 28,
+              color: C.head, marginTop: 14, marginBottom: 10,
             }}>
               {dish.name}
             </h2>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 20 }}>
               <Tag color={C.accent}>{dish.category}</Tag>
-              {dish.prepTime > 0 && <Tag color={C.sage}>🥄 Prep {dish.prepTime} min</Tag>}
-              {dish.cookTime > 0 && <Tag color={C.sage}>🍳 Cook {dish.cookTime} min</Tag>}
-              {dish.prepTime === 0 && dish.cookTime === 0 && <Tag color={C.sage}>⏱ {dish.time} min</Tag>}
+              {dish.prepTime > 0 && <Tag color={C.sage}>Prep {dish.prepTime} min</Tag>}
+              {dish.cookTime > 0 && <Tag color={C.sage}>Cook {dish.cookTime} min</Tag>}
+              {dish.prepTime === 0 && dish.cookTime === 0 && <Tag color={C.sage}>{dish.time} min</Tag>}
               {dish.tags.map(t => <Tag key={t} color={C.textMuted}>{t}</Tag>)}
             </div>
 
@@ -215,7 +216,7 @@ function DishDetail({ dish: dishProp, onBack, onDelete }) {
           </Card>
 
           {(dish.user_id !== UNIVERSAL_USER_ID) && <Btn variant="danger" onClick={() => onDelete(dish.id)} style={{ alignSelf: "flex-start" }}>
-            🗑 Delete Dish
+            Delete dish
           </Btn>}
         </div>
 
@@ -257,14 +258,14 @@ function DishDetail({ dish: dishProp, onBack, onDelete }) {
           {dish.recipe && (
             <Card>
               <h3 style={{ fontFamily: FONTS.display, fontSize: 18, marginBottom: 16, color: C.text }}>
-                📝 Recipe
+                Recipe
               </h3>
               <ol style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 12 }}>
                 {dish.recipe.split(/(?<=[.!?])\s+/).filter(s => s.trim()).map((step, i) => (
                   <li key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
                     <span style={{
                       minWidth: 24, height: 24, borderRadius: "50%",
-                      background: C.accent + "18", color: C.accent,
+                      background: alpha(C.accent, 10), color: C.accent,
                       fontSize: 12, fontWeight: 700,
                       display: "flex", alignItems: "center", justifyContent: "center",
                       flexShrink: 0, marginTop: 1,
@@ -281,7 +282,7 @@ function DishDetail({ dish: dishProp, onBack, onDelete }) {
           {dish.youtubeLink && (
             <Card>
               <h3 style={{ fontFamily: FONTS.display, fontSize: 18, marginBottom: 12, color: C.text }}>
-                📺 Video Tutorial
+                Video tutorial
               </h3>
               <a
                 href={dish.youtubeLink}
@@ -343,7 +344,7 @@ function IngredientRow({ ing, onChange, onRemove }) {
           cursor: "pointer", fontSize: 15, padding: "4px 6px",
           borderRadius: 6, flexShrink: 0, lineHeight: 1,
         }}
-        onMouseEnter={e => { e.currentTarget.style.color = C.error; e.currentTarget.style.background = C.error + "18"; }}
+        onMouseEnter={e => { e.currentTarget.style.color = C.error; e.currentTarget.style.background = alpha(C.error, 10); }}
         onMouseLeave={e => { e.currentTarget.style.color = C.textMuted; e.currentTarget.style.background = "none"; }}
       >✕</button>
     </div>
@@ -440,7 +441,7 @@ function AddDishForm({ onSave, onCancel, dishCategories, dietaryOptions }) {
         action={
           <div style={{ display: "flex", gap: 8 }}>
             <Btn variant="secondary" onClick={onCancel}>Cancel</Btn>
-            <Btn onClick={save} disabled={!f.name}>✓ Save Dish</Btn>
+            <Btn onClick={save} disabled={!f.name}>Save dish</Btn>
           </div>
         }
       />
@@ -453,22 +454,12 @@ function AddDishForm({ onSave, onCancel, dishCategories, dietaryOptions }) {
               Basic Info
             </h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <div style={{ display: "flex", gap: 10 }}>
-                <Input
-                  label="Emoji"
-                  value={f.img}
-                  onChange={e => set("img", e.target.value)}
-                  style={{ width: 72 }}
-                />
-                <div style={{ flex: 1 }}>
-                  <Input
-                    label="Dish Name *"
-                    value={f.name}
-                    onChange={e => set("name", e.target.value)}
-                    placeholder="e.g. Mushroom Risotto"
-                  />
-                </div>
-              </div>
+              <Input
+                label="Dish Name *"
+                value={f.name}
+                onChange={e => set("name", e.target.value)}
+                placeholder="e.g. Mushroom Risotto"
+              />
 
               <div style={{ display: "flex", gap: 12 }}>
                 <div style={{ flex: 1 }}>
@@ -518,7 +509,7 @@ function AddDishForm({ onSave, onCancel, dishCategories, dietaryOptions }) {
                           style={{
                             padding: "5px 12px", borderRadius: RADIUS.full,
                             border: `1.5px solid ${active ? C.sage : C.border}`,
-                            background: active ? C.sage + "22" : "#fff",
+                            background: active ? alpha(C.sage, 13) : C.card,
                             color: active ? C.sage : C.textSub,
                             fontSize: 12, fontWeight: active ? 600 : 400,
                             cursor: "pointer", fontFamily: FONTS.body,
@@ -575,45 +566,41 @@ function AddDishForm({ onSave, onCancel, dishCategories, dietaryOptions }) {
   );
 }
 
-// Dish card
+// Dish card — V3 cover card: spice-tinted field, plated dish straddling
+// the cover/body boundary, à-la-carte meta below.
 function DishCard({ dish, onClick }) {
+  const coverTint = DISH_TINT[dishSymbol(dish)] ?? "var(--c1)";
   return (
-    <div
+    <button
       onClick={onClick}
-      style={{
-        background: "#fff",
-        border: `1px solid ${C.border}`,
-        borderRadius: RADIUS.lg,
-        padding: 20,
-        cursor: "pointer",
-        transition: "transform 0.2s, box-shadow 0.2s",
-      }}
-      onMouseEnter={e => {
-        e.currentTarget.style.transform  = "translateY(-3px)";
-        e.currentTarget.style.boxShadow  = SHADOW.md;
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.transform  = "";
-        e.currentTarget.style.boxShadow  = "";
-      }}
+      className="sr-card"
+      style={{ display: "block", width: "100%", fontFamily: FONTS.body }}
     >
-      <div style={{ fontSize: 38, marginBottom: 12 }}>{dish.img}</div>
-      <h3 style={{ fontWeight: 600, color: C.text, fontSize: 15, marginBottom: 8, lineHeight: 1.3 }}>
-        {dish.name}
-      </h3>
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
-        <Tag color={C.accent}>{dish.category}</Tag>
-        {dish.youtubeLink && <Tag color="#CC0000">▶ Video</Tag>}
-      </div>
       <div style={{
-        display: "flex", justifyContent: "space-between",
-        borderTop: `1px solid ${C.border}`, paddingTop: 12,
+        height: 84, display: "grid", placeItems: "center",
+        background: `color-mix(in srgb, ${coverTint} 22%, var(--panel))`,
       }}>
-        <span style={{ fontSize: 12, color: C.textMuted }}>⏱ {dish.time} min</span>
-        <span style={{ fontSize: 12, color: C.textMuted }}>🔥 {(Number(dish.nutrients.calories) || 0).toFixed(1)}</span>
-        <span style={{ fontSize: 12, color: C.textMuted }}>👥 {dish.servings}</span>
+        <DishArt dish={dish} size={68} style={{ transform: "translateY(13px)" }} />
       </div>
-    </div>
+      <div style={{ padding: "20px 14px 12px" }}>
+        <span className="truncate" style={{
+          display: "block", fontFamily: FONTS.serif, fontWeight: 600, color: C.head,
+          fontSize: 15, marginBottom: 3, lineHeight: 1.3,
+        }}>
+          {dish.name}
+        </span>
+        <div style={{ fontSize: 11, color: C.textMuted, fontVariantNumeric: "tabular-nums" }}>
+          {dish.time} min · {(Number(dish.nutrients.calories) || 0).toFixed(1)} kcal · serves {dish.servings}
+        </div>
+        <div style={{
+          marginTop: 6, fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase",
+          color: C.accent, fontWeight: 700, display: "flex", gap: 10,
+        }}>
+          <span>{dish.category}</span>
+          {dish.youtubeLink && <span style={{ color: C.error }}>Video</span>}
+        </div>
+      </div>
+    </button>
   );
 }
 
@@ -622,9 +609,9 @@ function DishCard({ dish, onClick }) {
 //   yours     — only dishes the user has added
 //   suggested — recommendations based on frequently used dishes (coming soon)
 const TABS = [
-  { id: "explore",   label: "Explore Dishes",   icon: "🧭" },
-  { id: "yours",     label: "Your Dishes",      icon: "📖" },
-  { id: "suggested", label: "Suggested Dishes", icon: "✨" },
+  { id: "explore",   label: "Explore Dishes"   },
+  { id: "yours",     label: "Your Dishes"      },
+  { id: "suggested", label: "Suggested Dishes" },
 ];
 
 function TabBar({ active, onChange }) {
@@ -652,7 +639,7 @@ function TabBar({ active, onChange }) {
             onMouseEnter={e => { if (!on) e.currentTarget.style.color = C.text; }}
             onMouseLeave={e => { if (!on) e.currentTarget.style.color = C.textSub; }}
           >
-            <span>{t.icon}</span>{t.label}
+            {t.label}
           </button>
         );
       })}
@@ -671,7 +658,7 @@ function Pagination({ page, totalPages, onChange }) {
   const btn = (active = false, disabled = false) => ({
     minWidth: 34, padding: "7px 11px", borderRadius: RADIUS.sm,
     border: `1.5px solid ${active ? C.accent : C.border}`,
-    background: active ? C.accentLight : "#fff",
+    background: active ? C.accentLight : C.card,
     color: disabled ? C.textMuted : active ? C.accent : C.textSub,
     fontSize: 13, fontWeight: active ? 700 : 400,
     cursor: disabled ? "default" : "pointer", fontFamily: FONTS.body,
@@ -808,7 +795,7 @@ export default function Dishes({ dishes, setDishes, userId, dishCategories, diet
 
       {tab === "suggested" ? (
         <Empty
-          icon="✨"
+          icon={<DishArt dish={{ name: "noodle" }} size={56} />}
           title="Suggestions coming soon"
           subtitle="We'll recommend dishes here based on the ones you cook most often."
         />
@@ -820,10 +807,10 @@ export default function Dishes({ dishes, setDishes, userId, dishCategories, diet
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="🔍  Search dishes…"
+            placeholder="Search dishes…"
             style={{
               flex: 1, minWidth: 200,
-              background: "#fff",
+              background: C.card,
               border: `1.5px solid ${C.border}`,
               borderRadius: RADIUS.md,
               padding: "10px 16px",
@@ -838,7 +825,7 @@ export default function Dishes({ dishes, setDishes, userId, dishCategories, diet
                 style={{
                   padding: "8px 16px", borderRadius: RADIUS.sm,
                   border: `1.5px solid ${catFilter === c ? C.accent : C.border}`,
-                  background: catFilter === c ? C.accentLight : "#fff",
+                  background: catFilter === c ? C.accentLight : C.card,
                   color: catFilter === c ? C.accent : C.textSub,
                   fontSize: 13, fontWeight: catFilter === c ? 600 : 400,
                   cursor: "pointer", fontFamily: FONTS.body,
@@ -865,7 +852,7 @@ export default function Dishes({ dishes, setDishes, userId, dishCategories, diet
                   style={{
                     padding: "5px 12px", borderRadius: RADIUS.full,
                     border: `1.5px solid ${active ? C.sage : C.border}`,
-                    background: active ? C.sage + "22" : "#fff",
+                    background: active ? alpha(C.sage, 13) : C.card,
                     color: active ? C.sage : C.textSub,
                     fontSize: 12, fontWeight: active ? 600 : 400,
                     cursor: "pointer", fontFamily: FONTS.body,
@@ -896,7 +883,7 @@ export default function Dishes({ dishes, setDishes, userId, dishCategories, diet
       {/* Grid */}
       {!loading && items.length === 0 ? (
         <Empty
-          icon="🍽"
+          icon={<DishArt dish={{ name: "pasta" }} size={56} />}
           title={tab === "yours" ? "You haven't added any dishes yet" : "No dishes found"}
           subtitle={tab === "yours"
             ? "Dishes you create will show up here."
@@ -904,13 +891,15 @@ export default function Dishes({ dishes, setDishes, userId, dishCategories, diet
           action={<Btn onClick={() => setView("add")}>+ Add a Dish</Btn>}
         />
       ) : (
-        <>
+        <div style={{ position: "relative" }}>
+          <Watermark symbol="w-rings" size={230} style={{ right: 0, top: -46 }} />
           <div style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))",
             gap: 16,
             opacity: loading ? 0.55 : 1,
             transition: "opacity 0.15s",
+            position: "relative",
           }}>
             {items.map(d => (
               <DishCard
@@ -925,7 +914,7 @@ export default function Dishes({ dishes, setDishes, userId, dishCategories, diet
             {total > 0 && `Showing ${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, total)} of ${total}`}
           </div>
           <Pagination page={page} totalPages={totalPages} onChange={p => setPage(p)} />
-        </>
+        </div>
       )}
       </>
       )}

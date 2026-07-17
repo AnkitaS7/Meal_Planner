@@ -1,51 +1,60 @@
-import { C, FONTS } from "../theme";
+import { useState } from "react";
+import { C, FONTS, setThemeMode, isNightMode } from "../theme";
 import { Avatar } from "./ui";
 
 const NAV_ITEMS = [
-  { id: "dashboard",   icon: "⊞",  label: "Dashboard"     },
-  { id: "planner",     icon: "📅", label: "Meal Planner"  },
-  { id: "dishes",      icon: "🍽", label: "Dish Database" },
-  { id: "pantry",      icon: "🏺", label: "Pantry"        },
-  { id: "shopping",    icon: "🛒", label: "Shopping Cart" },
-  { id: "suggestions", icon: "✨", label: "Suggestions"   },
-  { id: "nutrients",   icon: "📊", label: "Nutrients"     },
-  { id: "scanner",     icon: "📷", label: "Bill Scanner"  },
-  { id: "social",      icon: "👥", label: "Community"     },
-  { id: "profile",     icon: "👤", label: "Profile"       },
+  { id: "dashboard",   label: "Dashboard"     },
+  { id: "planner",     label: "Meal Planner"  },
+  { id: "dishes",      label: "Dish Database" },
+  { id: "pantry",      label: "Pantry"        },
+  { id: "shopping",    label: "Shopping"      },
+  { id: "suggestions", label: "Suggestions"   },
+  { id: "nutrients",   label: "Nutrients"     },
+  { id: "scanner",     label: "Bill Scanner"  },
+  { id: "social",      label: "Community"     },
+  { id: "profile",     label: "Profile"       },
 ];
 
 export default function Sidebar({ page, setPage, user, onSignOut }) {
+  const [night, setNight] = useState(isNightMode);
+
+  const toggleNight = () => {
+    const next = !night;
+    setNight(next);
+    setThemeMode(next);
+  };
+
   return (
     <aside style={{
       width: 220,
-      background: C.sidebar,
+      background: C.panel,
+      borderRight: `1px solid ${C.border}`,
       display: "flex",
       flexDirection: "column",
-      padding: "28px 0",
+      padding: "28px 0 20px",
       minHeight: "100vh",
       position: "sticky",
       top: 0,
       flexShrink: 0,
+      transition: "background 0.35s ease, border-color 0.35s ease",
     }}>
       {/* Brand */}
-      <div style={{
-        padding: "0 24px 24px",
-        borderBottom: "1px solid rgba(255,255,255,0.1)",
-      }}>
+      <div style={{ padding: "0 24px 22px", borderBottom: `1px solid ${C.border}` }}>
         <div style={{
           fontFamily: FONTS.display,
-          color: "#fff",
-          fontSize: 22,
+          color: C.accent,
+          fontSize: 19,
           fontWeight: 700,
-          letterSpacing: -0.3,
+          letterSpacing: "0.2em",
+          textTransform: "uppercase",
         }}>
-          Mise en Place
+          Season
         </div>
         <div style={{
-          color: "rgba(255,255,255,0.35)",
-          fontSize: 10,
-          marginTop: 3,
-          letterSpacing: 1.5,
+          color: C.textMuted,
+          fontSize: 9,
+          marginTop: 4,
+          letterSpacing: "0.28em",
           textTransform: "uppercase",
         }}>
           Meal Planner
@@ -60,18 +69,21 @@ export default function Sidebar({ page, setPage, user, onSignOut }) {
             <button
               key={item.id}
               onClick={() => setPage(item.id)}
+              aria-current={active ? "page" : undefined}
               style={{
                 width: "100%",
                 display: "flex",
                 alignItems: "center",
-                gap: 11,
+                gap: 9,
                 padding: "10px 14px",
-                borderRadius: 10,
+                borderRadius: 9,
                 border: "none",
-                background: active ? C.accent : "transparent",
-                color: active ? "#fff" : "rgba(255,255,255,0.55)",
-                fontSize: 14,
-                fontWeight: active ? 600 : 400,
+                background: active ? C.accentLight : "transparent",
+                color: active ? C.accent : C.textSub,
+                fontSize: 11,
+                letterSpacing: "0.18em",
+                textTransform: "uppercase",
+                fontWeight: active ? 700 : 500,
                 cursor: "pointer",
                 transition: "all 0.18s",
                 textAlign: "left",
@@ -79,34 +91,61 @@ export default function Sidebar({ page, setPage, user, onSignOut }) {
                 fontFamily: FONTS.body,
               }}
               onMouseEnter={e => {
-                if (!active) e.currentTarget.style.background = "rgba(255,255,255,0.1)";
+                if (!active) e.currentTarget.style.color = "var(--ink)";
               }}
               onMouseLeave={e => {
-                if (!active) e.currentTarget.style.background = "transparent";
+                if (!active) e.currentTarget.style.color = "var(--soft)";
               }}
             >
-              <span style={{ fontSize: 16, flexShrink: 0 }}>{item.icon}</span>
+              <span aria-hidden="true" style={{
+                width: 5, height: 5, borderRadius: "50%", flexShrink: 0,
+                background: active ? C.accent : "transparent",
+                transition: "background 0.18s",
+              }} />
               <span>{item.label}</span>
             </button>
           );
         })}
       </nav>
 
+      {/* Day / night */}
+      <div style={{ padding: "0 20px 14px" }}>
+        <button
+          onClick={toggleNight}
+          aria-pressed={night}
+          style={{
+            width: "100%",
+            padding: "9px 0",
+            borderRadius: 9,
+            border: `1px solid ${C.border}`,
+            background: "transparent",
+            color: C.textSub,
+            fontSize: 10,
+            letterSpacing: "0.2em",
+            textTransform: "uppercase",
+            cursor: "pointer",
+            fontFamily: FONTS.body,
+            transition: "all 0.18s",
+          }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--c1)"; e.currentTarget.style.color = "var(--c1)"; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.color = "var(--soft)"; }}
+        >
+          {night ? "Switch to day" : "Switch to night"}
+        </button>
+      </div>
+
       {/* User footer */}
-      <div style={{
-        padding: "16px 20px",
-        borderTop: "1px solid rgba(255,255,255,0.1)",
-      }}>
+      <div style={{ padding: "16px 20px 0", borderTop: `1px solid ${C.border}` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-          <Avatar initials={user.avatar} size={34} color="#fff" />
+          <Avatar initials={user.avatar} size={34} color={C.gold} />
           <div style={{ overflow: "hidden" }}>
             <div style={{
-              color: "#fff", fontSize: 13, fontWeight: 600,
+              color: C.text, fontSize: 13, fontWeight: 600,
               whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
             }}>
               {user.name}
             </div>
-            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>
+            <div style={{ color: C.textMuted, fontSize: 11 }}>
               {user.handle}
             </div>
           </div>
@@ -118,18 +157,20 @@ export default function Sidebar({ page, setPage, user, onSignOut }) {
               width: "100%",
               padding: "7px 0",
               borderRadius: 8,
-              border: "1px solid rgba(255,255,255,0.15)",
+              border: "none",
               background: "transparent",
-              color: "rgba(255,255,255,0.45)",
-              fontSize: 12,
+              color: C.textMuted,
+              fontSize: 11,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
               cursor: "pointer",
               fontFamily: FONTS.body,
-              transition: "all 0.18s",
+              transition: "color 0.18s",
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+            onMouseEnter={e => { e.currentTarget.style.color = "var(--c2)"; }}
+            onMouseLeave={e => { e.currentTarget.style.color = "var(--faint)"; }}
           >
-            Sign Out
+            Sign out
           </button>
         )}
       </div>

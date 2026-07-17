@@ -1,11 +1,11 @@
-import { C, FONTS, RADIUS, SHADOW } from "../theme";
+import { C, FONTS, RADIUS, SHADOW, alpha } from "../theme";
 
 // Tag
 export const Tag = ({ children, color = C.sage }) => (
   <span style={{
-    background: color + "22",
+    background: alpha(color, 13),
     color,
-    border: `1px solid ${color}44`,
+    border: `1px solid ${alpha(color, 27)}`,
     borderRadius: RADIUS.full,
     padding: "3px 10px",
     fontSize: 11,
@@ -47,7 +47,7 @@ const BTN_VARIANTS = {
   ghost:     { background: "transparent", color: C.accent, border: `1.5px solid ${C.accent}` },
   sage:      { background: C.sage,        color: "#fff",   border: "none" },
   danger:    { background: C.error,       color: "#fff",   border: "none" },
-  dark:      { background: C.sidebar,     color: "#fff",   border: "none" },
+  dark:      { background: C.sidebar,     color: "var(--bg)", border: "none" },
 };
 
 export const Btn = ({
@@ -233,8 +233,8 @@ export const Avatar = ({ initials, size = 40, color = C.accent }) => (
   <div style={{
     width: size, height: size,
     borderRadius: "50%",
-    background: color + "20",
-    border: `2px solid ${color}50`,
+    background: alpha(color, 13),
+    border: `2px solid ${alpha(color, 31)}`,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",

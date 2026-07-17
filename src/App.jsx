@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
-import { C } from "./theme";
+import { C, initThemeMode } from "./theme";
+import { SvgDefs } from "./components/art";
 import { supabase } from "./lib/supabase";
+
+initThemeMode();
 import { fetchDishes, fetchPantry, fetchProfile, fetchAppEnums } from "./lib/db";
 import Sidebar     from "./components/Sidebar";
 import Login       from "./pages/Login";
@@ -125,6 +128,7 @@ export default function App() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: C.bg }}>
+      <SvgDefs />
       {/* Mobile overlay */}
       {isMobile && showSidebar && (
         <div
@@ -169,8 +173,11 @@ export default function App() {
             >
               ☰
             </button>
-            <span style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 18, color: C.text }}>
-              Mise en Place
+            <span style={{
+              fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 15,
+              letterSpacing: "0.2em", textTransform: "uppercase", color: C.accent,
+            }}>
+              Season
             </span>
             <div style={{ width: 42 }} />
           </div>

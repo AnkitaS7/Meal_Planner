@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { C, FONTS, RADIUS, SHADOW } from "../theme";
+import { SvgDefs, Watermark } from "../components/art";
 import { supabase } from "../lib/supabase";
 
 export default function Login() {
@@ -57,21 +58,25 @@ export default function Login() {
       alignItems: "center",
       justifyContent: "center",
     }}>
+      <SvgDefs />
       <div style={{
-        background: "#fff",
+        background: C.card,
         borderRadius: RADIUS.xl,
         boxShadow: SHADOW.lg,
         padding: "48px 40px",
         width: "100%",
         maxWidth: 400,
+        position: "relative",
+        overflow: "hidden",
       }}>
+        <Watermark symbol="w-steam" size={170} style={{ right: -34, top: -30 }} />
         {/* Brand */}
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
+        <div style={{ textAlign: "center", marginBottom: 32, position: "relative" }}>
           <div style={{
-            fontFamily: FONTS.display, fontSize: 28, fontWeight: 700,
-            color: C.text, letterSpacing: -0.5,
+            fontFamily: FONTS.display, fontSize: 26, fontWeight: 800,
+            color: C.accent, letterSpacing: "0.3em", textTransform: "uppercase",
           }}>
-            Mise en Place
+            Season
           </div>
           <div style={{
             fontSize: 13, color: C.textMuted, marginTop: 4,
@@ -93,7 +98,7 @@ export default function Login() {
               style={{
                 flex: 1, padding: "9px 0", border: "none",
                 borderRadius: RADIUS.sm,
-                background: mode === m ? "#fff" : "transparent",
+                background: mode === m ? C.card : "transparent",
                 color: mode === m ? C.text : C.textMuted,
                 fontWeight: mode === m ? 600 : 400,
                 fontSize: 14, cursor: "pointer",
@@ -130,7 +135,8 @@ export default function Login() {
 
           {error && (
             <div style={{
-              background: "#FEF2F2", border: "1px solid #FECACA",
+              background: "color-mix(in srgb, var(--c2) 10%, var(--panel))",
+              border: "1px solid color-mix(in srgb, var(--c2) 35%, transparent)",
               borderRadius: RADIUS.md, padding: "10px 14px",
               fontSize: 13, color: C.error,
             }}>
@@ -140,7 +146,8 @@ export default function Login() {
 
           {info && (
             <div style={{
-              background: "#F0FDF4", border: "1px solid #BBF7D0",
+              background: "color-mix(in srgb, var(--c4) 10%, var(--panel))",
+              border: "1px solid color-mix(in srgb, var(--c4) 35%, transparent)",
               borderRadius: RADIUS.md, padding: "10px 14px",
               fontSize: 13, color: C.success,
             }}>

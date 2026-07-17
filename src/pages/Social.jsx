@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { C, FONTS, RADIUS } from "../theme";
 import { Card, Btn, Avatar, Page, PageHeader, Empty } from "../components/ui";
+import { Watermark } from "../components/art";
 import { fetchCommunityUsers, followUser, unfollowUser } from "../lib/db";
 
 function UserCard({ user, onToggle }) {
@@ -13,7 +14,7 @@ function UserCard({ user, onToggle }) {
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
           <Avatar initials={user.avatar} size={46} color={C.accent} />
           <div>
-            <div style={{ fontWeight: 700, color: C.text, fontSize: 15 }}>{user.name}</div>
+            <div style={{ fontFamily: FONTS.serif, fontWeight: 600, color: C.head, fontSize: 16 }}>{user.name}</div>
             <div style={{ fontSize: 12, color: C.textMuted }}>{user.handle}</div>
           </div>
         </div>
@@ -22,33 +23,23 @@ function UserCard({ user, onToggle }) {
           onClick={() => onToggle(user.id)}
           style={{ padding: "7px 16px", fontSize: 13 }}
         >
-          {user.following ? "Following ✓" : "+ Follow"}
+          {user.following ? "Following" : "Follow"}
         </Btn>
       </div>
 
       <div style={{
         display: "flex", gap: 0,
         borderTop: `1px solid ${C.border}`,
-        borderBottom: `1px solid ${C.border}`,
-        padding: "12px 0", marginBottom: 14,
+        padding: "12px 0 0",
       }}>
         {[["Followers", user.followers.toLocaleString()], ["Dishes", user.dishes]].map(([label, val]) => (
           <div key={label} style={{ flex: 1, textAlign: "center" }}>
-            <div style={{ fontFamily: FONTS.display, fontSize: 18, fontWeight: 700, color: C.text }}>
+            <div style={{ fontFamily: FONTS.serif, fontSize: 18, color: C.head, fontVariantNumeric: "tabular-nums" }}>
               {val}
             </div>
-            <div style={{ fontSize: 11, color: C.textMuted }}>{label}</div>
+            <div style={{ fontSize: 10, color: C.textMuted, letterSpacing: "0.14em", textTransform: "uppercase", marginTop: 2 }}>{label}</div>
           </div>
         ))}
-      </div>
-
-      <div style={{ marginTop: 14, display: "flex", gap: 6 }}>
-        <Btn variant="secondary" style={{ flex: 1, fontSize: 12, padding: "8px 12px" }}>
-          🍽 View Dishes
-        </Btn>
-        <Btn variant="secondary" style={{ flex: 1, fontSize: 12, padding: "8px 12px" }}>
-          📅 View Menu
-        </Btn>
       </div>
     </Card>
   );
@@ -103,7 +94,7 @@ export default function Social({ userId }) {
 
       <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap", alignItems: "center" }}>
         <div style={{
-          display: "flex", background: "#fff",
+          display: "flex", background: C.card,
           border: `1px solid ${C.border}`,
           borderRadius: RADIUS.md, overflow: "hidden", flexShrink: 0,
         }}>
@@ -132,10 +123,10 @@ export default function Social({ userId }) {
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="🔍  Search people…"
+          placeholder="Search people…"
           style={{
             flex: 1, minWidth: 200,
-            background: "#fff", border: `1.5px solid ${C.border}`,
+            background: C.card, border: `1.5px solid ${C.border}`,
             borderRadius: RADIUS.md, padding: "10px 16px",
             fontSize: 14, color: C.text,
           }}
@@ -148,7 +139,11 @@ export default function Social({ userId }) {
         </div>
       ) : displayed.length === 0 ? (
         <Empty
-          icon="👥"
+          icon={
+            <svg viewBox="0 0 60 60" width={56} height={56} style={{ color: C.textMuted }} aria-hidden="true">
+              <use href="#w-plates" />
+            </svg>
+          }
           title={tab === "following" ? "Not following anyone yet" : "No new people found"}
           subtitle={
             tab === "following"
@@ -157,14 +152,18 @@ export default function Social({ userId }) {
           }
         />
       ) : (
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-          gap: 18,
-        }}>
-          {displayed.map(u => (
-            <UserCard key={u.id} user={u} onToggle={toggle} />
-          ))}
+        <div style={{ position: "relative" }}>
+          <Watermark symbol="w-plates" size={230} style={{ right: 0, top: -48 }} />
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+            gap: 18,
+            position: "relative",
+          }}>
+            {displayed.map(u => (
+              <UserCard key={u.id} user={u} onToggle={toggle} />
+            ))}
+          </div>
         </div>
       )}
     </Page>

@@ -1,3 +1,64 @@
+/* ============================================================
+   Season — Spice Route design system
+   Palette A "Blueberry, Tomato & Lemon": cool grounds, four
+   working colors (c1 brand/evening · c2 sunrise/emphasis ·
+   c3 checklist gold · c4 noon green), colored dark for night.
+   ============================================================ */
+
+:root {
+  --bg:          #F5F8F8;
+  --panel:       #FCFDFD;
+  --head:        #1E2530;
+  --ink:         #2A3240;
+  --soft:        #5C6878;
+  --faint:       #93A0AC;
+  --line:        #DFE5E7;
+  --line-strong: #B9C4C9;
+  --mound:       #E9EEEE;
+
+  --c1: #2F55B0;
+  --c2: #DE4A2E;
+  --c3: #B8860B;
+  --c4: #2F8757;
+
+  --c1-soft: #E7EDF8;
+  --c2-soft: #FAE8E3;
+  --c3-soft: #F5EEDB;
+  --c4-soft: #E3F0E9;
+
+  --shadow:      0 14px 34px -18px rgba(40, 60, 90, 0.35);
+  --shadow-lift: 0 18px 40px -18px rgba(40, 60, 90, 0.45);
+
+  --font-display: "Optima", "Alegreya Sans", "Gill Sans", sans-serif;
+  --font-serif:   "Palatino", "Lora", "Book Antiqua", Georgia, serif;
+  --font-body:    "Avenir Next", "Mulish", system-ui, sans-serif;
+}
+
+.night {
+  --bg:          #12161F;
+  --panel:       #1A2030;
+  --head:        #EAEDF5;
+  --ink:         #DCE1EC;
+  --soft:        #9AA5B8;
+  --faint:       #67718A;
+  --line:        #2A3147;
+  --line-strong: #45507A;
+  --mound:       #232B45;
+
+  --c1: #7C9AE8;
+  --c2: #F0704F;
+  --c3: #EFC94C;
+  --c4: #5FBE8A;
+
+  --c1-soft: #232B45;
+  --c2-soft: #3A2530;
+  --c3-soft: #38301C;
+  --c4-soft: #1F3A2E;
+
+  --shadow:      0 16px 36px -16px rgba(0, 0, 0, 0.6);
+  --shadow-lift: 0 20px 42px -16px rgba(0, 0, 0, 0.7);
+}
+
 /* Reset & Base */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -10,25 +71,33 @@ html, body, #root {
 }
 
 body {
-  background: #F7F3EE;
-  font-family: 'Jost', sans-serif;
-  color: #1A150F;
+  background: var(--bg);
+  font-family: var(--font-body);
+  color: var(--ink);
   -webkit-font-smoothing: antialiased;
+  transition: background 0.35s ease, color 0.35s ease;
 }
 
 input, textarea, select, button {
-  font-family: 'Jost', sans-serif;
+  font-family: var(--font-body);
 }
 
-input:focus, textarea:focus, select:focus {
+/* Keyboard focus stays visible; pointer focus stays quiet */
+:focus-visible {
+  outline: 2px solid var(--c1);
+  outline-offset: 2px;
+}
+input:focus:not(:focus-visible),
+textarea:focus:not(:focus-visible),
+select:focus:not(:focus-visible) {
   outline: none;
 }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #C8B9A8; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #A89888; }
+::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--faint); }
 
 /* Animations */
 @keyframes fadeUp {
@@ -60,9 +129,25 @@ input:focus, textarea:focus, select:focus {
   100% { top: 100%; }
 }
 
+/* Spice mounds pour in on load */
+@keyframes pour {
+  from { transform: scaleY(0); }
+}
+.sr-pour {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: pour 0.9s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  animation-delay: var(--pour-delay, 0.2s);
+}
+
 /* Page transitions */
 .page-enter {
   animation: fadeUp 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-enter, .sr-pour { animation: none; }
+  body { transition: none; }
 }
 
 /* Utility */
@@ -75,3 +160,102 @@ input:focus, textarea:focus, select:focus {
 /* Table base */
 table { border-collapse: collapse; width: 100%; }
 th, td { padding: 0; }
+
+/* ============================================================
+   Spice Route layout primitives (responsive without inline
+   media queries)
+   ============================================================ */
+
+.sr-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 14px;
+}
+.sp-3  { grid-column: span 3; }
+.sp-4  { grid-column: span 4; }
+.sp-5  { grid-column: span 5; }
+.sp-6  { grid-column: span 6; }
+.sp-7  { grid-column: span 7; }
+.sp-8  { grid-column: span 8; }
+.sp-12 { grid-column: span 12; }
+
+@media (max-width: 880px) {
+  .sp-3, .sp-4, .sp-5, .sp-6, .sp-7, .sp-8 { grid-column: 1 / -1; }
+}
+
+.sr-panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 20px 22px;
+  box-shadow: var(--shadow);
+  position: relative;
+  transition: background 0.35s ease, border-color 0.35s ease;
+}
+.sr-panel.clip { overflow: hidden; }
+.sr-tint-1 { background: color-mix(in srgb, var(--c1) 7%, var(--panel)); }
+.sr-tint-2 { background: color-mix(in srgb, var(--c2) 6%, var(--panel)); }
+.sr-tint-3 { background: color-mix(in srgb, var(--c3) 7%, var(--panel)); }
+.sr-tint-4 { background: color-mix(in srgb, var(--c4) 6%, var(--panel)); }
+
+.sr-panel-h {
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin: 0 0 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-weight: 600;
+}
+
+/* Watermark — one oversized faint motif per page, from that page's world */
+.sr-wm {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0.08;
+  color: var(--faint);
+}
+.night .sr-wm { opacity: 0.06; }
+
+/* Pantry shelves (V2 language) */
+.sr-shelf {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  padding: 10px 4px 0;
+  border-bottom: 3px solid color-mix(in srgb, var(--faint) 45%, var(--line));
+  flex-wrap: wrap;
+}
+.sr-pitem {
+  text-align: center;
+  padding: 6px 10px 10px;
+  border-radius: 9px;
+  position: relative;
+  min-width: 82px;
+  border: 0;
+  background: none;
+  cursor: default;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.sr-pitem:hover {
+  background: color-mix(in srgb, var(--c4) 8%, transparent);
+  transform: translateY(-2px);
+}
+
+/* Deck cards (V3 language) */
+.sr-card {
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  overflow: hidden;
+  background: var(--panel);
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.35s ease;
+  text-align: left;
+  padding: 0;
+}
+.sr-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lift);
+}

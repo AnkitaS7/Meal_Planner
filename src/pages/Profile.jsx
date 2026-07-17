@@ -3,6 +3,7 @@ import { C, FONTS, RADIUS } from "../theme";
 import {
   Card, Btn, Input, Textarea, Avatar, Toggle, Page, PageHeader, Divider,
 } from "../components/ui";
+import { Watermark } from "../components/art";
 
 import { fetchActivityStats, updateProfile } from "../lib/db";
 import NutritionTargets from "../components/NutritionTargets";
@@ -65,10 +66,10 @@ export default function Profile({ profile, setProfile, userId, dishCount, dietar
   }, [userId]);
 
   const activityStats = [
-    ["🍽", "Dishes Created", stats?.dishesCreated ?? dishCount,  C.accent ],
-    ["📅", "Meals Planned",  stats?.mealsPlanned,                 C.sage   ],
-    ["🛒", "Shopping Lists", stats?.shoppingLists,                C.gold   ],
-    ["🏺", "Pantry Items",   stats?.pantryItems,                  C.success],
+    ["Dishes created", stats?.dishesCreated ?? dishCount,  C.accent ],
+    ["Meals planned",  stats?.mealsPlanned,                 C.sage   ],
+    ["Shopping lists", stats?.shoppingLists,                C.gold   ],
+    ["Pantry items",   stats?.pantryItems,                  C.success],
   ];
 
   return (
@@ -80,18 +81,19 @@ export default function Profile({ profile, setProfile, userId, dishCount, dietar
             ? (
               <div style={{ display: "flex", gap: 8 }}>
                 <Btn variant="secondary" onClick={cancel}>Cancel</Btn>
-                <Btn onClick={save}>✓ Save Changes</Btn>
+                <Btn onClick={save}>Save changes</Btn>
               </div>
             )
-            : <Btn variant="ghost" onClick={() => setEditing(true)}>✏️ Edit Profile</Btn>
+            : <Btn variant="ghost" onClick={() => setEditing(true)}>Edit profile</Btn>
         }
       />
 
-      <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 24 }}>
+      <div className="sr-grid" style={{ gap: 18 }}>
         {/* Left column */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+        <div className="sp-4" style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           {/* Avatar & identity */}
-          <Card style={{ textAlign: "center" }}>
+          <Card style={{ textAlign: "center", position: "relative", overflow: "hidden" }}>
+            <Watermark symbol="i-egg" size={150} style={{ right: -34, top: -28, transform: "rotate(12deg)" }} />
             <div style={{
               width: 86, height: 86, borderRadius: "50%",
               background: C.accentLight,
@@ -173,7 +175,7 @@ export default function Profile({ profile, setProfile, userId, dishCount, dietar
                       fontSize: 12, fontWeight: 500,
                       cursor: editing ? "pointer" : "default",
                       border: `1.5px solid ${active ? C.sage : C.border}`,
-                      background: active ? C.sageLight : "#fff",
+                      background: active ? C.sageLight : C.card,
                       color: active ? C.sageDark : C.textMuted,
                       transition: "all 0.18s",
                       userSelect: "none",
@@ -188,23 +190,25 @@ export default function Profile({ profile, setProfile, userId, dishCount, dietar
         </div>
 
         {/* Right column */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+        <div className="sp-8" style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           {/* Activity stats */}
           <Card>
             <h3 style={{ fontFamily: FONTS.display, fontSize: 18, marginBottom: 18, color: C.text }}>
               Activity Stats
             </h3>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 12 }}>
-              {activityStats.map(([icon, label, val, color]) => (
+            <div style={{ display: "flex" }}>
+              {activityStats.map(([label, val, color], i) => (
                 <div key={label} style={{
-                  background: C.bg, borderRadius: RADIUS.md,
-                  padding: "16px 14px", textAlign: "center",
+                  flex: 1, textAlign: "center", padding: "6px 4px",
+                  borderLeft: i > 0 ? `1px solid ${C.border}` : "none",
                 }}>
-                  <div style={{ fontSize: 20, marginBottom: 4 }}>{icon}</div>
-                  <div style={{ fontSize: 22, fontWeight: 700, color, fontFamily: FONTS.display }}>
+                  <div style={{ fontSize: 24, color, fontFamily: FONTS.serif, fontVariantNumeric: "tabular-nums" }}>
                     {val ?? "—"}
                   </div>
-                  <div style={{ fontSize: 11, color: C.textSub, marginTop: 4, lineHeight: 1.4 }}>{label}</div>
+                  <div style={{
+                    fontSize: 10, color: C.textSub, marginTop: 4, lineHeight: 1.4,
+                    letterSpacing: "0.12em", textTransform: "uppercase",
+                  }}>{label}</div>
                 </div>
               ))}
             </div>
@@ -220,10 +224,10 @@ export default function Profile({ profile, setProfile, userId, dishCount, dietar
             </h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
               {[
-                ["notifications", "notif_email",     "🔔 Email Notifications",  "Weekly meal reminders & recipe suggestions"],
-                ["publicProfile", "public_profile",  "🔒 Public Profile",       "Anyone can view your dishes and menus"],
-                ["nutritionTrack","nutrition_track",  "📊 Nutrition Tracking",   "Enabled - daily summaries active"],
-                ["weeklyDigest",  "weekly_digest",    "📰 Weekly Digest",        "Receive a summary of trending recipes"],
+                ["notifications", "notif_email",     "Email notifications",  "Weekly meal reminders & recipe suggestions"],
+                ["publicProfile", "public_profile",  "Public profile",       "Anyone can view your dishes and menus"],
+                ["nutritionTrack","nutrition_track",  "Nutrition tracking",   "Enabled - daily summaries active"],
+                ["weeklyDigest",  "weekly_digest",    "Weekly digest",        "Receive a summary of trending recipes"],
               ].map(([key, dbKey, label, sub]) => (
                 <div key={key} style={{
                   display: "flex", justifyContent: "space-between",
@@ -244,9 +248,6 @@ export default function Profile({ profile, setProfile, userId, dishCount, dietar
                   />
                 </div>
               ))}
-            </div>
-            <div style={{ marginTop: 20 }}>
-              <Btn variant="danger" style={{ fontSize: 13 }}>🗑 Delete Account</Btn>
             </div>
           </Card>
         </div>

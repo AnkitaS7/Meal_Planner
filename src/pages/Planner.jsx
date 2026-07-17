@@ -1,5 +1,6 @@
 import {useEffect, useState} from "react";
 import {C, FONTS} from "../theme";
+import {DishArt, Watermark} from "../components/art";
 import {Btn, Modal, Page, PageHeader, Tag} from "../components/ui";
 import {DAYS, MEALS} from "../data/mockData";
 import {
@@ -167,21 +168,20 @@ export default function Planner({ dishes, userId }) {
           <div onClick={() => setShowExport(false)} style={{ position: "fixed", inset: 0, zIndex: 99 }} />
           <div style={{
             position: "absolute", top: "calc(100% + 8px)", right: 0,
-            background: "#fff", border: `1px solid ${C.border}`,
-            borderRadius: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+            background: C.card, border: `1px solid ${C.border}`,
+            borderRadius: 10, boxShadow: "var(--shadow-lift)",
             zIndex: 100, minWidth: 200, overflow: "hidden",
           }}>
             {[
-              { icon: "📄", label: "Save as PDF",        action: exportPDF      },
-              { icon: "✉️", label: "Send via Email",     action: shareEmail     },
-              { icon: "💬", label: "Share on WhatsApp",  action: shareWhatsApp  },
-            ].map(({ icon, label, action }, i, arr) => (
+              { label: "Save as PDF",        action: exportPDF      },
+              { label: "Send via email",     action: shareEmail     },
+              { label: "Share on WhatsApp",  action: shareWhatsApp  },
+            ].map(({ label, action }, i, arr) => (
               <button
                 key={label}
                 onClick={action}
                 style={{
-                  display: "flex", alignItems: "center", gap: 10,
-                  width: "100%", padding: "12px 16px",
+                  display: "block", width: "100%", padding: "12px 16px",
                   background: "none", cursor: "pointer", border: "none",
                   borderBottom: i < arr.length - 1 ? `1px solid ${C.border}` : "none",
                   fontSize: 14, color: C.text,
@@ -191,7 +191,6 @@ export default function Planner({ dishes, userId }) {
                 onMouseEnter={e => e.currentTarget.style.background = C.bg}
                 onMouseLeave={e => e.currentTarget.style.background = "none"}
               >
-                <span style={{ fontSize: 16 }}>{icon}</span>
                 {label}
               </button>
             ))}
@@ -206,18 +205,22 @@ export default function Planner({ dishes, userId }) {
     const dish = dishById(plan[day]?.[meal]);
     return dish ? (
       <div style={{
-        background: "#fff", border: `1px solid ${C.border}`,
+        background: C.card, border: `1px solid ${C.border}`,
         borderRadius: 12, padding: 10, position: "relative",
+        boxShadow: "var(--shadow)",
       }}>
-        <span style={{ fontSize: 22 }}>{dish.img}</span>
-        <div style={{ fontSize: 12, fontWeight: 600, color: C.text, lineHeight: 1.3, marginTop: 4 }}>
+        <DishArt dish={dish} size={30} />
+        <div className="truncate" style={{
+          fontSize: 12, fontFamily: FONTS.serif, color: C.text, lineHeight: 1.3, marginTop: 6,
+        }}>
           {dish.name}
         </div>
-        <div style={{ fontSize: 11, color: C.textMuted, marginTop: 3 }}>
+        <div style={{ fontSize: 11, color: C.textMuted, marginTop: 3, fontVariantNumeric: "tabular-nums" }}>
           {(Number(dish.nutrients.calories) || 0).toFixed(1)} kcal
         </div>
         <button
           onClick={() => remove(day, meal)}
+          aria-label={`Remove ${dish.name} from ${day} ${meal}`}
           style={{
             position: "absolute", top: 6, right: 6,
             background: "none", border: "none",
@@ -283,9 +286,9 @@ export default function Planner({ dishes, userId }) {
               onMouseEnter={e => { e.currentTarget.style.borderColor = C.accent; e.currentTarget.style.background = C.accentLight; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.background = C.bg; }}
             >
-              <span style={{ fontSize: 30 }}>{d.img}</span>
+              <DishArt dish={d} size={38} />
               <div>
-                <div style={{ fontWeight: 600, color: C.text }}>{d.name}</div>
+                <div style={{ fontFamily: FONTS.serif, fontWeight: 600, color: C.text }}>{d.name}</div>
                 <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
                   {d.time} min · {d.category} · {(Number(d.nutrients.calories) || 0).toFixed(1)} kcal
                 </div>
@@ -313,7 +316,7 @@ export default function Planner({ dishes, userId }) {
           </div>
           <div style={{
             display: "flex", alignItems: "center", justifyContent: "space-between",
-            background: "#fff", border: `1px solid ${C.border}`,
+            background: C.card, border: `1px solid ${C.border}`,
             borderRadius: 10, padding: "8px 12px",
           }}>
             <button
@@ -358,7 +361,7 @@ export default function Planner({ dishes, userId }) {
                   display: "flex", flexDirection: "column", alignItems: "center",
                   gap: 2, padding: "8px 12px",
                   borderRadius: 10, border: "none", cursor: "pointer",
-                  background: isSelected ? C.accent : isToday ? C.accentLight : "#fff",
+                  background: isSelected ? C.accent : isToday ? C.accentLight : C.card,
                   color: isSelected ? "#fff" : isToday ? C.accent : C.textSub,
                   fontFamily: FONTS.body,
                   boxShadow: isSelected ? "0 2px 8px rgba(0,0,0,0.12)" : "none",
@@ -443,7 +446,9 @@ export default function Planner({ dishes, userId }) {
           Loading plan…
         </div>
       ) : (
-        <div style={{ overflowX: "auto", marginBottom: 8 }}>
+        <div className="sr-panel clip" style={{ marginBottom: 8, padding: "14px 16px" }}>
+          <Watermark symbol="w-steam" size={200} style={{ right: -26, top: -34 }} />
+          <div style={{ overflowX: "auto", position: "relative" }}>
           <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 8 }}>
             <thead>
               <tr>
@@ -507,6 +512,7 @@ export default function Planner({ dishes, userId }) {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 

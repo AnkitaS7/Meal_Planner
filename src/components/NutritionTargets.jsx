@@ -27,7 +27,7 @@ export default function NutritionTargets({ userId }) {
                 flex: 1, padding: "9px 12px", fontSize: 14, fontWeight: 600,
                 cursor: "pointer", fontFamily: FONTS.body,
                 border: `1.5px solid ${active ? C.accent : C.border}`,
-                background: active ? C.accentLight : "#fff",
+                background: active ? C.accentLight : C.card,
                 color: active ? C.accentDark : C.textMuted,
                 borderRadius: RADIUS.md,
               }}

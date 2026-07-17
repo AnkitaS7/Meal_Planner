@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { C, FONTS, RADIUS } from "../theme";
-import { Card, Btn, Page, PageHeader, CheckRow } from "../components/ui";
+import { Btn, Page, PageHeader, CheckRow } from "../components/ui";
+import { IngredientArt, Watermark } from "../components/art";
 import { todayDateStr } from "../lib/db";
 import {
   fetchShoppingNeeded, fetchManualShoppingItems,
@@ -160,14 +161,14 @@ export default function Shopping({ userId, setPantry }) {
         ${items.map(i => `<li style="padding:8px 0;border-bottom:1px solid #f0ebe4;font-size:14px">${i}</li>`).join("")}
       </ul>`;
     win.document.write(`<!doctype html><html><head><meta charset="utf-8">
-      <title>Shopping List</title>
+      <title>Season · Shopping list</title>
       <style>
         body{font-family:Georgia,serif;padding:40px;color:#1a1a1a;max-width:700px;margin:0 auto}
         h1{font-size:26px;margin:0 0 4px}
         .sub{color:#888;font-size:13px;margin-bottom:28px}
         @media print{@page{margin:20mm}body{padding:0}}
       </style></head><body>
-      <h1>🛒 Shopping List</h1>
+      <h1>Shopping list</h1>
       <div class="sub">${todayDateStr()}</div>
       ${section("To Buy (Required)", needed.map(i => { const qty = i.qty != null ? `<strong>${i.qty}${i.unit ? " " + i.unit : ""}</strong> ` : ""; return `${qty}${i.name}${i.dish ? ` <span style="color:#aaa;font-size:12px">(${i.dish})</span>` : ""}`; }))}
       ${section("Optional", optNeed.map(i => { const qty = i.qty != null ? `<strong>${i.qty}${i.unit ? " " + i.unit : ""}</strong> ` : ""; return `${qty}${i.name}${i.dish ? ` <span style="color:#aaa;font-size:12px">(${i.dish})</span>` : ""}`; }))}
@@ -247,11 +248,19 @@ export default function Shopping({ userId, setPantry }) {
     </CheckRow>
   );
 
+  // Everything ticked so far — required, optional, and your own additions —
+  // stands together on the basket counter.
+  const basket = [
+    ...needed.filter(i => autoChecked[i.name]).map(i => ({ ...i, _k: `r-${i.name}` })),
+    ...optNeed.filter(i => autoChecked[i.name]).map(i => ({ ...i, _k: `o-${i.name}` })),
+    ...manual.filter(m => m.is_checked).map(m => ({ name: m.name, qty: null, unit: null, _k: `m-${m.id}` })),
+  ];
+
   return (
     <Page>
       <PageHeader
-        title="Shopping List"
-        subtitle="Based on this week's meal plan · Pantry items excluded"
+        title="The market ticket"
+        subtitle="Built from this week's plan — what's already on your shelves stays home"
         action={
           <div style={{ position: "relative" }}>
             <Btn onClick={() => setShowExport(v => !v)}>Share ↗</Btn>
@@ -263,21 +272,20 @@ export default function Shopping({ userId, setPantry }) {
                 />
                 <div style={{
                   position: "absolute", top: "calc(100% + 8px)", right: 0,
-                  background: "#fff", border: `1px solid ${C.border}`,
-                  borderRadius: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+                  background: C.card, border: `1px solid ${C.border}`,
+                  borderRadius: 10, boxShadow: "var(--shadow-lift)",
                   zIndex: 100, minWidth: 200, overflow: "hidden",
                 }}>
                   {[
-                    { icon: "📄", label: "Save as PDF",       action: exportPDF     },
-                    { icon: "✉️", label: "Send via Email",    action: shareEmail    },
-                    { icon: "💬", label: "Share on WhatsApp", action: shareWhatsApp },
-                  ].map(({ icon, label, action }, i, arr) => (
+                    { label: "Save as PDF",       action: exportPDF     },
+                    { label: "Send via email",    action: shareEmail    },
+                    { label: "Share on WhatsApp", action: shareWhatsApp },
+                  ].map(({ label, action }, i, arr) => (
                     <button
                       key={label}
                       onClick={action}
                       style={{
-                        display: "flex", alignItems: "center", gap: 10,
-                        width: "100%", padding: "12px 16px",
+                        display: "block", width: "100%", padding: "12px 16px",
                         background: "none", cursor: "pointer", border: "none",
                         borderBottom: i < arr.length - 1 ? `1px solid ${C.border}` : "none",
                         fontSize: 14, color: C.text,
@@ -287,7 +295,6 @@ export default function Shopping({ userId, setPantry }) {
                       onMouseEnter={e => e.currentTarget.style.background = C.bg}
                       onMouseLeave={e => e.currentTarget.style.background = "none"}
                     >
-                      <span style={{ fontSize: 16 }}>{icon}</span>
                       {label}
                     </button>
                   ))}
@@ -298,92 +305,121 @@ export default function Shopping({ userId, setPantry }) {
         }
       />
 
-      {/* Progress banner */}
-      <div style={{
-        background: C.card, border: `1px solid ${C.border}`,
-        borderRadius: RADIUS.lg, padding: "16px 20px",
-        marginBottom: 24,
-        display: "flex", alignItems: "center", gap: 16,
-      }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13, color: C.textSub, marginBottom: 6 }}>
-            {doneItems} of {totalItems} items collected
-          </div>
-          <div style={{ height: 6, background: C.border, borderRadius: 3 }}>
-            <div style={{
-              height: "100%", borderRadius: 3,
-              width: `${totalItems ? (doneItems / totalItems) * 100 : 0}%`,
-              background: doneItems === totalItems && totalItems > 0 ? C.success : C.accent,
-              transition: "width 0.4s ease",
-            }} />
-          </div>
-        </div>
-        <div style={{ fontSize: 24, fontWeight: 700, color: C.accent, fontFamily: FONTS.display }}>
-          {totalItems - doneItems}
-          <span style={{ fontSize: 13, color: C.textMuted, fontFamily: FONTS.body, marginLeft: 4 }}>left</span>
-        </div>
-      </div>
-
       {loading ? (
         <div style={{ color: C.textMuted, fontSize: 14, padding: "40px 0", textAlign: "center" }}>
           Loading shopping list…
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 24, alignItems: "start" }}>
-          {/* Left column — primary: what to buy */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-            {/* Required items to buy */}
-            <Card>
-              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 4 }}>
-                <h3 style={{ fontFamily: FONTS.display, fontSize: 20, color: C.text }}>
-                  🛒 Items to Buy
-                </h3>
-                {checkedAutoCount > 0 && (
-                  <Btn
-                    variant="sage"
-                    disabled={addingToPantry}
-                    onClick={addCheckedToPantry}
-                    style={{ padding: "7px 14px", fontSize: 13 }}
-                  >
-                    {addingToPantry ? "Adding…" : `Add ${checkedAutoCount} to Pantry 🏺`}
-                  </Btn>
-                )}
-              </div>
-              <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 16 }}>
-                {needed.length} required ingredients missing from pantry
-              </p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {needed.length === 0 ? (
-                  <div style={{ fontSize: 13, color: C.textMuted }}>Everything is stocked!</div>
-                ) : (
-                  needed.map(item => <AutoCheckItem key={item.name} item={item} />)
-                )}
-              </div>
-            </Card>
-          </div>
+        <div className="sr-grid">
+          {/* ---- THE TICKET & BASKET COUNTER: ticked items land here ---- */}
+          <section className="sr-panel clip sp-12">
+            <Watermark symbol="i-lemon" size={210} style={{ right: -44, top: -48, transform: "rotate(-14deg)" }} />
 
-          {/* Right column — supporting: optional, custom, pantry */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-            {/* Optional items */}
-            {optNeed.length > 0 && (
-              <Card>
-                <h3 style={{ fontFamily: FONTS.display, fontSize: 18, marginBottom: 4, color: C.text }}>
-                  ✨ Optional Ingredients
-                </h3>
-                <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 14 }}>
-                  Nice to have but not required
+            <div style={{ display: "flex", alignItems: "center", gap: 18, position: "relative" }}>
+              <div style={{ flex: 1, minWidth: 160 }}>
+                <div style={{ fontSize: 13, color: C.textSub, marginBottom: 6 }}>
+                  {doneItems} of {totalItems} items collected
+                </div>
+                <div style={{ height: 6, background: "var(--mound)", borderRadius: 3 }}>
+                  <div style={{
+                    height: "100%", borderRadius: 3,
+                    width: `${totalItems ? (doneItems / totalItems) * 100 : 0}%`,
+                    background: doneItems === totalItems && totalItems > 0 ? C.success : C.accent,
+                    transition: "width 0.4s ease",
+                  }} />
+                </div>
+              </div>
+              <div style={{
+                fontFamily: FONTS.serif, fontSize: 28, color: C.head,
+                fontVariantNumeric: "tabular-nums", lineHeight: 1,
+              }}>
+                {totalItems - doneItems}
+                <span style={{ fontSize: 12, color: C.textMuted, fontFamily: FONTS.body, marginLeft: 5 }}>left</span>
+              </div>
+              {checkedAutoCount > 0 && (
+                <Btn
+                  variant="sage"
+                  disabled={addingToPantry}
+                  onClick={addCheckedToPantry}
+                  style={{ borderRadius: 999, fontSize: 12 }}
+                >
+                  {addingToPantry ? "Adding…" : `Add ${checkedAutoCount} to pantry`}
+                </Btn>
+              )}
+            </div>
+
+            {/* The basket counter */}
+            <div style={{ marginTop: 16, position: "relative" }}>
+              <div style={{
+                fontSize: 10, letterSpacing: "0.24em", textTransform: "uppercase",
+                color: C.textMuted, marginBottom: 2, fontWeight: 600,
+              }}>
+                In the basket · {basket.length}
+              </div>
+              {basket.length === 0 ? (
+                <p style={{
+                  fontFamily: FONTS.serif, fontStyle: "italic", fontSize: 14,
+                  color: C.textSub, margin: "10px 0 4px",
+                  borderBottom: "3px solid color-mix(in srgb, var(--faint) 45%, var(--line))",
+                  paddingBottom: 14,
+                }}>
+                  Tick items as you shop — they land on this counter.
                 </p>
+              ) : (
+                <div className="sr-shelf">
+                  {basket.map(item => (
+                    <div key={item._k} className="sr-pitem" style={{ minWidth: 74, padding: "4px 8px 8px" }}>
+                      <IngredientArt name={item.name} size={38} />
+                      <div className="truncate" style={{ fontSize: 11, color: C.text, marginTop: 4, maxWidth: 96 }}>
+                        {item.name}
+                      </div>
+                      {item.qty != null && (
+                        <div style={{ fontSize: 10, color: C.textMuted, fontVariantNumeric: "tabular-nums" }}>
+                          {item.qty}{item.unit ? ` ${item.unit}` : ""}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* ---- TO BUY ---- */}
+          <section className="sr-panel sp-7">
+            <h3 className="sr-panel-h">
+              <span>To buy</span>
+              <span>{needed.length} required</span>
+            </h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {needed.length === 0 ? (
+                <p style={{ fontFamily: FONTS.serif, fontStyle: "italic", fontSize: 14, color: C.textSub, margin: 0 }}>
+                  Everything this week's plan needs is already on your shelves.
+                </p>
+              ) : (
+                needed.map(item => <AutoCheckItem key={item.name} item={item} />)
+              )}
+            </div>
+
+            {optNeed.length > 0 && (
+              <div style={{ borderTop: `1px solid ${C.border}`, marginTop: 16, paddingTop: 14 }}>
+                <div style={{
+                  fontSize: 10, letterSpacing: "0.24em", textTransform: "uppercase",
+                  color: C.textMuted, marginBottom: 8, fontWeight: 600,
+                }}>
+                  Optional · nice to have
+                </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {optNeed.map(item => <AutoCheckItem key={item.name} item={item} />)}
                 </div>
-              </Card>
+              </div>
             )}
+          </section>
 
-            {/* Custom extras */}
-            <Card>
-              <h3 style={{ fontFamily: FONTS.display, fontSize: 18, marginBottom: 14, color: C.text }}>
-                ➕ Add Custom Items
-              </h3>
+          {/* ---- YOUR ADDITIONS + ALREADY STOCKED ---- */}
+          <div className="sp-5" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <section className="sr-panel">
+              <h3 className="sr-panel-h"><span>Your own additions</span></h3>
               {manual.map(item => (
                 <div key={item.id} style={{ marginBottom: 6 }}>
                   <ManualCheckItem item={item} />
@@ -394,7 +430,7 @@ export default function Shopping({ userId, setPantry }) {
                   value={extraInput}
                   onChange={e => setExtraInput(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && addExtra()}
-                  placeholder="Type item and press Enter…"
+                  placeholder="Type an item and press Enter…"
                   style={{
                     flex: 1, background: C.bg,
                     border: `1.5px solid ${C.border}`,
@@ -404,20 +440,17 @@ export default function Shopping({ userId, setPantry }) {
                 />
                 <Btn onClick={addExtra} disabled={!extraInput.trim()}>Add</Btn>
               </div>
-            </Card>
+            </section>
 
-            {/* Already in pantry — secondary reference, demoted */}
-            <Card>
-              <h3 style={{ fontFamily: FONTS.display, fontSize: 16, marginBottom: 4, color: C.textSub }}>
-                ✅ Already in Pantry
+            <section className="sr-panel sr-tint-4">
+              <h3 className="sr-panel-h">
+                <span>Already on your shelves</span>
+                <span>{have.length}</span>
               </h3>
-              <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 16 }}>
-                {have.length} items covered, no need to buy
-              </p>
               {have.length === 0 ? (
-                <div style={{ fontSize: 13, color: C.textMuted }}>
+                <p style={{ fontFamily: FONTS.serif, fontStyle: "italic", fontSize: 14, color: C.textSub, margin: 0 }}>
                   Nothing from this week's plan is in your pantry yet.
-                </div>
+                </p>
               ) : (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                   {have.map(name => (
@@ -432,7 +465,7 @@ export default function Shopping({ userId, setPantry }) {
                   ))}
                 </div>
               )}
-            </Card>
+            </section>
           </div>
         </div>
       )}
