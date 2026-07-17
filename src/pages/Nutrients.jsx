@@ -310,7 +310,7 @@ export default function Nutrients({ dishes, userId }) {
 
           <div style={{
             display: "grid",
-            gridTemplateColumns: `repeat(${compDishes.length + (compDishes.length < 3 ? 1 : 0)}, 1fr)`,
+            gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
             gap: 16,
             alignItems: "start",
           }}>
@@ -336,7 +336,7 @@ export default function Nutrients({ dishes, userId }) {
                       position: "absolute", top: 10, right: 10,
                       background: "none", border: "none",
                       color: C.textMuted, fontSize: 14, cursor: "pointer",
-                      lineHeight: 1, padding: 2,
+                      lineHeight: 1, padding: 8,
                     }}
                     onMouseEnter={e => { e.currentTarget.style.color = C.error; }}
                     onMouseLeave={e => { e.currentTarget.style.color = C.textMuted; }}

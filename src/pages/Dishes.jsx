@@ -187,7 +187,7 @@ function DishDetail({ dish: dishProp, onBack, onDelete }) {
                     style={{
                       padding: "5px 14px", border: "none",
                       background: unitSystem === sys ? C.accent : C.bg,
-                      color: unitSystem === sys ? "#fff" : C.textSub,
+                      color: unitSystem === sys ? "var(--on-accent)" : C.textSub,
                       fontSize: 12, fontWeight: unitSystem === sys ? 600 : 400,
                       cursor: "pointer", fontFamily: FONTS.body,
                       textTransform: "capitalize",
@@ -446,7 +446,7 @@ function AddDishForm({ onSave, onCancel, dishCategories, dietaryOptions }) {
         }
       />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 24 }}>
         {/* Left - Basic info */}
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <Card>

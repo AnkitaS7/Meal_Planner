@@ -232,7 +232,7 @@ export default function Shopping({ userId, setPantry }) {
         <button
           onClick={e => { e.stopPropagation(); removeExtra(item.id); }}
           aria-label={`Remove ${item.name}`}
-          style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 14 }}
+          style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 14, padding: "6px 8px" }}
         >
           ✕
         </button>
@@ -320,7 +320,14 @@ export default function Shopping({ userId, setPantry }) {
                 <div style={{ fontSize: 13, color: C.textSub, marginBottom: 6 }}>
                   {doneItems} of {totalItems} items collected
                 </div>
-                <div style={{ height: 6, background: "var(--mound)", borderRadius: 3 }}>
+                <div
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={totalItems}
+                  aria-valuenow={doneItems}
+                  aria-label="Items collected"
+                  style={{ height: 6, background: "var(--mound)", borderRadius: 3 }}
+                >
                   <div style={{
                     height: "100%", borderRadius: 3,
                     width: `${totalItems ? (doneItems / totalItems) * 100 : 0}%`,

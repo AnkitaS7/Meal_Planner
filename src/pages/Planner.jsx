@@ -225,25 +225,28 @@ export default function Planner({ dishes, userId }) {
             position: "absolute", top: 6, right: 6,
             background: "none", border: "none",
             color: C.textMuted, fontSize: 13, cursor: "pointer",
-            lineHeight: 1, padding: 2,
+            lineHeight: 1, padding: 6,
           }}
         >✕</button>
       </div>
     ) : (
-      <div
+      <button
+        type="button"
         onClick={() => setModal({ day, meal })}
+        aria-label={`Add a dish for ${day} ${meal}`}
         style={{
+          width: "100%", background: "transparent",
           border: `2px dashed ${C.borderDark}`,
           borderRadius: 12, padding: "14px 6px",
           textAlign: "center", cursor: "pointer",
-          color: C.textMuted, fontSize: 12,
+          color: C.textMuted, fontSize: 12, fontFamily: "inherit",
           transition: "border-color 0.18s, background 0.18s",
         }}
         onMouseEnter={e => { e.currentTarget.style.borderColor = C.accent; e.currentTarget.style.background = C.accentLight; }}
         onMouseLeave={e => { e.currentTarget.style.borderColor = C.borderDark; e.currentTarget.style.background = "transparent"; }}
       >
         + Add
-      </div>
+      </button>
     );
   };
 
@@ -274,13 +277,15 @@ export default function Planner({ dishes, userId }) {
         {dishes
           .filter(d => d.name.toLowerCase().includes(modalSearch.toLowerCase()))
           .map(d => (
-            <div
+            <button
+              type="button"
               key={d.id}
               onClick={() => assign(d)}
               style={{
-                display: "flex", gap: 14, padding: 14,
+                display: "flex", gap: 14, padding: 14, width: "100%",
                 background: C.bg, borderRadius: 12, cursor: "pointer",
-                border: "1.5px solid transparent",
+                border: "1.5px solid transparent", textAlign: "left",
+                fontFamily: "inherit",
                 transition: "border-color 0.18s, background 0.18s",
               }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = C.accent; e.currentTarget.style.background = C.accentLight; }}
@@ -293,7 +298,7 @@ export default function Planner({ dishes, userId }) {
                   {d.time} min · {d.category} · {(Number(d.nutrients.calories) || 0).toFixed(1)} kcal
                 </div>
               </div>
-            </div>
+            </button>
           ))}
       </div>
     </>
@@ -362,7 +367,7 @@ export default function Planner({ dishes, userId }) {
                   gap: 2, padding: "8px 12px",
                   borderRadius: 10, border: "none", cursor: "pointer",
                   background: isSelected ? C.accent : isToday ? C.accentLight : C.card,
-                  color: isSelected ? "#fff" : isToday ? C.accent : C.textSub,
+                  color: isSelected ? "var(--on-accent)" : isToday ? C.accent : C.textSub,
                   fontFamily: FONTS.body,
                   boxShadow: isSelected ? "0 2px 8px rgba(0,0,0,0.12)" : "none",
                   transition: "all 0.18s",
@@ -372,7 +377,7 @@ export default function Planner({ dishes, userId }) {
                 {kcal > 0 && (
                   <span style={{
                     fontSize: 10,
-                    color: isSelected ? "rgba(255,255,255,0.8)" : C.accent,
+                    color: isSelected ? "var(--on-accent)" : C.accent,
                     fontWeight: 500,
                   }}>
                     {kcal.toFixed(1)}

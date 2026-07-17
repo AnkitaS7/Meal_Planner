@@ -108,7 +108,7 @@ export default function Social({ userId }) {
               style={{
                 padding: "10px 20px", border: "none",
                 background: tab === t.id ? C.accent : "transparent",
-                color: tab === t.id ? "#fff" : C.textSub,
+                color: tab === t.id ? "var(--on-accent)" : C.textSub,
                 fontWeight: tab === t.id ? 600 : 400,
                 fontSize: 14, cursor: "pointer",
                 fontFamily: FONTS.body,

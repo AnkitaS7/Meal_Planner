@@ -160,7 +160,7 @@ export default function Login() {
             disabled={loading}
             style={{
               background: loading ? C.border : C.accent,
-              color: "#fff", border: "none",
+              color: "var(--on-accent)", border: "none",
               borderRadius: RADIUS.md, padding: "13px 0",
               fontSize: 15, fontWeight: 600,
               fontFamily: FONTS.body,

@@ -337,6 +337,12 @@ export function SvgDefs() {
             <path d="M21 15 h18 M21 23 h18 M21 31 h12" strokeWidth="2" />
           </g>
         </symbol>
+        <symbol id="w-lens" viewBox="0 0 60 60">
+          <g fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+            <circle cx="26" cy="26" r="14" />
+            <path d="M36.5 36.5 L 48 48" />
+          </g>
+        </symbol>
         <symbol id="w-plates" viewBox="0 0 60 60">
           <g fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="21" cy="30" r="17" /><circle cx="21" cy="30" r="6" />

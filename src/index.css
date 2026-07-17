@@ -11,15 +11,17 @@
   --head:        #1E2530;
   --ink:         #2A3240;
   --soft:        #5C6878;
-  --faint:       #93A0AC;
+  --faint:       #66727E; /* ≥4.5:1 on panel & bg — used for small labels */
   --line:        #DFE5E7;
   --line-strong: #B9C4C9;
   --mound:       #E9EEEE;
 
   --c1: #2F55B0;
-  --c2: #DE4A2E;
-  --c3: #B8860B;
-  --c4: #2F8757;
+  --c2: #CE3D20;
+  --c3: #91690A;
+  --c4: #2A7A4E;
+
+  --on-accent: #FFFFFF; /* text on solid c1–c4 fills */
 
   --c1-soft: #E7EDF8;
   --c2-soft: #FAE8E3;
@@ -40,7 +42,7 @@
   --head:        #EAEDF5;
   --ink:         #DCE1EC;
   --soft:        #9AA5B8;
-  --faint:       #67718A;
+  --faint:       #8791A9;
   --line:        #2A3147;
   --line-strong: #45507A;
   --mound:       #232B45;
@@ -49,6 +51,8 @@
   --c2: #F0704F;
   --c3: #EFC94C;
   --c4: #5FBE8A;
+
+  --on-accent: #12161F; /* night accents are light — dark text keeps ≥6:1 */
 
   --c1-soft: #232B45;
   --c2-soft: #3A2530;
@@ -148,6 +152,12 @@ select:focus:not(:focus-visible) {
 @media (prefers-reduced-motion: reduce) {
   .page-enter, .sr-pour { animation: none; }
   body { transition: none; }
+  /* Safety net for inline-styled animations (spinners, pulses) */
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* Utility */

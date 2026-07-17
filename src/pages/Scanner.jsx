@@ -212,7 +212,7 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
 
       {/* ── Idle ── */}
       {stage === "idle" && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24 }}>
 
           <div>
             <div
@@ -428,18 +428,22 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
                       <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 2 }}>Scanned</div>
                       <div style={{ fontWeight: 600, color: C.text, fontSize: 14 }}>{item.name}</div>
                     </div>
-                    <div
+                    <button
+                      type="button"
+                      role="checkbox"
+                      aria-checked={isSel}
+                      aria-label={`Include ${item.name}`}
                       onClick={() => toggleItem(index)}
                       style={{
-                        width: 22, height: 22, borderRadius: 6, flexShrink: 0,
+                        width: 22, height: 22, borderRadius: 6, flexShrink: 0, padding: 0,
                         border: `2px solid ${isSel ? C.sage : C.borderDark}`,
                         background: isSel ? C.sage : "transparent",
                         display: "flex", alignItems: "center", justifyContent: "center",
                         transition: "all 0.18s", marginLeft: 10, cursor: "pointer",
                       }}
                     >
-                      {isSel && <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>✓</span>}
-                    </div>
+                      {isSel && <span style={{ color: "var(--on-accent)", fontSize: 12, fontWeight: 700 }}>✓</span>}
+                    </button>
                   </div>
 
                   {/* Add as: matched ingredient options */}
@@ -451,14 +455,17 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
                       {opts.map(o => {
                         const active = item.chosenName === o.value;
                         return (
-                          <div
+                          <button
+                            type="button"
                             key={o.value}
+                            aria-pressed={active}
                             onClick={() => updateItem(index, { ...item, chosenName: o.value })}
                             style={{
-                              display: "flex", alignItems: "center", gap: 8,
+                              display: "flex", alignItems: "center", gap: 8, width: "100%",
                               padding: "6px 8px", borderRadius: RADIUS.sm, cursor: "pointer",
                               border: `1.5px solid ${active ? C.sage : C.border}`,
                               background: active ? C.card : "transparent",
+                              fontFamily: "inherit", textAlign: "left",
                             }}
                           >
                             <span style={{
@@ -474,7 +481,7 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
                                 {Math.round(o.score * 100)}%
                               </span>
                             )}
-                          </div>
+                          </button>
                         );
                       })}
                     </div>

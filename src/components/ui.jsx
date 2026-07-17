@@ -42,11 +42,11 @@ export const Card = ({ children, style = {}, onClick, onMouseEnter, onMouseLeave
 
 // Button
 const BTN_VARIANTS = {
-  primary:   { background: C.accent,      color: "#fff",   border: "none" },
+  primary:   { background: C.accent,      color: "var(--on-accent)", border: "none" },
   secondary: { background: C.border,      color: C.text,   border: "none" },
   ghost:     { background: "transparent", color: C.accent, border: `1.5px solid ${C.accent}` },
-  sage:      { background: C.sage,        color: "#fff",   border: "none" },
-  danger:    { background: C.error,       color: "#fff",   border: "none" },
+  sage:      { background: C.sage,        color: "var(--on-accent)", border: "none" },
+  danger:    { background: C.error,       color: "var(--on-accent)", border: "none" },
   dark:      { background: C.sidebar,     color: "var(--bg)", border: "none" },
 };
 
@@ -152,7 +152,7 @@ export const CheckRow = ({ checked, onToggle, label, children, trailing }) => (
       display: "flex", alignItems: "center", justifyContent: "center",
       transition: "all 0.18s",
     }}>
-      {checked && <span style={{ color: "#fff", fontSize: 11 }}>✓</span>}
+      {checked && <span style={{ color: "var(--on-accent)", fontSize: 11 }}>✓</span>}
     </span>
     <div style={{ flex: 1 }}>{children}</div>
     {trailing}
@@ -274,14 +274,18 @@ export const NutrientBar = ({ name, current, target, unit, color }) => {
 };
 
 // Toggle
-export const Toggle = ({ on, onChange }) => (
-  <div
+export const Toggle = ({ on, onChange, label }) => (
+  <button
+    type="button"
+    role="switch"
+    aria-checked={on}
+    aria-label={label}
     onClick={onChange}
     style={{
       width: 44, height: 24, borderRadius: 12,
       background: on ? C.sage : C.borderDark,
       display: "flex", alignItems: "center",
-      padding: "0 3px",
+      padding: "0 3px", border: "none",
       justifyContent: on ? "flex-end" : "flex-start",
       cursor: "pointer",
       transition: "all 0.22s",
@@ -293,7 +297,7 @@ export const Toggle = ({ on, onChange }) => (
       boxShadow: "0 1px 4px rgba(0,0,0,0.2)",
       transition: "all 0.22s",
     }} />
-  </div>
+  </button>
 );
 
 // SectionLabel
@@ -313,7 +317,13 @@ export const Divider = ({ style = {} }) => (
 );
 
 // Empty state
-export const Empty = ({ icon = "🔍", title, subtitle, action }) => (
+const EmptyDefaultIcon = (
+  <svg viewBox="0 0 60 60" width={48} height={48} style={{ color: "var(--faint)" }} aria-hidden="true">
+    <use href="#w-lens" />
+  </svg>
+);
+
+export const Empty = ({ icon = EmptyDefaultIcon, title, subtitle, action }) => (
   <div style={{
     textAlign: "center", padding: "64px 24px",
     display: "flex", flexDirection: "column",

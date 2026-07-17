@@ -363,7 +363,7 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
                             aria-label={`Remove ${item.name} from pantry`}
                             style={{
                               background: "none", border: "none", color: C.textMuted,
-                              cursor: "pointer", fontSize: 11, marginLeft: 6, padding: "0 2px",
+                              cursor: "pointer", fontSize: 11, marginLeft: 4, padding: "4px 6px",
                             }}
                             onMouseEnter={e => { e.currentTarget.style.color = "var(--c2)"; }}
                             onMouseLeave={e => { e.currentTarget.style.color = "var(--faint)"; }}

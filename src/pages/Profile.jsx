@@ -167,12 +167,15 @@ export default function Profile({ profile, setProfile, userId, dishCount, dietar
               {dietaryOptions.map(d => {
                 const active = (editing ? draft : displayProfile).dietary.includes(d);
                 return (
-                  <span
+                  <button
+                    type="button"
                     key={d}
+                    disabled={!editing}
+                    aria-pressed={active}
                     onClick={() => editing && toggleDiet(d)}
                     style={{
                       padding: "5px 12px", borderRadius: RADIUS.full,
-                      fontSize: 12, fontWeight: 500,
+                      fontSize: 12, fontWeight: 500, fontFamily: "inherit",
                       cursor: editing ? "pointer" : "default",
                       border: `1.5px solid ${active ? C.sage : C.border}`,
                       background: active ? C.sageLight : C.card,
@@ -182,7 +185,7 @@ export default function Profile({ profile, setProfile, userId, dishCount, dietar
                     }}
                   >
                     {d}
-                  </span>
+                  </button>
                 );
               })}
             </div>
@@ -239,6 +242,7 @@ export default function Profile({ profile, setProfile, userId, dishCount, dietar
                     <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>{sub}</div>
                   </div>
                   <Toggle
+                    label={label}
                     on={displayProfile[dbKey]}
                     onChange={async () => {
                       const newVal = !displayProfile[dbKey];
