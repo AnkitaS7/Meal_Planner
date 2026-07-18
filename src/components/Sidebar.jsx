@@ -8,7 +8,6 @@ const NAV_ITEMS = [
   { id: "dishes",      label: "Dish Database" },
   { id: "pantry",      label: "Pantry"        },
   { id: "shopping",    label: "Shopping"      },
-  { id: "suggestions", label: "Suggestions"   },
   { id: "nutrients",   label: "Nutrients"     },
   { id: "scanner",     label: "Bill Scanner"  },
   { id: "social",      label: "Community"     },

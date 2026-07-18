@@ -17,7 +17,6 @@ const Planner     = lazy(() => import("./pages/Planner"));
 const Dishes      = lazy(() => import("./pages/Dishes"));
 const Pantry      = lazy(() => import("./pages/Pantry"));
 const Shopping    = lazy(() => import("./pages/Shopping"));
-const Suggestions = lazy(() => import("./pages/Suggestions"));
 const Nutrients   = lazy(() => import("./pages/Nutrients"));
 const Scanner     = lazy(() => import("./pages/Scanner"));
 const Social      = lazy(() => import("./pages/Social"));
@@ -48,7 +47,7 @@ export default function App() {
   const [pantry, setPantry] = useState([]);
   const [enums, setEnums]   = useState({ dishCategories: [], pantryCategories: [], pantryUnits: [], dietaryOptions: [] });
   const [page, setPage]     = useState("dashboard");
-  const [pendingDish, setPendingDish] = useState(null);
+  const [pendingDishesTab, setPendingDishesTab] = useState(null);
   const [isMobile, setIsMobile]     = useState(() => window.innerWidth < 700);
   const [showSidebar, setShowSidebar] = useState(false);
 
@@ -107,7 +106,8 @@ export default function App() {
 
     // …and stream the full dish list in the background. The Dish Database
     // page does its own server-side paging, so nothing waits on this; it
-    // feeds the planner/suggestions/nutrients pages as soon as it lands.
+    // feeds the planner/nutrients pages and the suggested-dishes tab as
+    // soon as it lands.
     fetchDishes(user.id)
       .then(setDishes)
       .catch(console.error);
@@ -125,12 +125,11 @@ export default function App() {
   const sharedProps = { dishes, setDishes, pantry, setPantry, userId: user.id };
 
   const PAGES = {
-    dashboard:   <Dashboard   {...sharedProps} setPage={setPage} />,
+    dashboard:   <Dashboard   {...sharedProps} setPage={setPage} onOpenSuggestions={() => { setPendingDishesTab("suggested"); setPage("dishes"); }} />,
     planner:     <Planner     dishes={dishes} userId={user.id} />,
-    dishes:      <Dishes      dishes={dishes} setDishes={setDishes} userId={user.id} dishCategories={enums.dishCategories} dietaryOptions={enums.dietaryOptions} pendingDish={pendingDish} onClearPending={() => setPendingDish(null)} />,
+    dishes:      <Dishes      dishes={dishes} setDishes={setDishes} pantry={pantry} userId={user.id} dishCategories={enums.dishCategories} dietaryOptions={enums.dietaryOptions} pendingTab={pendingDishesTab} onClearPendingTab={() => setPendingDishesTab(null)} />,
     pantry:      <Pantry      pantry={pantry} setPantry={setPantry} userId={user.id} pantryCategories={enums.pantryCategories} pantryUnits={enums.pantryUnits} />,
     shopping:    <Shopping    dishes={dishes} pantry={pantry} setPantry={setPantry} userId={user.id} />,
-    suggestions: <Suggestions dishes={dishes} pantry={pantry} onViewDish={dish => { setPendingDish(dish); setPage("dishes"); }} />,
     nutrients:   <Nutrients   dishes={dishes} userId={user.id} />,
     scanner:     <Scanner     setPantry={setPantry} userId={user.id} pantryCategories={enums.pantryCategories} pantryUnits={enums.pantryUnits} />,
     social:      <Social      userId={user.id} />,

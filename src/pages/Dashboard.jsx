@@ -34,7 +34,7 @@ function nextMeal(rows) {
   return rows[rows.length - 1];
 }
 
-export default function Dashboard({ setPage, dishes, pantry, userId }) {
+export default function Dashboard({ setPage, onOpenSuggestions, dishes, pantry, userId }) {
   const [todayMeals, setTodayMeals]         = useState([]);
   const [nutrientData, setNutrientData]     = useState([]);
   const [shoppingNeeded, setShoppingNeeded] = useState([]);
@@ -329,7 +329,7 @@ export default function Dashboard({ setPage, dishes, pantry, userId }) {
             </div>
           ))}
           <button
-            onClick={() => setPage("suggestions")}
+            onClick={onOpenSuggestions}
             style={{
               marginTop: 12, background: "none", border: "none", cursor: "pointer",
               color: C.sage, fontSize: 11, letterSpacing: "0.18em",

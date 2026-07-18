@@ -1,0 +1,259 @@
+import { useMemo, useState } from "react";
+import { C, FONTS, RADIUS, alpha } from "../theme";
+import { Btn, Tag, Empty } from "./ui";
+import { DishArt, IngredientArt, Watermark, dishSymbol, DISH_TINT } from "./art";
+
+// Cap both grids: with a big catalog almost every dish shares one common
+// ingredient (and dishes without listed ingredients count as cookable), so
+// rendering every match at once can mean thousands of cards.
+const FULL_LIMIT    = 48;
+const PARTIAL_LIMIT = 24;
+
+function SuggestionCard({ dish, missing, onViewDish }) {
+  const full = missing.length === 0;
+  const tint = DISH_TINT[dishSymbol(dish)] ?? "#D89540";
+
+  return (
+    <div style={{
+      background: C.card,
+      border: `1px solid ${full ? alpha(C.success, 40) : C.border}`,
+      borderRadius: 14, overflow: "hidden",
+      boxShadow: "var(--shadow)",
+      display: "flex", flexDirection: "column",
+    }}>
+      {/* Cover — the dish leads */}
+      <div style={{
+        height: 84, display: "grid", placeItems: "center", position: "relative",
+        background: `color-mix(in srgb, ${tint} ${full ? 26 : 16}%, var(--panel))`,
+      }}>
+        <DishArt dish={dish} size={68} style={{ transform: "translateY(13px)" }} />
+        {full && (
+          <span style={{ position: "absolute", top: 10, right: 10 }}>
+            <Tag color={C.success}>Ready to cook</Tag>
+          </span>
+        )}
+      </div>
+
+      <div style={{ padding: "22px 16px 16px", display: "flex", flexDirection: "column", flex: 1 }}>
+        <h3 style={{ fontFamily: FONTS.serif, fontSize: 19, color: C.head, marginBottom: 8 }}>
+          {dish.name}
+        </h3>
+
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+          <Tag color={C.accent}>{dish.category}</Tag>
+          <Tag color={C.sage}>{dish.time} min</Tag>
+          <Tag color={C.gold}>{(Number(dish.nutrients.calories) || 0).toFixed(1)} kcal</Tag>
+        </div>
+
+        {missing.length > 0 && (
+          <div style={{ marginBottom: 14 }}>
+            <div style={{
+              fontSize: 10, color: C.textMuted, fontWeight: 700,
+              letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 8,
+            }}>
+              Missing · {missing.length}
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+              {missing.map((m, i) => <Tag key={`${m.name}-${i}`} color={C.error}>{m.name}</Tag>)}
+            </div>
+          </div>
+        )}
+
+        <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 14, marginTop: "auto", display: "flex", gap: 8 }}>
+          <Btn
+            variant={full ? "sage" : "ghost"}
+            style={{ flex: 1 }}
+            onClick={() => onViewDish(dish)}
+          >
+            {full ? "Cook now" : "View recipe"}
+          </Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Pantry-based suggestions, rendered as the "Suggested Dishes" tab of the
+// Dish Database page. Category / diet filters mirror the ones on the
+// Explore and Your Dishes tabs, applied client-side here.
+export default function DishSuggestions({ dishes, pantry, onViewDish, dishCategories, dietaryOptions }) {
+  const [catFilter, setCatFilter]   = useState("All");
+  const [tagFilters, setTagFilters] = useState(new Set());
+
+  const categories = ["All", ...(dishCategories?.length
+    ? dishCategories
+    : [...new Set(dishes.map(d => d.category))])];
+  const allTags = (dietaryOptions?.length
+    ? [...dietaryOptions]
+    : [...new Set(dishes.flatMap(d => d.tags ?? []))]).sort();
+
+  const toggleTag = tag =>
+    setTagFilters(prev => {
+      const next = new Set(prev);
+      next.has(tag) ? next.delete(tag) : next.add(tag);
+      return next;
+    });
+
+  const tagKey = [...tagFilters].sort().join("|");
+
+  // One pass over the catalog: skip dishes the filters exclude, then split
+  // each dish's required ingredients into have/missing against the pantry
+  // and classify. Memoized — this only reruns when the dish list, pantry,
+  // or filters actually change.
+  const { canMake, canMakeTotal, partial, partialTotal } = useMemo(() => {
+    const pantryNames = new Set(pantry.map(p => p.name.toLowerCase()));
+    const wantedTags = [...tagFilters];
+    const allFull = [], allPartial = [];
+    for (const dish of dishes) {
+      if (catFilter !== "All" && dish.category !== catFilter) continue;
+      if (wantedTags.length > 0 && !wantedTags.every(t => dish.tags?.includes(t))) continue;
+      const missing = [];
+      let have = 0;
+      for (const ing of dish.reqIngredients) {
+        if (pantryNames.has(ing.name.toLowerCase())) have++;
+        else missing.push(ing);
+      }
+      if (missing.length === 0) allFull.push({ dish, missing });
+      else if (have > 0) allPartial.push({ dish, missing });
+    }
+    // Ranked by how few ingredients stand between you and the dish
+    allPartial.sort((a, b) => a.missing.length - b.missing.length);
+    return {
+      canMake:      allFull.slice(0, FULL_LIMIT),
+      canMakeTotal: allFull.length,
+      partial:      allPartial.slice(0, PARTIAL_LIMIT),
+      partialTotal: allPartial.length,
+    };
+  }, [dishes, pantry, catFilter, tagKey]);
+
+  const SectionHead = ({ dot, title, count }) => (
+    <h2 style={{
+      fontSize: 11, letterSpacing: "0.24em", textTransform: "uppercase",
+      color: C.textMuted, fontWeight: 600,
+      marginBottom: 14, display: "flex", alignItems: "center", gap: 8,
+    }}>
+      <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: "50%", background: dot, display: "inline-block" }} />
+      {title} · {count}
+    </h2>
+  );
+
+  const filtersActive = catFilter !== "All" || tagFilters.size > 0;
+  const noResults = canMakeTotal === 0 && partialTotal === 0;
+
+  return (
+    <>
+      {/* Filters — same category / diet chips as the Explore and Your Dishes tabs */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {categories.map(c => (
+            <button
+              key={c}
+              onClick={() => setCatFilter(c)}
+              style={{
+                padding: "8px 16px", borderRadius: RADIUS.sm,
+                border: `1.5px solid ${catFilter === c ? C.accent : C.border}`,
+                background: catFilter === c ? C.accentLight : C.card,
+                color: catFilter === c ? C.accent : C.textSub,
+                fontSize: 13, fontWeight: catFilter === c ? 600 : 400,
+                cursor: "pointer", fontFamily: FONTS.body,
+                transition: "all 0.18s",
+              }}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+
+        {allTags.length > 0 && (
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, letterSpacing: 0.6, textTransform: "uppercase", marginRight: 4 }}>
+              Diet
+            </span>
+            {allTags.map(tag => {
+              const active = tagFilters.has(tag);
+              return (
+                <button
+                  key={tag}
+                  onClick={() => toggleTag(tag)}
+                  style={{
+                    padding: "5px 12px", borderRadius: RADIUS.full,
+                    border: `1.5px solid ${active ? C.sage : C.border}`,
+                    background: active ? alpha(C.sage, 13) : C.card,
+                    color: active ? C.sage : C.textSub,
+                    fontSize: 12, fontWeight: active ? 600 : 400,
+                    cursor: "pointer", fontFamily: FONTS.body,
+                    transition: "all 0.18s",
+                  }}
+                >
+                  {active && "✓ "}{tag}
+                </button>
+              );
+            })}
+            {tagFilters.size > 0 && (
+              <button
+                onClick={() => setTagFilters(new Set())}
+                style={{
+                  padding: "5px 10px", borderRadius: RADIUS.full,
+                  border: `1.5px solid ${C.border}`,
+                  background: "none", color: C.textMuted,
+                  fontSize: 12, cursor: "pointer", fontFamily: FONTS.body,
+                }}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {noResults && (filtersActive ? (
+        <Empty
+          icon={<IngredientArt name="chili" size={56} />}
+          title="No suggestions match these filters"
+          subtitle="Try a different category or fewer diet tags."
+          action={<Btn variant="secondary" onClick={() => { setCatFilter("All"); setTagFilters(new Set()); }}>Clear filters</Btn>}
+        />
+      ) : (
+        <Empty
+          icon={<IngredientArt name="chili" size={56} />}
+          title="Pantry looks bare"
+          subtitle="Add items to your pantry and dishes you can already cook will appear here."
+        />
+      ))}
+
+    <div style={{ position: "relative" }}>
+      <Watermark symbol="i-chili" size={220} style={{ right: -10, top: -40, transform: "rotate(-18deg)" }} />
+
+      {canMakeTotal > 0 && (
+        <section style={{ marginBottom: 36, position: "relative" }}>
+          <SectionHead
+            dot={C.success}
+            title="Ready to cook"
+            count={canMakeTotal > canMake.length ? `first ${canMake.length} of ${canMakeTotal}` : canMakeTotal}
+          />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px,1fr))", gap: 16 }}>
+            {canMake.map(({ dish, missing }) => (
+              <SuggestionCard key={dish.id} dish={dish} missing={missing} onViewDish={onViewDish} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {partialTotal > 0 && (
+        <section style={{ marginBottom: 36, position: "relative" }}>
+          <SectionHead
+            dot={C.warning}
+            title="Almost there"
+            count={partialTotal > partial.length ? `closest ${partial.length} of ${partialTotal}` : partialTotal}
+          />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px,1fr))", gap: 16 }}>
+            {partial.map(({ dish, missing }) => (
+              <SuggestionCard key={dish.id} dish={dish} missing={missing} onViewDish={onViewDish} />
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+    </>
+  );
+}

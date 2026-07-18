@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { C, FONTS, RADIUS, alpha } from "../theme";
 import { DishArt, dishSymbol, DISH_TINT, Watermark } from "../components/art";
+import DishSuggestions from "../components/DishSuggestions";
 import {
   Card, Btn, Tag, Input, Textarea, Select, IconX,
   Page, PageHeader, Empty, SectionLabel,
@@ -608,7 +609,7 @@ function DishCard({ dish, onClick }) {
 // Tabs for the Dish Database screen.
 //   explore   — every dish available to the user (universal + their own)
 //   yours     — only dishes the user has added
-//   suggested — recommendations based on frequently used dishes (coming soon)
+//   suggested — pantry-based suggestions (what you can cook right now)
 const TABS = [
   { id: "explore",   label: "Explore Dishes"   },
   { id: "yours",     label: "Your Dishes"      },
@@ -679,18 +680,21 @@ function Pagination({ page, totalPages, onChange }) {
 }
 
 // Main page
-export default function Dishes({ dishes, setDishes, userId, dishCategories, dietaryOptions, pendingDish, onClearPending }) {
+export default function Dishes({ dishes, setDishes, pantry, userId, dishCategories, dietaryOptions, pendingTab, onClearPendingTab }) {
   const [view, setView]       = useState("list");  // list | add | detail
   const [tab, setTab]         = useState("explore"); // explore | yours | suggested
   const [selected, setSelected] = useState(null);
 
+  // Another page (e.g. the Dashboard "From your shelf" card) can land here
+  // with a specific tab pre-selected.
   useEffect(() => {
-    if (pendingDish) {
-      setSelected(pendingDish);
-      setView("detail");
-      onClearPending?.();
+    if (pendingTab) {
+      setTab(pendingTab);
+      setView("list");
+      setSelected(null);
+      onClearPendingTab?.();
     }
-  }, [pendingDish]);
+  }, [pendingTab]);
   const [search, setSearch]   = useState("");
   const [catFilter, setCatFilter] = useState("All");
   const [tagFilters, setTagFilters] = useState(new Set());
@@ -777,7 +781,7 @@ export default function Dishes({ dishes, setDishes, userId, dishCategories, diet
   }
 
   const subtitle = tab === "suggested"
-    ? "Personalized picks based on your habits"
+    ? `What your pantry of ${pantry.length} item${pantry.length === 1 ? "" : "s"} can already cook`
     : loading && total === 0
       ? "Loading dishes…"
       : tab === "yours"
@@ -795,10 +799,12 @@ export default function Dishes({ dishes, setDishes, userId, dishCategories, diet
       <TabBar active={tab} onChange={setTab} />
 
       {tab === "suggested" ? (
-        <Empty
-          icon={<DishArt dish={{ name: "noodle" }} size={56} />}
-          title="Suggestions coming soon"
-          subtitle="We'll recommend dishes here based on the ones you cook most often."
+        <DishSuggestions
+          dishes={dishes}
+          pantry={pantry}
+          dishCategories={dishCategories}
+          dietaryOptions={dietaryOptions}
+          onViewDish={dish => { setSelected(dish); setView("detail"); }}
         />
       ) : (
       <>
