@@ -95,6 +95,9 @@ export default function DishSuggestions({ dishes, pantry, onViewDish, dishCatego
     });
 
   const tagKey = [...tagFilters].sort().join("|");
+  var pantryBare = true
+  
+
 
   // One pass over the catalog: skip dishes the filters exclude, then split
   // each dish's required ingredients into have/missing against the pantry
@@ -114,7 +117,10 @@ export default function DishSuggestions({ dishes, pantry, onViewDish, dishCatego
         else missing.push(ing);
       }
       if (missing.length === 0) allFull.push({ dish, missing });
-      else if ((have/dish.reqIngredients.length) > 0.70) allPartial.push({ dish, missing });
+      else if ((have/dish.reqIngredients.length) > 0.70) {
+        pantryBare = false;
+        allPartial.push({ dish, missing });
+      }
     }
     // Ranked by how few ingredients stand between you and the dish
     allPartial.sort((a, b) => a.missing.length - b.missing.length);
@@ -206,7 +212,7 @@ export default function DishSuggestions({ dishes, pantry, onViewDish, dishCatego
         )}
       </div>
 
-      {noResults && (filtersActive ? (
+      {noResults && ((!pantryBare && filtersActive) ? (
         <Empty
           icon={<IngredientArt name="chili" size={56} />}
           title="No suggestions match these filters"
