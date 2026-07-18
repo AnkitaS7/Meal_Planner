@@ -114,7 +114,7 @@ export default function DishSuggestions({ dishes, pantry, onViewDish, dishCatego
         else missing.push(ing);
       }
       if (missing.length === 0) allFull.push({ dish, missing });
-      else if (have > 0) allPartial.push({ dish, missing });
+      else if ((have/dish.reqIngredients.length) > 0.70) allPartial.push({ dish, missing });
     }
     // Ranked by how few ingredients stand between you and the dish
     allPartial.sort((a, b) => a.missing.length - b.missing.length);
