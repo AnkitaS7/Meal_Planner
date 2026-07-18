@@ -144,7 +144,7 @@ export async function fetchDishesPage(userId, {
 
   if (search.trim())     q = q.ilike("name", `%${search.trim()}%`);
   if (category !== "All") q = q.eq("category", category);
-  if (tags.length > 0)   q = q.overlaps("tags", tags);
+  if (tags.length > 0)   q = q.contains("tags", tags);
 
   const from = (page - 1) * pageSize;
   const { data, error, count } = await q.order("id").range(from, from + pageSize - 1);
