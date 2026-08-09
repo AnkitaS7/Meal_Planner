@@ -10,6 +10,19 @@ import {
 // App.jsx picks the recovery session up from there and shows the update form.
 const resetRedirect = () => `${window.location.origin}${window.location.pathname}`;
 
+// Supabase's raw auth errors are aimed at developers; translate the ones a user
+// can actually hit into something they can act on.
+const friendlyError = (error) => {
+  if (error.code === "over_email_send_rate_limit" || error.status === 429) {
+    return "Too many emails requested just now. Wait a few minutes and try again — " +
+           "if a link already reached your inbox, that one still works.";
+  }
+  if (error.code === "email_not_confirmed") {
+    return "This email hasn't been confirmed yet. Use the confirmation link sent when the account was created.";
+  }
+  return error.message;
+};
+
 export default function Login() {
   const [mode, setMode]         = useState("signin"); // "signin" | "signup" | "forgot"
   const [email, setEmail]       = useState("");
@@ -28,11 +41,11 @@ export default function Login() {
 
     if (mode === "signin") {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) setError(error.message);
+      if (error) setError(friendlyError(error));
     } else if (mode === "signup") {
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) {
-        setError(error.message);
+        setError(friendlyError(error));
       } else {
         setInfo("Account created! Check your email to confirm, then sign in.");
         setMode("signin");
@@ -43,7 +56,7 @@ export default function Login() {
       });
       // Don't leak whether the address has an account — report the same thing
       // either way unless Supabase itself refused the request (e.g. rate limit).
-      if (error) setError(error.message);
+      if (error) setError(friendlyError(error));
       else setInfo("If an account exists for that email, a password reset link is on its way.");
     }
     setLoading(false);
