@@ -125,7 +125,9 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
         return {
           ...it,
           matches,
-          chosenName: matches[0]?.alias ?? it.name,
+          // pantry_alias is the clean household name; fall back to the raw
+          // alias if the match RPC predates the pantry_alias column
+          chosenName: matches[0]?.pantry_alias ?? matches[0]?.alias ?? it.name,
           addToCatalog: false,
           nutrients: { cal: "", protein: "", carbs: "", fat: "", fiber: "" },
         };
@@ -162,7 +164,7 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
     const failed = [];
     for (const i of indices) {
       const item = items[i];
-      const chosenIsNew = !(item.matches ?? []).some(m => m.alias === item.chosenName);
+      const chosenIsNew = !(item.matches ?? []).some(m => (m.pantry_alias ?? m.alias) === item.chosenName);
       try {
         // Optionally register a not-found item in the shared ingredient catalog
         // first (idempotent server-side), then add it to the pantry.
@@ -398,20 +400,23 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
               const isSel  = !!selected[index];
               const color  = CAT_COLORS[item.category] ?? C.textSub;
 
-              // "Add as" choices: matched aliases (deduped) + a keep-original
-              // option, unless the original is already one of the matches.
+              // "Add as" choices: matched pantry names (deduped) + a keep-original
+              // option, unless the original is already one of the matches. Dedupe
+              // on the pantry name, since distinct catalog ingredients can share
+              // one household name.
               const opts = [];
               const seen = new Set();
               for (const m of (item.matches ?? [])) {
-                if (seen.has(m.alias)) continue;
-                seen.add(m.alias);
-                opts.push({ value: m.alias, score: m.score });
+                const name = m.pantry_alias ?? m.alias;
+                if (seen.has(name)) continue;
+                seen.add(name);
+                opts.push({ value: name, score: m.score });
               }
               if (!seen.has(item.name)) opts.push({ value: item.name, score: null, original: true });
 
               // The chosen name is "new" (not in the catalog) when it isn't one
               // of the fuzzy matches — only then can it be added to the catalog.
-              const chosenIsNew = !(item.matches ?? []).some(m => m.alias === item.chosenName);
+              const chosenIsNew = !(item.matches ?? []).some(m => (m.pantry_alias ?? m.alias) === item.chosenName);
 
               return (
                 <div key={index} style={{

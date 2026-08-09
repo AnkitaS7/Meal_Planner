@@ -153,18 +153,34 @@ export async function fetchDishesPage(userId, {
 }
 
 // Typeahead over the ingredient reference table (pantry "add item" field).
+// Matches against BOTH the raw source alias and the household pantry_alias:
+// the raw alias catches searches like "hing" (whose display name is
+// "Asafoetida (Hing)"), while pantry_alias catches display names that share
+// no words with any source alias (e.g. "Bok Choy" over "Cabbage, chinese
+// (pak-choi)"). Suggestions are deduped by pantry_alias, since many source
+// aliases collapse to one household name.
 export async function searchIngredientAliases(term, limit = 8) {
   const t = term.trim();
   if (t.length < 2) return [];
+  const pattern = `%${t.replaceAll('"', "")}%`;
   const { data, error } = await supabase
     .from("ingredient_aliases")
-    .select("alias,category,is_canonical")
-    .ilike("alias", `%${t}%`)
+    .select("alias,pantry_alias,category,is_canonical")
+    .or(`alias.ilike."${pattern}",pantry_alias.ilike."${pattern}"`)
     .order("is_canonical", { ascending: false })
     .order("alias")
-    .limit(limit);
+    .limit(limit * 5); // over-fetch: dedupe below can collapse many rows into one name
   if (error) throw error;
-  return data;
+  const seen = new Set();
+  const out = [];
+  for (const row of data ?? []) {
+    const name = row.pantry_alias || row.alias;
+    if (seen.has(name)) continue;
+    seen.add(name);
+    out.push(row);
+    if (out.length >= limit) break;
+  }
+  return out;
 }
 
 // Fuzzy-match a (possibly messy) receipt item name against the ingredient

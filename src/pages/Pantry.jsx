@@ -101,7 +101,7 @@ function ItemNameAutocomplete({ value, onChange, onPick, pantryCategories }) {
 
   const pick = s => {
     pickedRef.current = true;
-    onPick(s.alias, pantryCategories.includes(s.category) ? s.category : null);
+    onPick(s.pantry_alias || s.alias, pantryCategories.includes(s.category) ? s.category : null);
     setOpen(false);
   };
 
@@ -130,9 +130,10 @@ function ItemNameAutocomplete({ value, onChange, onPick, pantryCategories }) {
         }}>
           {suggestions.map((s, i) => {
             const color = catColor(s.category);
+            const name = s.pantry_alias || s.alias;
             return (
               <div
-                key={s.alias}
+                key={name}
                 onMouseDown={e => { e.preventDefault(); pick(s); }}
                 onMouseEnter={() => setHi(i)}
                 style={{
@@ -143,7 +144,7 @@ function ItemNameAutocomplete({ value, onChange, onPick, pantryCategories }) {
                 }}
               >
                 <span style={{ fontSize: 13, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {s.alias}
+                  {name}
                 </span>
                 <span style={{
                   fontSize: 10, fontWeight: 700, color, flexShrink: 0,
