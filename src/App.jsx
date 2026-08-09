@@ -1,7 +1,7 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import { C, initThemeMode } from "./theme";
 import { SvgDefs } from "./components/art";
-import { supabase } from "./lib/supabase";
+import { supabase, arrivedFromRecoveryLink } from "./lib/supabase";
 
 initThemeMode();
 import { fetchDishes, fetchPantry, fetchProfile, fetchAppEnums } from "./lib/db";
@@ -9,6 +9,8 @@ import Sidebar     from "./components/Sidebar";
 import { IconMenu } from "./components/ui";
 import Login       from "./pages/Login";
 import Dashboard   from "./pages/Dashboard";
+
+const UpdatePassword = lazy(() => import("./pages/UpdatePassword"));
 
 // Every page beyond the two first-paint ones loads on demand. This keeps
 // heavyweight page-only dependencies (recharts lives solely in Nutrients)
@@ -50,6 +52,7 @@ export default function App() {
   const [pendingDishesTab, setPendingDishesTab] = useState(null);
   const [isMobile, setIsMobile]     = useState(() => window.innerWidth < 700);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [recovery, setRecovery]     = useState(arrivedFromRecoveryLink);
 
   // Track auth state
   useEffect(() => {
@@ -58,7 +61,10 @@ export default function App() {
       setAuthLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // Fires for the code-exchange reset flow, which leaves no recovery
+      // fragment for arrivedFromRecoveryLink to spot.
+      if (event === "PASSWORD_RECOVERY") setRecovery(true);
       setUser(session?.user ?? null);
     });
 
@@ -113,7 +119,23 @@ export default function App() {
       .catch(console.error);
   }, [user?.id]);
 
-  if (authLoading || dataLoading) return <LoadingScreen />;
+  const leaveRecovery = () => {
+    // Drop any auth remnants so a refresh doesn't reopen the reset screen.
+    window.history.replaceState({}, "", window.location.pathname);
+    setRecovery(false);
+  };
+
+  if (authLoading) return <LoadingScreen />;
+  // The reset screen owns the whole view until it's dismissed — it must not
+  // wait on the app's data fetches, and it applies signed in or not.
+  if (recovery) {
+    return (
+      <Suspense fallback={<LoadingScreen />}>
+        <UpdatePassword onDone={leaveRecovery} />
+      </Suspense>
+    );
+  }
+  if (dataLoading) return <LoadingScreen />;
   if (!user) return <Login />;
 
   const sidebarUser = {

@@ -1,15 +1,24 @@
 import { useState } from "react";
-import { C, FONTS, RADIUS, SHADOW } from "../theme";
-import { SvgDefs, Watermark } from "../components/art";
+import { C, RADIUS, FONTS } from "../theme";
 import { supabase } from "../lib/supabase";
+import {
+  AuthShell, AuthNotice, AuthButton, AuthLink,
+  authInputStyle, authLabelStyle,
+} from "../components/authUi";
+
+// Where Supabase sends the user back to after they click the reset email.
+// App.jsx picks the recovery session up from there and shows the update form.
+const resetRedirect = () => `${window.location.origin}${window.location.pathname}`;
 
 export default function Login() {
-  const [mode, setMode]         = useState("signin"); // "signin" | "signup"
+  const [mode, setMode]         = useState("signin"); // "signin" | "signup" | "forgot"
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState("");
   const [info, setInfo]         = useState("");
+
+  const switchMode = (m) => { setMode(m); setError(""); setInfo(""); };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -20,7 +29,7 @@ export default function Login() {
     if (mode === "signin") {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setError(error.message);
-    } else {
+    } else if (mode === "signup") {
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) {
         setError(error.message);
@@ -28,65 +37,38 @@ export default function Login() {
         setInfo("Account created! Check your email to confirm, then sign in.");
         setMode("signin");
       }
+    } else {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: resetRedirect(),
+      });
+      // Don't leak whether the address has an account — report the same thing
+      // either way unless Supabase itself refused the request (e.g. rate limit).
+      if (error) setError(error.message);
+      else setInfo("If an account exists for that email, a password reset link is on its way.");
     }
     setLoading(false);
   };
 
-  const inputStyle = {
-    width: "100%",
-    border: `1.5px solid ${C.border}`,
-    borderRadius: RADIUS.md,
-    padding: "11px 14px",
-    fontSize: 14,
-    color: C.text,
-    fontFamily: FONTS.body,
-    outline: "none",
-    boxSizing: "border-box",
-  };
-
-  const labelStyle = {
-    display: "block", fontSize: 12, fontWeight: 600,
-    color: C.textSub, marginBottom: 6, letterSpacing: 0.4,
-    textTransform: "uppercase",
+  const buttonLabel = () => {
+    if (loading) {
+      return { signin: "Signing in…", signup: "Creating account…", forgot: "Sending link…" }[mode];
+    }
+    return { signin: "Sign In", signup: "Create Account", forgot: "Send Reset Link" }[mode];
   };
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: C.bg,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-    }}>
-      <SvgDefs />
-      <div style={{
-        background: C.card,
-        borderRadius: RADIUS.xl,
-        boxShadow: SHADOW.lg,
-        padding: "48px 40px",
-        width: "100%",
-        maxWidth: 400,
-        position: "relative",
-        overflow: "hidden",
-      }}>
-        <Watermark symbol="w-steam" size={170} style={{ right: -34, top: -30 }} />
-        {/* Brand */}
-        <div style={{ textAlign: "center", marginBottom: 32, position: "relative" }}>
-          <div style={{
-            fontFamily: FONTS.display, fontSize: 26, fontWeight: 800,
-            color: C.accent, letterSpacing: "0.3em", textTransform: "uppercase",
-          }}>
-            Season
+    <AuthShell>
+      {mode === "forgot" ? (
+        <div style={{ marginBottom: 24, position: "relative" }}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 6 }}>
+            Reset your password
           </div>
-          <div style={{
-            fontSize: 13, color: C.textMuted, marginTop: 4,
-            letterSpacing: 1.5, textTransform: "uppercase",
-          }}>
-            Meal Planner
+          <div style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.5 }}>
+            Enter your email and we'll send you a link to set a new password.
           </div>
         </div>
-
-        {/* Mode tabs */}
+      ) : (
+        /* Mode tabs */
         <div style={{
           display: "flex", background: C.bg, borderRadius: RADIUS.md,
           padding: 4, marginBottom: 28,
@@ -94,7 +76,7 @@ export default function Login() {
           {[["signin", "Sign In"], ["signup", "Sign Up"]].map(([m, label]) => (
             <button
               key={m}
-              onClick={() => { setMode(m); setError(""); setInfo(""); }}
+              onClick={() => switchMode(m)}
               style={{
                 flex: 1, padding: "9px 0", border: "none",
                 borderRadius: RADIUS.sm,
@@ -111,67 +93,49 @@ export default function Login() {
             </button>
           ))}
         </div>
+      )}
 
-        <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <div>
-            <label style={labelStyle}>Email</label>
-            <input
-              type="email" value={email}
-              onChange={e => setEmail(e.target.value)}
-              required placeholder="you@example.com"
-              style={inputStyle}
-            />
-          </div>
+      <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <div>
+          <label style={authLabelStyle}>Email</label>
+          <input
+            type="email" value={email}
+            onChange={e => setEmail(e.target.value)}
+            required placeholder="you@example.com"
+            style={authInputStyle}
+          />
+        </div>
 
+        {mode !== "forgot" && (
           <div>
-            <label style={labelStyle}>Password</label>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <label style={authLabelStyle}>Password</label>
+              {mode === "signin" && (
+                <AuthLink onClick={() => switchMode("forgot")} style={{ marginBottom: 6 }}>
+                  Forgot?
+                </AuthLink>
+              )}
+            </div>
             <input
               type="password" value={password}
               onChange={e => setPassword(e.target.value)}
               required placeholder="••••••••"
-              style={inputStyle}
+              style={authInputStyle}
             />
           </div>
+        )}
 
-          {error && (
-            <div style={{
-              background: "color-mix(in srgb, var(--c2) 10%, var(--panel))",
-              border: "1px solid color-mix(in srgb, var(--c2) 35%, transparent)",
-              borderRadius: RADIUS.md, padding: "10px 14px",
-              fontSize: 13, color: C.error,
-            }}>
-              {error}
-            </div>
-          )}
+        {error && <AuthNotice tone="error">{error}</AuthNotice>}
+        {info  && <AuthNotice tone="success">{info}</AuthNotice>}
 
-          {info && (
-            <div style={{
-              background: "color-mix(in srgb, var(--c4) 10%, var(--panel))",
-              border: "1px solid color-mix(in srgb, var(--c4) 35%, transparent)",
-              borderRadius: RADIUS.md, padding: "10px 14px",
-              fontSize: 13, color: C.success,
-            }}>
-              {info}
-            </div>
-          )}
+        <AuthButton type="submit" loading={loading}>{buttonLabel()}</AuthButton>
+      </form>
 
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              background: loading ? C.border : C.accent,
-              color: "var(--on-accent)", border: "none",
-              borderRadius: RADIUS.md, padding: "13px 0",
-              fontSize: 15, fontWeight: 600,
-              fontFamily: FONTS.body,
-              cursor: loading ? "not-allowed" : "pointer",
-              marginTop: 4, transition: "background 0.18s",
-            }}
-          >
-            {loading ? (mode === "signin" ? "Signing in…" : "Creating account…") : (mode === "signin" ? "Sign In" : "Create Account")}
-          </button>
-        </form>
-      </div>
-    </div>
+      {mode === "forgot" && (
+        <div style={{ textAlign: "center", marginTop: 18, position: "relative" }}>
+          <AuthLink onClick={() => switchMode("signin")}>Back to sign in</AuthLink>
+        </div>
+      )}
+    </AuthShell>
   );
 }
