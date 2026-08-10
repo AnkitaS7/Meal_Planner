@@ -95,9 +95,10 @@ export default function DishSuggestions({ dishes, pantry, onViewDish, dishCatego
     });
 
   const tagKey = [...tagFilters].sort().join("|");
-  var pantryBare = true
-  
-
+  // "Bare" is about the pantry itself, not the active filters — so a stocked
+  // pantry that's simply been over-filtered gets the filter empty state, while
+  // an empty pantry always gets the "add items" prompt.
+  const pantryBare = pantry.length === 0;
 
   // One pass over the catalog: skip dishes the filters exclude, then split
   // each dish's required ingredients into have/missing against the pantry
@@ -117,10 +118,7 @@ export default function DishSuggestions({ dishes, pantry, onViewDish, dishCatego
         else missing.push(ing);
       }
       if (missing.length === 0) allFull.push({ dish, missing });
-      else if ((have/dish.reqIngredients.length) > 0.70) {
-        pantryBare = false;
-        allPartial.push({ dish, missing });
-      }
+      else if ((have/dish.reqIngredients.length) > 0.70) allPartial.push({ dish, missing });
     }
     // Ranked by how few ingredients stand between you and the dish
     allPartial.sort((a, b) => a.missing.length - b.missing.length);
