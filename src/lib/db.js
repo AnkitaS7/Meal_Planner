@@ -340,6 +340,20 @@ export function mergePantryRows(list, rows) {
   return Array.from(byId.values());
 }
 
+// Set a pantry row's quantity outright (the −/＋ stepper on each item card).
+// Unlike insertPantryItem's merge-by-sum, this replaces the value, so callers
+// can decrement as ingredients get used. Returns the updated, remapped row.
+export async function updatePantryQty(id, qty) {
+  const { data, error } = await supabase
+    .from("pantry_items")
+    .update({ quantity: qty })
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return mapPantryItem(data);
+}
+
 export async function deletePantryItem(id) {
   const { error } = await supabase.from("pantry_items").delete().eq("id", id);
   if (error) throw error;

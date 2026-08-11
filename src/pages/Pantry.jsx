@@ -2,10 +2,13 @@ import { useState, useEffect, useRef } from "react";
 import { C, FONTS, RADIUS, SHADOW, alpha } from "../theme";
 import { IngredientArt, Watermark } from "../components/art";
 import {
-  Card, Btn, Input, Select, Page, PageHeader, Empty, SectionLabel, IconX,
+  Card, Btn, Input, Select, Page, PageHeader, Empty, IconX,
 } from "../components/ui";
 
-import { insertPantryItem, deletePantryItem, searchIngredientAliases, mergePantryRows } from "../lib/db";
+import {
+  insertPantryItem, deletePantryItem, updatePantryQty,
+  searchIngredientAliases, mergePantryRows,
+} from "../lib/db";
 
 const CAT_COLORS = {
   Grains:   C.gold,
@@ -49,23 +52,23 @@ function daysUntilExpiry(dateStr) {
   return Math.ceil((new Date(dateStr) - Date.now()) / (1000 * 60 * 60 * 24));
 }
 
-// Expiry as a small badge perched on the shelf item (V2 language)
-function ExpiryBadge({ dateStr }) {
-  const days = daysUntilExpiry(dateStr);
-  if (days === null || days > 7) return null;
-  const color = days < 3 ? C.error : C.warning;
-  const text  = days < 0 ? "expired" : days === 0 ? "today" : `${days} d`;
-  return (
-    <span style={{
-      position: "absolute", top: 0, right: 2,
-      background: alpha(color, 12), color,
-      border: `1px solid ${alpha(color, 35)}`,
-      fontSize: 9, fontWeight: 700, borderRadius: 999,
-      padding: "1px 7px", letterSpacing: "0.06em",
-    }}>
-      {text}
-    </span>
-  );
+// Freshness is the axis the pantry is really organised around: what needs
+// using before it turns. Everything downstream (the "Use soon" strip, the
+// per-item dot, the Fresh view) reads from this single classifier.
+function freshness(expiry) {
+  const d = daysUntilExpiry(expiry);
+  if (d === null) return { level: "none",    color: C.textMuted, days: null };
+  if (d < 0)      return { level: "expired", color: C.error,     days: d };
+  if (d <= 3)     return { level: "urgent",  color: C.error,     days: d };
+  if (d <= 7)     return { level: "soon",    color: C.warning,   days: d };
+  return               { level: "fresh",   color: C.success,   days: d };
+}
+
+function freshnessLabel(days) {
+  if (days === null) return "";
+  if (days < 0)  return "expired";
+  if (days === 0) return "today";
+  return `${days} d`;
 }
 
 const BLANK = { name: "", qty: "", unit: "g", category: "Produce", expiry: "" };
@@ -163,27 +166,115 @@ function ItemNameAutocomplete({ value, onChange, onPick, pantryCategories }) {
   );
 }
 
-export default function Pantry({ pantry, setPantry, userId, pantryCategories, pantryUnits }) {
-  const [showAdd, setShowAdd]  = useState(false);
-  const [form, setForm]        = useState(BLANK);
-  const [search, setSearch]    = useState("");
-  const [cat, setCat]          = useState("All");
-  const [removing, setRemoving] = useState(() => new Set()); // ids mid-exit
+// A single pantry item. The −/＋ stepper is the primary gesture: you decrement
+// as you cook, and hitting zero removes the row. Delete is the small corner
+// escape hatch. A freshness cue sits opposite it.
+function PantryCard({ item, accent, onDec, onInc, onRemove, flashing, removing }) {
+  const f = freshness(item.expiry);
+  const soon = f.days !== null && f.days <= 7;
+
+  return (
+    <div
+      className={`sr-pitem${removing ? " removing" : ""}${flashing ? " sr-flash" : ""}`}
+      tabIndex={0}
+      style={{ minWidth: 128 }}
+    >
+      {/* Delete — demoted to a subtle corner escape hatch */}
+      <button
+        className="sr-press"
+        onClick={onRemove}
+        aria-label={`Remove ${item.name} from pantry`}
+        style={{
+          position: "absolute", top: 3, left: 3, zIndex: 2,
+          width: 26, height: 26, borderRadius: "50%",
+          border: "none", background: "none", color: C.textMuted,
+          cursor: "pointer", display: "inline-flex",
+          alignItems: "center", justifyContent: "center",
+          transition: "background 0.18s, color 0.18s, transform 0.14s ease-out",
+        }}
+        onMouseEnter={e => { e.currentTarget.style.color = "var(--c2)"; e.currentTarget.style.background = alpha(C.error, 10); }}
+        onMouseLeave={e => { e.currentTarget.style.color = "var(--faint)"; e.currentTarget.style.background = "none"; }}
+      >
+        <IconX size={10} />
+      </button>
+
+      {/* Freshness cue, opposite the delete affordance */}
+      {f.level !== "none" && (
+        soon ? (
+          <span style={{
+            position: "absolute", top: 2, right: 2, zIndex: 2,
+            background: alpha(f.color, 12), color: f.color,
+            border: `1px solid ${alpha(f.color, 35)}`,
+            fontSize: 9, fontWeight: 700, borderRadius: 999,
+            padding: "1px 7px", letterSpacing: "0.06em",
+          }}>
+            {freshnessLabel(f.days)}
+          </span>
+        ) : (
+          <span aria-label="fresh" title="Fresh" style={{
+            position: "absolute", top: 8, right: 8, zIndex: 2,
+            width: 8, height: 8, borderRadius: "50%", background: f.color,
+          }} />
+        )
+      )}
+
+      <IngredientArt name={item.name} category={item.category} size={44} jarColor={accent} />
+
+      <div className="truncate" style={{ fontSize: 12, color: C.text, marginTop: 5, maxWidth: 116 }}>
+        {item.name}
+      </div>
+
+      {/* Quantity stepper */}
+      <div className="sr-stepper">
+        <button
+          className="sr-press sr-step"
+          onClick={onDec}
+          aria-label={item.qty <= 1 ? `Remove ${item.name}` : `Use one ${item.unit} of ${item.name}`}
+        >
+          <span aria-hidden="true">−</span>
+        </button>
+        <span style={{ fontSize: 11, color: C.textMuted, fontVariantNumeric: "tabular-nums", minWidth: 40, textAlign: "center" }}>
+          {item.qty} {item.unit}
+        </span>
+        <button
+          className="sr-press sr-step"
+          onClick={onInc}
+          aria-label={`Add one ${item.unit} of ${item.name}`}
+        >
+          <span aria-hidden="true">+</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default function Pantry({ pantry, setPantry, userId, pantryCategories, pantryUnits, onScan }) {
+  const [showAdd, setShowAdd]     = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+  const [form, setForm]           = useState(BLANK);
+  const [search, setSearch]       = useState("");
+  const [view, setView]           = useState("shelf"); // shelf | fresh | az
+  const [removing, setRemoving]   = useState(() => new Set()); // ids mid-exit
+  const [flashId, setFlashId]     = useState(null);            // just added / changed
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const flash = (id) => {
+    setFlashId(id);
+    setTimeout(() => setFlashId(cur => (cur === id ? null : cur)), 1100);
+  };
 
   const addItem = async () => {
     if (!form.name || !form.qty) return;
     const item = { name: form.name, qty: parseFloat(form.qty), unit: form.unit, category: form.category, expiry: form.expiry };
     const saved = await insertPantryItem(item, userId).catch(console.error);
-    if (saved) setPantry(p => mergePantryRows(p, [saved]));
-    setForm(BLANK);
-    setShowAdd(false);
+    if (saved) { setPantry(p => mergePantryRows(p, [saved])); flash(saved.id); }
+    // Keep the panel open and ready for the next item — the common case is
+    // stocking several things at once. Clear only name/qty/expiry.
+    setForm(f => ({ ...f, name: "", qty: "", expiry: "" }));
   };
 
   const removeItem = (id) => {
-    // Play the exit first, then drop the row. The DB delete fires in parallel;
-    // the row is already flagged non-interactive by the `removing` class.
     setRemoving(prev => new Set(prev).add(id));
     deletePantryItem(id).catch(console.error);
     setTimeout(() => {
@@ -192,106 +283,145 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
     }, 180);
   };
 
-  const categories = ["All", ...categoriesOf(pantry, pantryCategories)];
+  // Optimistic quantity change: reflect it instantly, persist in the
+  // background, and roll back on failure. Decrementing past 1 removes the row.
+  const changeQty = (item, delta) => {
+    const next = item.qty + delta;
+    if (next < 1) { removeItem(item.id); return; }
+    setPantry(p => p.map(i => i.id === item.id ? { ...i, qty: next } : i));
+    flash(item.id);
+    updatePantryQty(item.id, next).catch(err => {
+      console.error(err);
+      setPantry(p => p.map(i => i.id === item.id ? { ...i, qty: item.qty } : i));
+    });
+  };
 
-  const filtered = pantry.filter(
-    p => (cat === "All" || catOf(p) === cat)
-      && p.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = pantry.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
 
-  // Summary by category — straight from the items' own category column
-  const summary = categoriesOf(pantry, pantryCategories);
+  // Anything within a week (expired included), soonest first. Drawn from the
+  // whole pantry, not the filtered view — it's a standing alert.
+  const useSoon = pantry
+    .filter(p => { const d = daysUntilExpiry(p.expiry); return d !== null && d <= 7; })
+    .sort((a, b) => daysUntilExpiry(a.expiry) - daysUntilExpiry(b.expiry));
+
+  const groups = groupItems(filtered, view, pantryCategories);
+
+  const countLine = `${pantry.length} item${pantry.length === 1 ? "" : "s"} tracked`
+    + (useSoon.length ? ` · ${useSoon.length} to use soon` : "");
 
   return (
     <Page>
       <PageHeader
         title="Pantry"
-        subtitle={`${pantry.length} items tracked`}
+        subtitle={countLine}
         action={
-          <Btn onClick={() => setShowAdd(v => !v)}>
-            {showAdd ? "Cancel" : "+ Add Item"}
-          </Btn>
+          <div style={{ display: "flex", gap: 8 }}>
+            {onScan && <Btn variant="ghost" onClick={onScan}>Scan</Btn>}
+            <Btn onClick={() => setShowAdd(v => !v)}>
+              {showAdd ? "Done" : "+ Add Item"}
+            </Btn>
+          </div>
         }
       />
 
-      {/* Summary chips */}
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
-        {summary.map(c => {
-          const count = pantry.filter(p => catOf(p) === c).length;
-          const color = catColor(c);
-          return (
-            <div key={c} style={{
-              padding: "5px 14px", borderRadius: RADIUS.full,
-              background: alpha(color, 10), color, border: `1px solid ${alpha(color, 27)}`,
-              fontSize: 12, fontWeight: 500,
-            }}>
-              {c} · {count}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Add item form */}
-      {showAdd && (
-        <div className="sr-pop">
-        <Card style={{ marginBottom: 24 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 18, color: C.text }}>
-            Add Pantry Item
-          </h3>
+      {/* Use-soon triage — the one band that drives action */}
+      {useSoon.length > 0 && (
+        <div style={{ marginBottom: 22 }}>
           <div style={{
-            display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end",
+            fontSize: 10, letterSpacing: "0.24em", textTransform: "uppercase",
+            color: C.textMuted, marginBottom: 8, display: "flex", gap: 8, alignItems: "center",
           }}>
-            <div style={{ flex: 2, minWidth: 180 }}>
-              <ItemNameAutocomplete
-                value={form.name}
-                onChange={v => set("name", v)}
-                onPick={(name, category) =>
-                  setForm(f => ({ ...f, name, category: category ?? f.category }))}
-                pantryCategories={pantryCategories}
-              />
-            </div>
-            <div style={{ width: 90 }}>
-              <Input
-                label="Quantity *"
-                value={form.qty}
-                onChange={e => set("qty", e.target.value)}
-                type="number"
-              />
-            </div>
-            <div style={{ width: 100 }}>
-              <Select
-                label="Unit"
-                value={form.unit}
-                onChange={e => set("unit", e.target.value)}
-                options={pantryUnits}
-              />
-            </div>
-            <div style={{ width: 140 }}>
-              <Select
-                label="Category"
-                value={form.category}
-                onChange={e => set("category", e.target.value)}
-                options={pantryCategories}
-              />
-            </div>
-            <div style={{ width: 150 }}>
-              <Input
-                label="Expiry Date"
-                value={form.expiry}
-                onChange={e => set("expiry", e.target.value)}
-                type="date"
-              />
-            </div>
-            <Btn onClick={addItem} disabled={!form.name || !form.qty}>
-              Save
-            </Btn>
+            <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: C.warning }} />
+            Use soon · {useSoon.length}
           </div>
-        </Card>
+          <div className="sr-usesoon">
+            {useSoon.map(item => {
+              const f = freshness(item.expiry);
+              return (
+                <button
+                  key={item.id}
+                  className="sr-press"
+                  onClick={() => setSearch(item.name)}
+                  title={`Find ${item.name}`}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 8, flexShrink: 0,
+                    padding: "7px 12px 7px 8px", borderRadius: RADIUS.full,
+                    border: `1.5px solid ${alpha(f.color, 40)}`,
+                    background: alpha(f.color, 8), cursor: "pointer",
+                    fontFamily: FONTS.body, transition: "transform 0.14s ease-out",
+                  }}
+                >
+                  <IngredientArt name={item.name} category={item.category} size={26} jarColor={catColor(item.category)} />
+                  <span style={{ fontSize: 12, color: C.text, whiteSpace: "nowrap" }}>{item.name}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: f.color, whiteSpace: "nowrap" }}>
+                    {freshnessLabel(f.days)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
-      {/* Search & category filters */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
+      {/* Quick-add */}
+      {showAdd && (
+        <div className="sr-pop">
+          <Card style={{ marginBottom: 24 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 18, color: C.text }}>
+              Add Pantry Item
+            </h3>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
+              <div style={{ flex: 2, minWidth: 180 }}>
+                <ItemNameAutocomplete
+                  value={form.name}
+                  onChange={v => set("name", v)}
+                  onPick={(name, category) =>
+                    setForm(f => ({ ...f, name, category: category ?? f.category }))}
+                  pantryCategories={pantryCategories}
+                />
+              </div>
+              <div style={{ width: 96 }}>
+                <Input
+                  label="Quantity *"
+                  value={form.qty}
+                  onChange={e => set("qty", e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") addItem(); }}
+                  type="number"
+                />
+              </div>
+              <Btn onClick={addItem} disabled={!form.name || !form.qty}>Add</Btn>
+            </div>
+
+            {/* Details revealed only when wanted — most items just need name + qty */}
+            <button
+              onClick={() => setShowDetails(v => !v)}
+              style={{
+                marginTop: 14, background: "none", border: "none", cursor: "pointer",
+                color: C.accent, fontSize: 12, fontWeight: 600, fontFamily: FONTS.body,
+                letterSpacing: "0.04em", padding: 0,
+              }}
+            >
+              {showDetails ? "Hide details" : "Unit · category · expiry"}
+            </button>
+            {showDetails && (
+              <div className="sr-pop" style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end", marginTop: 12 }}>
+                <div style={{ width: 110 }}>
+                  <Select label="Unit" value={form.unit} onChange={e => set("unit", e.target.value)} options={pantryUnits} />
+                </div>
+                <div style={{ width: 150 }}>
+                  <Select label="Category" value={form.category} onChange={e => set("category", e.target.value)} options={pantryCategories} />
+                </div>
+                <div style={{ width: 160 }}>
+                  <Input label="Expiry Date" value={form.expiry} onChange={e => set("expiry", e.target.value)} type="date" />
+                </div>
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
+
+      {/* Toolbar: search + view switch */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap", alignItems: "center" }}>
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
@@ -303,102 +433,112 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
             fontSize: 14, color: C.text,
           }}
         />
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {categories.map(c => (
+        <div style={{ display: "flex", gap: 4, background: C.card, border: `1.5px solid ${C.border}`, borderRadius: RADIUS.full, padding: 3 }}>
+          {[["shelf", "Shelf"], ["fresh", "Freshness"], ["az", "A–Z"]].map(([id, label]) => (
             <button
-              key={c}
+              key={id}
               className="sr-press"
-              onClick={() => setCat(c)}
+              onClick={() => setView(id)}
+              aria-pressed={view === id}
               style={{
-                padding: "8px 14px", borderRadius: RADIUS.sm,
-                border: `1.5px solid ${cat === c ? C.accent : C.border}`,
-                background: cat === c ? C.accentLight : C.card,
-                color: cat === c ? C.accent : C.textSub,
-                fontSize: 13, cursor: "pointer", fontFamily: FONTS.body,
-                fontWeight: cat === c ? 600 : 400,
-                transition: "background 0.18s, border-color 0.18s, color 0.18s, transform 0.14s ease-out",
+                padding: "6px 14px", borderRadius: RADIUS.full, border: "none",
+                background: view === id ? C.accentLight : "transparent",
+                color: view === id ? C.accent : C.textSub,
+                fontSize: 12, fontWeight: view === id ? 700 : 500,
+                cursor: "pointer", fontFamily: FONTS.body,
+                transition: "background 0.18s, color 0.18s, transform 0.14s ease-out",
               }}
             >
-              {c}
+              {label}
             </button>
           ))}
         </div>
       </div>
 
-      {/* The shelves — everything you own, standing in rows (V2 language) */}
-      {filtered.length === 0 ? (
+      {/* Body */}
+      {pantry.length === 0 ? (
         <Empty
           icon={<IngredientArt name="jar" size={56} />}
-          title="No items found"
-          subtitle="Add your first pantry item or try a different search."
-          action={<Btn onClick={() => setShowAdd(true)}>+ Add Item</Btn>}
+          title="Your pantry is empty"
+          subtitle="Scan a grocery receipt to fill it fast, or add your first item by hand."
+          action={
+            <div style={{ display: "flex", gap: 8 }}>
+              {onScan && <Btn variant="secondary" onClick={onScan}>Scan a receipt</Btn>}
+              <Btn onClick={() => setShowAdd(true)}>+ Add Item</Btn>
+            </div>
+          }
+        />
+      ) : filtered.length === 0 ? (
+        <Empty
+          icon={<IngredientArt name="chili" size={56} />}
+          title="No items match your search"
+          subtitle="Try a different term."
+          action={<Btn variant="secondary" onClick={() => setSearch("")}>Clear search</Btn>}
         />
       ) : (
         <div className="sr-panel clip" style={{ paddingBottom: 10 }}>
           <Watermark symbol="i-garlic" size={170} style={{ left: -32, top: -22 }} />
           <Watermark symbol="i-herb" size={190} style={{ right: -28, bottom: -36, transform: "rotate(14deg)" }} />
 
-          {categoriesOf(filtered, pantryCategories)
-            .map(category => {
-              const color = catColor(category);
-              const shelfItems = filtered.filter(p => catOf(p) === category);
-              return (
-                <div key={category} style={{ marginBottom: 22, position: "relative" }}>
-                  <div style={{
-                    fontSize: 10, letterSpacing: "0.24em", textTransform: "uppercase",
-                    color: C.textMuted, marginBottom: 2, display: "flex", gap: 8, alignItems: "center",
-                  }}>
-                    <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: color }} />
-                    {category} · {shelfItems.length}
-                  </div>
-                  <div className="sr-shelf">
-                    {shelfItems.map(item => (
-                      <div key={item.id} className={`sr-pitem${removing.has(item.id) ? " removing" : ""}`} tabIndex={0}>
-                        <ExpiryBadge dateStr={item.expiry} />
-                        <IngredientArt
-                          name={item.name}
-                          category={item.category}
-                          size={44}
-                          jarColor={color}
-                        />
-                        <div className="truncate" style={{
-                          fontSize: 12, color: C.text, marginTop: 5, maxWidth: 110,
-                        }}>
-                          {item.name}
-                        </div>
-                        <div style={{
-                          fontSize: 10, color: C.textMuted, fontVariantNumeric: "tabular-nums",
-                        }}>
-                          {item.qty} {item.unit}
-                          <button
-                            className="sr-press"
-                            onClick={() => removeItem(item.id)}
-                            aria-label={`Remove ${item.name} from pantry`}
-                            style={{
-                              background: "none", border: "none", color: C.textMuted,
-                              cursor: "pointer", padding: 0,
-                              // 44×44 tap target; negative margins absorb the extra
-                              // size so the tight card row keeps its height.
-                              minWidth: 44, minHeight: 44,
-                              margin: "-11px -4px -11px 0", marginLeft: 4,
-                              display: "inline-flex", alignItems: "center",
-                              justifyContent: "center", verticalAlign: "middle",
-                              transition: "color 0.18s, transform 0.14s ease-out",
-                            }}
-                            onMouseEnter={e => { e.currentTarget.style.color = "var(--c2)"; }}
-                            onMouseLeave={e => { e.currentTarget.style.color = "var(--faint)"; }}
-                          >
-                            <IconX size={11} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+          {groups.map(group => (
+            <div key={group.label ?? "all"} style={{ marginBottom: 22, position: "relative" }}>
+              {group.label && (
+                <div style={{
+                  fontSize: 10, letterSpacing: "0.24em", textTransform: "uppercase",
+                  color: C.textMuted, marginBottom: 2, display: "flex", gap: 8, alignItems: "center",
+                }}>
+                  <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: group.color }} />
+                  {group.label} · {group.items.length}
                 </div>
-              );
-            })}
+              )}
+              <div className="sr-shelf">
+                {group.items.map(item => (
+                  <PantryCard
+                    key={item.id}
+                    item={item}
+                    accent={catColor(item.category)}
+                    onDec={() => changeQty(item, -1)}
+                    onInc={() => changeQty(item, +1)}
+                    onRemove={() => removeItem(item.id)}
+                    flashing={flashId === item.id}
+                    removing={removing.has(item.id)}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </Page>
   );
+}
+
+// Group the (already search-filtered) items for the active view. Each group is
+// { label, color, items }; a null label renders as a single headerless grid.
+function groupItems(items, view, pantryCategories) {
+  if (view === "az") {
+    return [{ label: null, color: null, items: [...items].sort((a, b) => a.name.localeCompare(b.name)) }];
+  }
+  if (view === "fresh") {
+    const buckets = [
+      { label: "Expired",        color: C.error,     test: d => d !== null && d < 0 },
+      { label: "Use within 3 days", color: C.error,  test: d => d !== null && d >= 0 && d <= 3 },
+      { label: "Use this week",  color: C.warning,   test: d => d !== null && d > 3 && d <= 7 },
+      { label: "Fresh",          color: C.success,   test: d => d !== null && d > 7 },
+      { label: "No expiry date", color: C.textMuted, test: d => d === null },
+    ];
+    return buckets
+      .map(b => ({
+        label: b.label, color: b.color,
+        items: items
+          .filter(i => b.test(daysUntilExpiry(i.expiry)))
+          .sort((a, b) => (daysUntilExpiry(a.expiry) ?? 1e9) - (daysUntilExpiry(b.expiry) ?? 1e9)),
+      }))
+      .filter(g => g.items.length);
+  }
+  // shelf (category)
+  return categoriesOf(items, pantryCategories).map(category => ({
+    label: category, color: catColor(category),
+    items: items.filter(i => catOf(i) === category),
+  }));
 }

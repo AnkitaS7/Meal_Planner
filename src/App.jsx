@@ -150,7 +150,7 @@ export default function App() {
     dashboard:   <Dashboard   {...sharedProps} setPage={setPage} onOpenSuggestions={() => { setPendingDishesTab("suggested"); setPage("dishes"); }} />,
     planner:     <Planner     dishes={dishes} userId={user.id} />,
     dishes:      <Dishes      dishes={dishes} setDishes={setDishes} pantry={pantry} userId={user.id} dishCategories={enums.dishCategories} dietaryOptions={enums.dietaryOptions} pendingTab={pendingDishesTab} onClearPendingTab={() => setPendingDishesTab(null)} />,
-    pantry:      <Pantry      pantry={pantry} setPantry={setPantry} userId={user.id} pantryCategories={enums.pantryCategories} pantryUnits={enums.pantryUnits} />,
+    pantry:      <Pantry      pantry={pantry} setPantry={setPantry} userId={user.id} pantryCategories={enums.pantryCategories} pantryUnits={enums.pantryUnits} onScan={() => setPage("scanner")} />,
     shopping:    <Shopping    dishes={dishes} pantry={pantry} setPantry={setPantry} userId={user.id} />,
     nutrients:   <Nutrients   dishes={dishes} userId={user.id} />,
     scanner:     <Scanner     setPantry={setPantry} userId={user.id} pantryCategories={enums.pantryCategories} pantryUnits={enums.pantryUnits} />,
