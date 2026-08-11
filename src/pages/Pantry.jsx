@@ -265,7 +265,6 @@ function useIsMobile() {
 export default function Pantry({ pantry, setPantry, userId, pantryCategories, pantryUnits, onScan }) {
   const isMobile = useIsMobile();
   const [showAdd, setShowAdd]     = useState(false);
-  const [showDetails, setShowDetails] = useState(false);
   const [form, setForm]           = useState(BLANK);
   const [search, setSearch]       = useState("");
   const [view, setView]           = useState("shelf"); // shelf | fresh | az
@@ -340,56 +339,38 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
     + (useSoon.length ? ` · ${useSoon.length} to use soon` : "");
 
   // The add-form body — shared verbatim by the desktop inline panel and the
-  // mobile bottom sheet, so both stay in lockstep.
+  // mobile bottom sheet, so both stay in lockstep. All fields are shown at once.
   const addFields = (
-    <>
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
-        <div style={{ flex: 2, minWidth: 180 }}>
-          <ItemNameAutocomplete
-            value={form.name}
-            onChange={v => set("name", v)}
-            onPick={(name, category) =>
-              setForm(f => ({ ...f, name, category: category ?? f.category }))}
-            pantryCategories={pantryCategories}
-          />
-        </div>
-        <div style={{ width: 96 }}>
-          <Input
-            label="Quantity *"
-            value={form.qty}
-            onChange={e => set("qty", e.target.value)}
-            onKeyDown={e => { if (e.key === "Enter") addItem(); }}
-            type="number"
-          />
-        </div>
-        <Btn onClick={addItem} disabled={!form.name || !form.qty}>Add</Btn>
+    <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
+      <div style={{ flex: 2, minWidth: 180 }}>
+        <ItemNameAutocomplete
+          value={form.name}
+          onChange={v => set("name", v)}
+          onPick={(name, category) =>
+            setForm(f => ({ ...f, name, category: category ?? f.category }))}
+          pantryCategories={pantryCategories}
+        />
       </div>
-
-      {/* Details revealed only when wanted — most items just need name + qty */}
-      <button
-        onClick={() => setShowDetails(v => !v)}
-        style={{
-          marginTop: 14, background: "none", border: "none", cursor: "pointer",
-          color: C.accent, fontSize: 12, fontWeight: 600, fontFamily: FONTS.body,
-          letterSpacing: "0.04em", padding: 0,
-        }}
-      >
-        {showDetails ? "Hide details" : "Unit · category · expiry"}
-      </button>
-      {showDetails && (
-        <div className="sr-pop" style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end", marginTop: 12 }}>
-          <div style={{ width: 110 }}>
-            <Select label="Unit" value={form.unit} onChange={e => set("unit", e.target.value)} options={pantryUnits} />
-          </div>
-          <div style={{ width: 150 }}>
-            <Select label="Category" value={form.category} onChange={e => set("category", e.target.value)} options={pantryCategories} />
-          </div>
-          <div style={{ width: 160 }}>
-            <Input label="Expiry Date" value={form.expiry} onChange={e => set("expiry", e.target.value)} type="date" />
-          </div>
-        </div>
-      )}
-    </>
+      <div style={{ width: 90 }}>
+        <Input
+          label="Quantity *"
+          value={form.qty}
+          onChange={e => set("qty", e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter") addItem(); }}
+          type="number"
+        />
+      </div>
+      <div style={{ width: 100 }}>
+        <Select label="Unit" value={form.unit} onChange={e => set("unit", e.target.value)} options={pantryUnits} />
+      </div>
+      <div style={{ width: 140 }}>
+        <Select label="Category" value={form.category} onChange={e => set("category", e.target.value)} options={pantryCategories} />
+      </div>
+      <div style={{ width: 150 }}>
+        <Input label="Expiry Date" value={form.expiry} onChange={e => set("expiry", e.target.value)} type="date" />
+      </div>
+      <Btn onClick={addItem} disabled={!form.name || !form.qty}>Add</Btn>
+    </div>
   );
 
   return (
