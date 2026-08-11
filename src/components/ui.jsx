@@ -70,6 +70,7 @@ const BTN_VARIANTS = {
   secondary: { background: C.border,      color: C.text,   border: "none" },
   ghost:     { background: "transparent", color: C.accent, border: `1.5px solid ${C.accent}` },
   sage:      { background: C.sage,        color: "var(--on-accent)", border: "none" },
+  sageSoft:  { background: C.sageLight,   color: C.sage,   border: "none" },
   danger:    { background: C.error,       color: "var(--on-accent)", border: "none" },
   dark:      { background: C.sidebar,     color: "var(--bg)", border: "none" },
 };

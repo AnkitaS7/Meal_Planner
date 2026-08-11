@@ -321,6 +321,69 @@ th, td { padding: 0; }
 }
 .sr-flash { animation: sr-flash-ring 1.1s ease-out; }
 
+/* Mobile add: a floating action button in the thumb zone, opening a bottom
+   sheet. Sits below the sidebar drawer (z 150) so the drawer covers it. */
+.sr-fab {
+  position: fixed;
+  right: 20px;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  background: var(--c1);
+  color: var(--on-accent);
+  box-shadow: 0 10px 24px -8px rgba(45, 45, 95, 0.5);
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 140;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.14s ease-out, filter 0.18s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .sr-fab:hover { filter: brightness(1.08); }
+}
+
+.sr-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  transition: opacity 0.28s ease;
+  z-index: 200;
+}
+.sr-sheet-backdrop.open { opacity: 1; }
+
+.sr-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 201;
+  background: var(--panel);
+  border-top-left-radius: 18px;
+  border-top-right-radius: 18px;
+  padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
+  box-shadow: 0 -12px 40px -12px rgba(45, 45, 95, 0.4);
+  max-height: 85vh;
+  overflow-y: auto;
+  transform: translateY(100%);
+  transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.sr-sheet.open { transform: translateY(0); }
+
+@media (prefers-reduced-motion: reduce) {
+  .sr-sheet {
+    transition: opacity 0.2s ease;
+    transform: none;
+    opacity: 0;
+  }
+  .sr-sheet.open { opacity: 1; }
+}
+
 /* Popover / panel entrances: form card slides down, typeahead menu scales from
    its trigger edge. @starting-style animates the mount with no JS. */
 .sr-pop {

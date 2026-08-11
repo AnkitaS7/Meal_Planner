@@ -248,7 +248,22 @@ function PantryCard({ item, accent, onDec, onInc, onRemove, flashing, removing }
   );
 }
 
+// Matches App's breakpoint. Below it the Add control becomes a thumb-reachable
+// FAB + bottom sheet; at desktop widths it lives inline in the toolbar.
+function useIsMobile() {
+  const [mobile, setMobile] = useState(() =>
+    typeof window !== "undefined" && window.matchMedia("(max-width: 700px)").matches);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 700px)");
+    const handler = e => setMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return mobile;
+}
+
 export default function Pantry({ pantry, setPantry, userId, pantryCategories, pantryUnits, onScan }) {
+  const isMobile = useIsMobile();
   const [showAdd, setShowAdd]     = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [form, setForm]           = useState(BLANK);
@@ -256,6 +271,21 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
   const [view, setView]           = useState("shelf"); // shelf | fresh | az
   const [removing, setRemoving]   = useState(() => new Set()); // ids mid-exit
   const [flashId, setFlashId]     = useState(null);            // just added / changed
+
+  // Bottom-sheet mount + slide state for the mobile add flow (animates both in
+  // and out; the panel stays mounted through its slide-down before unmounting).
+  const [sheetMounted, setSheetMounted] = useState(false);
+  const [sheetShown, setSheetShown]     = useState(false);
+  useEffect(() => {
+    if (showAdd && isMobile) {
+      setSheetMounted(true);
+      const r = requestAnimationFrame(() => requestAnimationFrame(() => setSheetShown(true)));
+      return () => cancelAnimationFrame(r);
+    }
+    setSheetShown(false);
+    const t = setTimeout(() => setSheetMounted(false), 280);
+    return () => clearTimeout(t);
+  }, [showAdd, isMobile]);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -309,19 +339,64 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
   const countLine = `${pantry.length} item${pantry.length === 1 ? "" : "s"} tracked`
     + (useSoon.length ? ` · ${useSoon.length} to use soon` : "");
 
+  // The add-form body — shared verbatim by the desktop inline panel and the
+  // mobile bottom sheet, so both stay in lockstep.
+  const addFields = (
+    <>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
+        <div style={{ flex: 2, minWidth: 180 }}>
+          <ItemNameAutocomplete
+            value={form.name}
+            onChange={v => set("name", v)}
+            onPick={(name, category) =>
+              setForm(f => ({ ...f, name, category: category ?? f.category }))}
+            pantryCategories={pantryCategories}
+          />
+        </div>
+        <div style={{ width: 96 }}>
+          <Input
+            label="Quantity *"
+            value={form.qty}
+            onChange={e => set("qty", e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") addItem(); }}
+            type="number"
+          />
+        </div>
+        <Btn onClick={addItem} disabled={!form.name || !form.qty}>Add</Btn>
+      </div>
+
+      {/* Details revealed only when wanted — most items just need name + qty */}
+      <button
+        onClick={() => setShowDetails(v => !v)}
+        style={{
+          marginTop: 14, background: "none", border: "none", cursor: "pointer",
+          color: C.accent, fontSize: 12, fontWeight: 600, fontFamily: FONTS.body,
+          letterSpacing: "0.04em", padding: 0,
+        }}
+      >
+        {showDetails ? "Hide details" : "Unit · category · expiry"}
+      </button>
+      {showDetails && (
+        <div className="sr-pop" style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end", marginTop: 12 }}>
+          <div style={{ width: 110 }}>
+            <Select label="Unit" value={form.unit} onChange={e => set("unit", e.target.value)} options={pantryUnits} />
+          </div>
+          <div style={{ width: 150 }}>
+            <Select label="Category" value={form.category} onChange={e => set("category", e.target.value)} options={pantryCategories} />
+          </div>
+          <div style={{ width: 160 }}>
+            <Input label="Expiry Date" value={form.expiry} onChange={e => set("expiry", e.target.value)} type="date" />
+          </div>
+        </div>
+      )}
+    </>
+  );
+
   return (
     <Page>
       <PageHeader
         title="Pantry"
         subtitle={countLine}
-        action={
-          <div style={{ display: "flex", gap: 8 }}>
-            {onScan && <Btn variant="ghost" onClick={onScan}>Scan</Btn>}
-            <Btn onClick={() => setShowAdd(v => !v)}>
-              {showAdd ? "Done" : "+ Add Item"}
-            </Btn>
-          </div>
-        }
       />
 
       {/* Use-soon triage — the one band that drives action */}
@@ -363,65 +438,17 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
         </div>
       )}
 
-      {/* Quick-add */}
-      {showAdd && (
-        <div className="sr-pop">
-          <Card style={{ marginBottom: 24 }}>
-            <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 18, color: C.text }}>
-              Add Pantry Item
-            </h3>
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
-              <div style={{ flex: 2, minWidth: 180 }}>
-                <ItemNameAutocomplete
-                  value={form.name}
-                  onChange={v => set("name", v)}
-                  onPick={(name, category) =>
-                    setForm(f => ({ ...f, name, category: category ?? f.category }))}
-                  pantryCategories={pantryCategories}
-                />
-              </div>
-              <div style={{ width: 96 }}>
-                <Input
-                  label="Quantity *"
-                  value={form.qty}
-                  onChange={e => set("qty", e.target.value)}
-                  onKeyDown={e => { if (e.key === "Enter") addItem(); }}
-                  type="number"
-                />
-              </div>
-              <Btn onClick={addItem} disabled={!form.name || !form.qty}>Add</Btn>
-            </div>
+      {/* Quick-add UI lives below the toolbar (desktop) or in a bottom sheet
+          (mobile) — see below. */}
 
-            {/* Details revealed only when wanted — most items just need name + qty */}
-            <button
-              onClick={() => setShowDetails(v => !v)}
-              style={{
-                marginTop: 14, background: "none", border: "none", cursor: "pointer",
-                color: C.accent, fontSize: 12, fontWeight: 600, fontFamily: FONTS.body,
-                letterSpacing: "0.04em", padding: 0,
-              }}
-            >
-              {showDetails ? "Hide details" : "Unit · category · expiry"}
-            </button>
-            {showDetails && (
-              <div className="sr-pop" style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end", marginTop: 12 }}>
-                <div style={{ width: 110 }}>
-                  <Select label="Unit" value={form.unit} onChange={e => set("unit", e.target.value)} options={pantryUnits} />
-                </div>
-                <div style={{ width: 150 }}>
-                  <Select label="Category" value={form.category} onChange={e => set("category", e.target.value)} options={pantryCategories} />
-                </div>
-                <div style={{ width: 160 }}>
-                  <Input label="Expiry Date" value={form.expiry} onChange={e => set("expiry", e.target.value)} type="date" />
-                </div>
-              </div>
-            )}
-          </Card>
-        </div>
-      )}
-
-      {/* Toolbar: search + view switch */}
+      {/* Toolbar: add (desktop) + search + view switch */}
       <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap", alignItems: "center" }}>
+        {!isMobile && (
+          <Btn onClick={() => setShowAdd(v => !v)}>{showAdd ? "Close" : "+ Add"}</Btn>
+        )}
+        {onScan && (
+          <Btn variant="sage" onClick={onScan}>Scan</Btn>
+        )}
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
@@ -455,6 +482,18 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
         </div>
       </div>
 
+      {/* Desktop: quick-add panel opens inline, right under the toolbar button */}
+      {!isMobile && showAdd && (
+        <div className="sr-pop">
+          <Card style={{ marginBottom: 24 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 18, color: C.text }}>
+              Add Pantry Item
+            </h3>
+            {addFields}
+          </Card>
+        </div>
+      )}
+
       {/* Body */}
       {pantry.length === 0 ? (
         <Empty
@@ -463,7 +502,7 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
           subtitle="Scan a grocery receipt to fill it fast, or add your first item by hand."
           action={
             <div style={{ display: "flex", gap: 8 }}>
-              {onScan && <Btn variant="secondary" onClick={onScan}>Scan a receipt</Btn>}
+              {onScan && <Btn variant="sage" onClick={onScan}>Scan a receipt</Btn>}
               <Btn onClick={() => setShowAdd(true)}>+ Add Item</Btn>
             </div>
           }
@@ -508,6 +547,45 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
             </div>
           ))}
         </div>
+      )}
+
+      {/* Mobile: a thumb-reachable FAB that opens the add form as a bottom sheet */}
+      {isMobile && (
+        <button
+          className="sr-fab sr-press"
+          onClick={() => setShowAdd(v => !v)}
+          aria-label={showAdd ? "Close add item" : "Add pantry item"}
+          aria-expanded={showAdd}
+        >
+          <span aria-hidden="true">+</span>
+        </button>
+      )}
+      {isMobile && sheetMounted && (
+        <>
+          <div
+            className={`sr-sheet-backdrop${sheetShown ? " open" : ""}`}
+            onClick={() => setShowAdd(false)}
+          />
+          <div className={`sr-sheet${sheetShown ? " open" : ""}`} role="dialog" aria-modal="true" aria-label="Add pantry item">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 600, color: C.text }}>Add Pantry Item</h3>
+              <button
+                className="sr-press"
+                onClick={() => setShowAdd(false)}
+                aria-label="Close"
+                style={{
+                  width: 36, height: 36, borderRadius: "50%", border: "none",
+                  background: C.bg, color: C.textSub, cursor: "pointer",
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  transition: "transform 0.14s ease-out",
+                }}
+              >
+                <IconX size={14} />
+              </button>
+            </div>
+            {addFields}
+          </div>
+        </>
       )}
     </Page>
   );
