@@ -248,11 +248,56 @@ th, td { padding: 0; }
   border: 0;
   background: none;
   cursor: default;
-  transition: background 0.15s ease, transform 0.15s ease;
+  transition: background 0.15s ease, transform 0.18s ease, opacity 0.18s ease;
 }
-.sr-pitem:hover {
-  background: color-mix(in srgb, var(--c4) 8%, transparent);
-  transform: translateY(-2px);
+/* Hover-lift only where a real pointer exists — on touch, :hover fires on tap
+   and makes every item jump. */
+@media (hover: hover) and (pointer: fine) {
+  .sr-pitem:hover {
+    background: color-mix(in srgb, var(--c4) 8%, transparent);
+    transform: translateY(-2px);
+  }
+}
+/* Removal exit — the item shrinks and fades before it unmounts, so deleting
+   never reads as a broken instant vanish. */
+.sr-pitem.removing {
+  opacity: 0;
+  transform: scale(0.9);
+  pointer-events: none;
+}
+
+/* Press feedback for any pressable element (Btn, filter chips, the remove X). */
+.sr-press:active {
+  transform: scale(0.97);
+}
+
+/* Popover / panel entrances: form card slides down, typeahead menu scales from
+   its trigger edge. @starting-style animates the mount with no JS. */
+.sr-pop {
+  transition: opacity 0.2s cubic-bezier(0.23, 1, 0.32, 1),
+              transform 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+}
+@starting-style {
+  .sr-pop { opacity: 0; transform: translateY(-6px); }
+}
+.sr-menu {
+  transform-origin: top;
+  transition: opacity 0.15s ease-out, transform 0.15s ease-out;
+}
+@starting-style {
+  .sr-menu { opacity: 0; transform: scale(0.98); }
+}
+
+/* Reduced motion: keep opacity fades (they aid comprehension), drop movement. */
+@media (prefers-reduced-motion: reduce) {
+  .sr-pitem { transition: opacity 0.18s ease; }
+  .sr-pitem.removing { transform: none; }
+  .sr-press:active { transform: none; }
+  .sr-pop, .sr-menu { transition-property: opacity; }
+  @starting-style {
+    .sr-pop { transform: none; }
+    .sr-menu { transform: none; }
+  }
 }
 
 /* Deck cards (V3 language) */

@@ -122,7 +122,7 @@ function ItemNameAutocomplete({ value, onChange, onPick, pantryCategories }) {
         placeholder="e.g. Olive oil"
       />
       {open && (
-        <div style={{
+        <div className="sr-menu" style={{
           position: "absolute", top: "100%", left: 0, right: 0, zIndex: 30,
           marginTop: 4, background: C.card,
           border: `1.5px solid ${C.border}`, borderRadius: RADIUS.md,
@@ -168,6 +168,7 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
   const [form, setForm]        = useState(BLANK);
   const [search, setSearch]    = useState("");
   const [cat, setCat]          = useState("All");
+  const [removing, setRemoving] = useState(() => new Set()); // ids mid-exit
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -180,9 +181,15 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
     setShowAdd(false);
   };
 
-  const removeItem = async (id) => {
-    await deletePantryItem(id).catch(console.error);
-    setPantry(p => p.filter(i => i.id !== id));
+  const removeItem = (id) => {
+    // Play the exit first, then drop the row. The DB delete fires in parallel;
+    // the row is already flagged non-interactive by the `removing` class.
+    setRemoving(prev => new Set(prev).add(id));
+    deletePantryItem(id).catch(console.error);
+    setTimeout(() => {
+      setPantry(p => p.filter(i => i.id !== id));
+      setRemoving(prev => { const next = new Set(prev); next.delete(id); return next; });
+    }, 180);
   };
 
   const categories = ["All", ...categoriesOf(pantry, pantryCategories)];
@@ -226,6 +233,7 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
 
       {/* Add item form */}
       {showAdd && (
+        <div className="sr-pop">
         <Card style={{ marginBottom: 24 }}>
           <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 18, color: C.text }}>
             Add Pantry Item
@@ -279,6 +287,7 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
             </Btn>
           </div>
         </Card>
+        </div>
       )}
 
       {/* Search & category filters */}
@@ -298,6 +307,7 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
           {categories.map(c => (
             <button
               key={c}
+              className="sr-press"
               onClick={() => setCat(c)}
               style={{
                 padding: "8px 14px", borderRadius: RADIUS.sm,
@@ -305,7 +315,8 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
                 background: cat === c ? C.accentLight : C.card,
                 color: cat === c ? C.accent : C.textSub,
                 fontSize: 13, cursor: "pointer", fontFamily: FONTS.body,
-                fontWeight: cat === c ? 600 : 400, transition: "all 0.18s",
+                fontWeight: cat === c ? 600 : 400,
+                transition: "background 0.18s, border-color 0.18s, color 0.18s, transform 0.14s ease-out",
               }}
             >
               {c}
@@ -342,7 +353,7 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
                   </div>
                   <div className="sr-shelf">
                     {shelfItems.map(item => (
-                      <div key={item.id} className="sr-pitem" tabIndex={0}>
+                      <div key={item.id} className={`sr-pitem${removing.has(item.id) ? " removing" : ""}`} tabIndex={0}>
                         <ExpiryBadge dateStr={item.expiry} />
                         <IngredientArt
                           name={item.name}
@@ -360,12 +371,19 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
                         }}>
                           {item.qty} {item.unit}
                           <button
+                            className="sr-press"
                             onClick={() => removeItem(item.id)}
                             aria-label={`Remove ${item.name} from pantry`}
                             style={{
                               background: "none", border: "none", color: C.textMuted,
-                              cursor: "pointer", marginLeft: 4, padding: 6,
-                              display: "inline-flex", verticalAlign: "middle",
+                              cursor: "pointer", padding: 0,
+                              // 44×44 tap target; negative margins absorb the extra
+                              // size so the tight card row keeps its height.
+                              minWidth: 44, minHeight: 44,
+                              margin: "-11px -4px -11px 0", marginLeft: 4,
+                              display: "inline-flex", alignItems: "center",
+                              justifyContent: "center", verticalAlign: "middle",
+                              transition: "color 0.18s, transform 0.14s ease-out",
                             }}
                             onMouseEnter={e => { e.currentTarget.style.color = "var(--c2)"; }}
                             onMouseLeave={e => { e.currentTarget.style.color = "var(--faint)"; }}

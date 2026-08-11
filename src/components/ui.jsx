@@ -82,6 +82,7 @@ export const Btn = ({
     type={type}
     onClick={onClick}
     disabled={disabled}
+    className="sr-press"
     style={{
       ...BTN_VARIANTS[variant],
       borderRadius: RADIUS.md,
@@ -90,7 +91,7 @@ export const Btn = ({
       fontSize: 14,
       cursor: disabled ? "not-allowed" : "pointer",
       opacity: disabled ? 0.55 : 1,
-      transition: "all 0.18s",
+      transition: "transform 0.14s ease-out, filter 0.18s ease",
       display: "inline-flex",
       alignItems: "center",
       gap: 6,
