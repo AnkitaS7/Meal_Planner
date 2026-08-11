@@ -294,8 +294,9 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
   };
 
   const addItem = async () => {
-    if (!form.name || !form.qty) return;
-    const item = { name: form.name, qty: parseFloat(form.qty), unit: form.unit, category: form.category, expiry: form.expiry };
+    const qty = parseFloat(form.qty);
+    if (!form.name || !(qty > 0)) return;   // name required, quantity must be positive
+    const item = { name: form.name, qty, unit: form.unit, category: form.category, expiry: form.expiry };
     const saved = await insertPantryItem(item, userId).catch(console.error);
     if (saved) { setPantry(p => mergePantryRows(p, [saved])); flash(saved.id); }
     // Keep the panel open and ready for the next item — the common case is
@@ -358,6 +359,8 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
           onChange={e => set("qty", e.target.value)}
           onKeyDown={e => { if (e.key === "Enter") addItem(); }}
           type="number"
+          min="0"
+          step="any"
         />
       </div>
       <div style={{ width: 100 }}>
@@ -369,7 +372,7 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
       <div style={{ width: 150 }}>
         <Input label="Expiry Date" value={form.expiry} onChange={e => set("expiry", e.target.value)} type="date" />
       </div>
-      <Btn onClick={addItem} disabled={!form.name || !form.qty}>Add</Btn>
+      <Btn onClick={addItem} disabled={!form.name || !(parseFloat(form.qty) > 0)}>Add</Btn>
     </div>
   );
 

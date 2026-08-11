@@ -109,7 +109,7 @@ export const Btn = ({
 // Input
 export const Input = ({
   label, value, onChange, placeholder,
-  type = "text", style = {}, readOnly = false, onKeyDown,
+  type = "text", style = {}, readOnly = false, onKeyDown, min, step,
 }) => (
   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
     {label && (
@@ -127,6 +127,8 @@ export const Input = ({
       placeholder={placeholder}
       type={type}
       readOnly={readOnly}
+      min={min}
+      step={step}
       style={{
         background: C.bg,
         border: `1.5px solid ${C.border}`,
