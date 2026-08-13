@@ -6,7 +6,7 @@ import { supabase, arrivedFromRecoveryLink } from "./lib/supabase";
 initThemeMode();
 import { fetchDishes, fetchPantry, fetchProfile, fetchAppEnums } from "./lib/db";
 import Sidebar     from "./components/Sidebar";
-import { IconMenu } from "./components/ui";
+import { IconMenu, Loading } from "./components/ui";
 import Login       from "./pages/Login";
 import Dashboard   from "./pages/Dashboard";
 
@@ -25,6 +25,8 @@ const Social      = lazy(() => import("./pages/Social"));
 const Profile     = lazy(() => import("./pages/Profile"));
 
 function LoadingScreen() {
+  // SvgDefs is mounted here too: this screen returns before the main app
+  // tree renders, so the steam symbol must be available on its own.
   return (
     <div style={{
       minHeight: "100vh",
@@ -32,10 +34,9 @@ function LoadingScreen() {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      fontSize: 15,
-      color: C.textMuted,
     }}>
-      Loading…
+      <SvgDefs />
+      <Loading label="Setting the table…" size={46} />
     </div>
   );
 }
@@ -219,11 +220,7 @@ export default function App() {
             <div style={{ width: 44 }} />
           </div>
         )}
-        <Suspense fallback={
-          <div style={{ padding: "48px 0", textAlign: "center", fontSize: 14, color: C.textMuted }}>
-            Loading…
-          </div>
-        }>
+        <Suspense fallback={<Loading style={{ padding: "48px 0" }} />}>
           {PAGES[page] ?? <Dashboard {...sharedProps} setPage={setPage} />}
         </Suspense>
       </main>

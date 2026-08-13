@@ -4,7 +4,7 @@ import {
   PieChart, Pie, Cell,
 } from "recharts";
 import { C, FONTS, alpha } from "../theme";
-import { Tag, Page, PageHeader, IconX } from "../components/ui";
+import { Tag, Loading, Page, PageHeader, IconX } from "../components/ui";
 import { DishArt, SpiceMound, SPICE, NUTRIENT_SPICE } from "../components/art";
 import { DAYS } from "../data/mockData";
 import { fetchNutrientTargets, fetchWeeklyPlan, getWeekStart } from "../lib/db";
@@ -168,11 +168,14 @@ export default function Nutrients({ dishes, userId }) {
       <PageHeader
         title="The spice stall"
         subtitle={`${dateStr}${calPct != null ? ` · ${calPct}% of today's calories` : ""}`}
+        eyebrow="Nourishment"
+        color={C.c2}
+        motif="i-herb"
       />
 
       <div className="sr-grid">
         {/* ---- HERO: the stall — five mounds, a week under each ---- */}
-        <section className="sr-panel clip sp-12">
+        <section className="sr-panel sr-tint-2 clip sp-12">
           <svg
             className="sr-wm" viewBox="0 0 120 70" width={360} height={210}
             style={{ left: -64, bottom: -52 }} aria-hidden="true"
@@ -186,7 +189,7 @@ export default function Nutrients({ dishes, userId }) {
           </h3>
 
           {loading ? (
-            <div style={{ color: C.textMuted, fontSize: 13 }}>Loading targets…</div>
+            <Loading label="Raising the stall…" size={30} style={{ padding: "14px 0" }} />
           ) : nutrientData.length === 0 ? (
             <p style={{ fontFamily: FONTS.serif, fontStyle: "italic", fontSize: 14, color: C.textSub }}>
               Set nutrition targets in your profile to raise the stall.

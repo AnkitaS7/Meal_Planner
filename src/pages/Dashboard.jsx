@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { C, FONTS, alpha } from "../theme";
-import { Btn, Page } from "../components/ui";
+import { Btn, Loading, Page } from "../components/ui";
 import { DishArt, SpiceMound, Watermark, NUTRIENT_SPICE } from "../components/art";
 import {
   fetchTodayPlan, fetchNutrientTargets, fetchShoppingNeeded, getWeekStart,
@@ -170,7 +170,7 @@ export default function Dashboard({ setPage, onOpenSuggestions, dishes, pantry, 
             <span style={{ letterSpacing: "0.06em" }}>{shoppingNeeded.length || ""}</span>
           </h3>
           {loading ? (
-            <div style={{ color: C.textMuted, fontSize: 13 }}>Loading…</div>
+            <Loading size={26} style={{ padding: "10px 0" }} label="On the stove…" />
           ) : shoppingNeeded.length === 0 ? (
             <p style={{ fontFamily: FONTS.serif, fontStyle: "italic", fontSize: 14, color: C.textSub }}>
               Everything for this week is already on your shelves.
@@ -218,7 +218,7 @@ export default function Dashboard({ setPage, onOpenSuggestions, dishes, pantry, 
             </button>
           </h3>
           {loading ? (
-            <div style={{ color: C.textMuted, fontSize: 13 }}>Loading…</div>
+            <Loading size={26} style={{ padding: "10px 0" }} label="On the stove…" />
           ) : nutrientData.length === 0 ? (
             <p style={{ fontFamily: FONTS.serif, fontStyle: "italic", fontSize: 14, color: C.textSub }}>
               Set nutrition targets in your profile to fill the stall.
@@ -264,7 +264,7 @@ export default function Dashboard({ setPage, onOpenSuggestions, dishes, pantry, 
         <section className="sr-panel sp-7">
           <h3 className="sr-panel-h"><span>Today's table</span><span>{todayMeals.length} meals</span></h3>
           {loading ? (
-            <div style={{ color: C.textMuted, fontSize: 13 }}>Loading…</div>
+            <Loading size={26} style={{ padding: "10px 0" }} label="On the stove…" />
           ) : todayMeals.length === 0 ? (
             <p style={{ fontFamily: FONTS.serif, fontStyle: "italic", fontSize: 14, color: C.textSub }}>
               No meals planned for today — the planner is waiting.

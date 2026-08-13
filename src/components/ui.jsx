@@ -426,8 +426,10 @@ export const Page = ({ children }) => (
   </div>
 );
 
-// Page header
-export const PageHeader = ({ title, subtitle, action }) => (
+// Page header. `eyebrow` + `color` give each page its signature hue at the
+// top; `motif` is an art symbol id (full-color i-* food art) shown beside the
+// title so the page opens on food, not just type.
+export const PageHeader = ({ title, subtitle, action, eyebrow, color, motif }) => (
   <div style={{
     display: "flex",
     justifyContent: "space-between",
@@ -435,18 +437,53 @@ export const PageHeader = ({ title, subtitle, action }) => (
     marginBottom: 28,
     gap: 16,
   }}>
-    <div>
-      <h1 style={{
-        fontFamily: FONTS.display,
-        fontSize: 32, fontWeight: 700,
-        color: C.text, lineHeight: 1.1,
-      }}>
-        {title}
-      </h1>
-      {subtitle && (
-        <p style={{ color: C.textSub, marginTop: 6, fontSize: 14 }}>{subtitle}</p>
+    <div style={{ display: "flex", alignItems: "center", gap: 16, minWidth: 0 }}>
+      {motif && (
+        <svg
+          aria-hidden="true" viewBox="0 0 60 60" width={46} height={46}
+          style={{ flexShrink: 0 }}
+        >
+          <use href={`#${motif}`} />
+        </svg>
       )}
+      <div style={{ minWidth: 0 }}>
+        {eyebrow && (
+          <div style={{
+            fontSize: 11, letterSpacing: "0.24em", textTransform: "uppercase",
+            fontWeight: 700, color: color ?? C.accent, marginBottom: 5,
+          }}>
+            {eyebrow}
+          </div>
+        )}
+        <h1 style={{
+          fontFamily: FONTS.display,
+          fontSize: 32, fontWeight: 700,
+          color: C.text, lineHeight: 1.1,
+        }}>
+          {title}
+        </h1>
+        {subtitle && (
+          <p style={{ color: C.textSub, marginTop: 6, fontSize: 14 }}>{subtitle}</p>
+        )}
+      </div>
     </div>
     {action && <div style={{ flexShrink: 0 }}>{action}</div>}
+  </div>
+);
+
+// Shared loading state — rising steam (currentColor line art from SvgDefs)
+// instead of bare "Loading…" text. Compact enough to sit inside a panel.
+export const Loading = ({ label = "Warming the stove…", size = 38, style = {} }) => (
+  <div role="status" style={{
+    display: "flex", flexDirection: "column", alignItems: "center",
+    gap: 8, padding: "28px 0", color: C.textMuted, fontSize: 13, ...style,
+  }}>
+    <svg
+      aria-hidden="true" viewBox="0 0 60 60" width={size} height={size}
+      style={{ animation: "pulse 1.5s ease-in-out infinite" }}
+    >
+      <use href="#w-steam" />
+    </svg>
+    <span>{label}</span>
   </div>
 );

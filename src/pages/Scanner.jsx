@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { C, FONTS, RADIUS, alpha } from "../theme";
+import { C, FONTS, RADIUS, alpha, tint } from "../theme";
 import { Card, Btn, Page, PageHeader, IconCheck } from "../components/ui";
 import { Watermark } from "../components/art";
 import { insertPantryItem, matchIngredientAliases, addCatalogIngredient, mergePantryRows } from "../lib/db";
@@ -210,6 +210,9 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
       <PageHeader
         title="Bill Scanner"
         subtitle="Upload a grocery receipt and AI will populate your pantry automatically"
+        eyebrow="Receipt to shelf"
+        color={C.c4}
+        motif="i-can"
       />
 
       {/* ── Idle ── */}
@@ -228,7 +231,7 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
                 padding: "64px 40px",
                 textAlign: "center",
                 cursor: "pointer",
-                background: drag ? C.accentLight : C.card,
+                background: drag ? C.accentLight : tint(C.c4, 7),
                 transition: "all 0.22s",
                 boxShadow: drag ? `0 0 0 4px ${alpha(C.accent, 13)}` : "none",
                 position: "relative",

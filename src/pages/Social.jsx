@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { C, FONTS, RADIUS } from "../theme";
-import { Card, Btn, Avatar, Page, PageHeader, Empty } from "../components/ui";
+import { Card, Btn, Avatar, Loading, Page, PageHeader, Empty } from "../components/ui";
 import { Watermark } from "../components/art";
 import { fetchCommunityUsers, followUser, unfollowUser } from "../lib/db";
 
@@ -90,6 +90,9 @@ export default function Social({ userId }) {
       <PageHeader
         title="Community"
         subtitle="Follow cooks and explore their menus, dishes, and recipes"
+        eyebrow="Fellow cooks"
+        color={C.c3}
+        motif="i-bread"
       />
 
       <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap", alignItems: "center" }}>
@@ -134,9 +137,7 @@ export default function Social({ userId }) {
       </div>
 
       {loading ? (
-        <div style={{ color: C.textMuted, fontSize: 14, padding: "40px 0", textAlign: "center" }}>
-          Loading community…
-        </div>
+        <Loading label="Gathering the table…" />
       ) : displayed.length === 0 ? (
         <Empty
           icon={
@@ -152,8 +153,11 @@ export default function Social({ userId }) {
           }
         />
       ) : (
-        <div style={{ position: "relative" }}>
-          <Watermark symbol="w-plates" size={230} style={{ right: 0, top: -48 }} />
+        <div className="sr-tint-3" style={{
+          position: "relative", overflow: "hidden",
+          borderRadius: 20, padding: 16,
+        }}>
+          <Watermark symbol="w-plates" size={230} style={{ right: -30, top: -48, color: C.c3 }} />
           <div style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",

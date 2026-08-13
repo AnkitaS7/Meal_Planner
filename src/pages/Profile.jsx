@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { C, FONTS, RADIUS } from "../theme";
+import { C, FONTS, RADIUS, tint } from "../theme";
 import {
   Card, Btn, Input, Textarea, Avatar, Toggle, Page, PageHeader, Divider,
 } from "../components/ui";
@@ -76,6 +76,9 @@ export default function Profile({ profile, setProfile, userId, dishCount, dietar
     <Page>
       <PageHeader
         title="Your Profile"
+        eyebrow="Your kitchen"
+        color={C.c1}
+        motif="i-apple"
         action={
           editing
             ? (
@@ -92,7 +95,7 @@ export default function Profile({ profile, setProfile, userId, dishCount, dietar
         {/* Left column */}
         <div className="sp-4" style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           {/* Avatar & identity */}
-          <Card style={{ textAlign: "center", position: "relative", overflow: "hidden" }}>
+          <Card style={{ textAlign: "center", position: "relative", overflow: "hidden", background: tint(C.c1, 7) }}>
             <Watermark symbol="i-egg" size={150} style={{ right: -34, top: -28, transform: "rotate(12deg)" }} />
             <div style={{
               width: 86, height: 86, borderRadius: "50%",

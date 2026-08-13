@@ -381,6 +381,9 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
       <PageHeader
         title="Pantry"
         subtitle={countLine}
+        eyebrow="Your shelf"
+        color={C.c4}
+        motif="i-jar"
       />
 
       {/* Use-soon triage — the one band that drives action */}
@@ -499,7 +502,7 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
           action={<Btn variant="secondary" onClick={() => setSearch("")}>Clear search</Btn>}
         />
       ) : (
-        <div className="sr-panel clip" style={{ paddingBottom: 10 }}>
+        <div className="sr-panel sr-tint-4 clip" style={{ paddingBottom: 10 }}>
           <Watermark symbol="i-garlic" size={170} style={{ left: -32, top: -22 }} />
           <Watermark symbol="i-herb" size={190} style={{ right: -28, bottom: -36, transform: "rotate(14deg)" }} />
 

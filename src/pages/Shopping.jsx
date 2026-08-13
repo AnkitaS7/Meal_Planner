@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { C, FONTS, RADIUS } from "../theme";
-import { Btn, Page, PageHeader, CheckRow, IconX, IconCheck } from "../components/ui";
+import { Btn, Loading, Page, PageHeader, CheckRow, IconX, IconCheck } from "../components/ui";
 import { IngredientArt, Watermark } from "../components/art";
 import { todayDateStr } from "../lib/db";
 import {
@@ -266,6 +266,9 @@ export default function Shopping({ userId, setPantry }) {
       <PageHeader
         title="The market ticket"
         subtitle="Built from this week's plan — what's already on your shelves stays home"
+        eyebrow="The market"
+        color={C.c3}
+        motif="i-lemon"
         action={
           <div style={{ position: "relative" }}>
             <Btn onClick={() => setShowExport(v => !v)}>Share ↗</Btn>
@@ -311,13 +314,11 @@ export default function Shopping({ userId, setPantry }) {
       />
 
       {loading ? (
-        <div style={{ color: C.textMuted, fontSize: 14, padding: "40px 0", textAlign: "center" }}>
-          Loading shopping list…
-        </div>
+        <Loading label="Writing the ticket…" />
       ) : (
         <div className="sr-grid">
           {/* ---- THE TICKET & BASKET COUNTER: ticked items land here ---- */}
-          <section className="sr-panel clip sp-12">
+          <section className="sr-panel sr-tint-3 clip sp-12">
             <Watermark symbol="i-lemon" size={210} style={{ right: -44, top: -48, transform: "rotate(-14deg)" }} />
 
             <div style={{ display: "flex", alignItems: "center", gap: 18, position: "relative" }}>

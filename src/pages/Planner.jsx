@@ -1,7 +1,7 @@
 import {useEffect, useMemo, useState} from "react";
 import {C, FONTS} from "../theme";
 import {DishArt, Watermark} from "../components/art";
-import {Btn, IconX, Modal, Page, PageHeader, Tag} from "../components/ui";
+import {Btn, IconX, Loading, Modal, Page, PageHeader, Tag} from "../components/ui";
 import {DAYS, MEALS} from "../data/mockData";
 import {
     buildPlanObject,
@@ -463,6 +463,9 @@ export default function Planner({ dishes, userId }) {
       <PageHeader
         title="Weekly Planner"
         subtitle={weekLabel}
+        eyebrow="The week ahead"
+        color={C.c1}
+        motif="i-tomato"
         action={
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <Btn variant="secondary" onClick={() => shiftWeek(-1)}>← Previous</Btn>
@@ -474,11 +477,9 @@ export default function Planner({ dishes, userId }) {
       />
 
       {loading ? (
-        <div style={{ color: C.textMuted, fontSize: 14, padding: "40px 0", textAlign: "center" }}>
-          Loading plan…
-        </div>
+        <Loading label="Reading the week's menu…" />
       ) : (
-        <div className="sr-panel clip" style={{ marginBottom: 8, padding: "14px 16px" }}>
+        <div className="sr-panel sr-tint-1 clip" style={{ marginBottom: 8, padding: "14px 16px" }}>
           <Watermark symbol="w-steam" size={200} style={{ right: -26, top: -34 }} />
           <div style={{ overflowX: "auto", position: "relative" }}>
           <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 8 }}>

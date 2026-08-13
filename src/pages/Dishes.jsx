@@ -440,6 +440,8 @@ function AddDishForm({ onSave, onCancel, dishCategories, dietaryOptions }) {
     <Page>
       <PageHeader
         title="Add New Dish"
+        eyebrow="The cookbook"
+        color={C.c2}
         action={
           <div style={{ display: "flex", gap: 8 }}>
             <Btn variant="secondary" onClick={onCancel}>Cancel</Btn>
@@ -793,6 +795,9 @@ export default function Dishes({ dishes, setDishes, pantry, userId, dishCategori
       <PageHeader
         title="Dish Database"
         subtitle={subtitle}
+        eyebrow="The cookbook"
+        color={C.c2}
+        motif="i-chili"
         action={<Btn onClick={() => setView("add")}>+ Add New Dish</Btn>}
       />
 
@@ -898,8 +903,11 @@ export default function Dishes({ dishes, setDishes, pantry, userId, dishCategori
           action={<Btn onClick={() => setView("add")}>+ Add a Dish</Btn>}
         />
       ) : (
-        <div style={{ position: "relative" }}>
-          <Watermark symbol="w-rings" size={230} style={{ right: 0, top: -46 }} />
+        <div className="sr-tint-2" style={{
+          position: "relative", overflow: "hidden",
+          borderRadius: 20, padding: 16,
+        }}>
+          <Watermark symbol="w-rings" size={230} style={{ right: -30, top: -46, color: C.c2 }} />
           <div style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))",
