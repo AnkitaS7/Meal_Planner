@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { C, FONTS, RADIUS } from "../theme";
 import { Card } from "./ui";
 import DriCalculator from "./DriCalculator";
 import CustomTargets from "./CustomTargets";
@@ -16,27 +15,18 @@ export default function NutritionTargets({ userId }) {
 
   return (
     <Card>
-      <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
-        {TABS.map(t => {
-          const active = tab === t.value;
-          return (
-            <button
-              key={t.value}
-              onClick={() => setTab(t.value)}
-              aria-pressed={active}
-              style={{
-                flex: 1, padding: "9px 12px", fontSize: 14, fontWeight: 600,
-                cursor: "pointer", fontFamily: FONTS.body,
-                border: `1.5px solid ${active ? C.accent : C.border}`,
-                background: active ? C.accentLight : C.card,
-                color: active ? C.accentDark : C.textMuted,
-                borderRadius: RADIUS.md,
-              }}
-            >
-              {t.label}
-            </button>
-          );
-        })}
+      <h3 className="sr-panel-h"><span>Nutrition targets</span><span>drives your macros</span></h3>
+      <div className="chip-row" style={{ marginBottom: 20 }}>
+        {TABS.map(t => (
+          <button
+            key={t.value}
+            className={`chip${tab === t.value ? " on" : ""}`}
+            onClick={() => setTab(t.value)}
+            aria-pressed={tab === t.value}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
       {tab === "calculator"

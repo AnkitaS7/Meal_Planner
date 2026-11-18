@@ -1,12 +1,12 @@
 import { useState, useEffect, lazy, Suspense } from "react";
-import { C, initThemeMode } from "./theme";
+import { initThemeMode } from "./theme";
 import { SvgDefs } from "./components/art";
 import { supabase, arrivedFromRecoveryLink } from "./lib/supabase";
 
 initThemeMode();
 import { fetchDishes, fetchPantry, fetchProfile, fetchAppEnums } from "./lib/db";
-import Sidebar     from "./components/Sidebar";
-import { IconMenu, Loading } from "./components/ui";
+import { TopBar, Dock, Menu, useNight } from "./components/Shell";
+import { Loading, PageHeader, WorldContext } from "./components/ui";
 import Login       from "./pages/Login";
 import Dashboard   from "./pages/Dashboard";
 
@@ -26,17 +26,15 @@ const Profile     = lazy(() => import("./pages/Profile"));
 
 function LoadingScreen() {
   // SvgDefs is mounted here too: this screen returns before the main app
-  // tree renders, so the steam symbol must be available on its own.
+  // tree renders, so shared symbols must be available on its own.
   return (
     <div style={{
       minHeight: "100vh",
-      background: C.bg,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
+      background: "var(--world-bg)", color: "var(--world-fg)",
+      display: "flex", alignItems: "center", justifyContent: "center",
     }}>
       <SvgDefs />
-      <Loading label="Setting the table…" size={46} />
+      <Loading label="Setting the table…" size={64} />
     </div>
   );
 }
@@ -51,8 +49,8 @@ export default function App() {
   const [enums, setEnums]   = useState({ dishCategories: [], pantryCategories: [], pantryUnits: [], dietaryOptions: [] });
   const [page, setPage]     = useState("dashboard");
   const [pendingDishesTab, setPendingDishesTab] = useState(null);
-  const [isMobile, setIsMobile]     = useState(() => window.innerWidth < 700);
-  const [showSidebar, setShowSidebar] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [night, toggleNight] = useNight();
   const [recovery, setRecovery]     = useState(arrivedFromRecoveryLink);
 
   // Track auth state
@@ -72,20 +70,12 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Each section is its own world: tell the document which one is showing
+  // (the body colour follows it) and start every visit at the top.
   useEffect(() => {
-    const mq = window.matchMedia("(max-width: 700px)");
-    const handler = e => { setIsMobile(e.matches); if (!e.matches) setShowSidebar(false); };
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
-
-  // Escape dismisses the mobile drawer, mirroring the backdrop tap
-  useEffect(() => {
-    if (!showSidebar) return;
-    const onKey = e => { if (e.key === "Escape") setShowSidebar(false); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [showSidebar]);
+    document.documentElement.dataset.world = user ? page : "dashboard";
+    window.scrollTo(0, 0);
+  }, [page, user]);
 
   // Load data when user authenticates
   useEffect(() => {
@@ -148,7 +138,7 @@ export default function App() {
   const sharedProps = { dishes, setDishes, pantry, setPantry, userId: user.id };
 
   const PAGES = {
-    dashboard:   <Dashboard   {...sharedProps} setPage={setPage} onOpenSuggestions={() => { setPendingDishesTab("suggested"); setPage("dishes"); }} />,
+    dashboard:   <Dashboard   {...sharedProps} profileName={profile?.name} setPage={setPage} onOpenSuggestions={() => { setPendingDishesTab("suggested"); setPage("dishes"); }} />,
     planner:     <Planner     dishes={dishes} userId={user.id} />,
     dishes:      <Dishes      dishes={dishes} setDishes={setDishes} pantry={pantry} userId={user.id} dishCategories={enums.dishCategories} dietaryOptions={enums.dietaryOptions} pendingTab={pendingDishesTab} onClearPendingTab={() => setPendingDishesTab(null)} />,
     pantry:      <Pantry      pantry={pantry} setPantry={setPantry} userId={user.id} pantryCategories={enums.pantryCategories} pantryUnits={enums.pantryUnits} onScan={() => setPage("scanner")} />,
@@ -159,71 +149,32 @@ export default function App() {
     profile:     profile ? <Profile profile={profile} setProfile={setProfile} userId={user.id} dishCount={dishes.length} dietaryOptions={enums.dietaryOptions} /> : <LoadingScreen />,
   };
 
-  const handleNav = (p) => { setPage(p); setShowSidebar(false); };
+  const signOut = () => { setMenuOpen(false); setPage("dashboard"); supabase.auth.signOut(); };
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: C.bg }}>
+    <div className="world" data-world={page}>
       <SvgDefs />
-      {/* Mobile overlay */}
-      {isMobile && showSidebar && (
-        <div
-          onClick={() => setShowSidebar(false)}
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 149 }}
+      <div className="world-inner">
+        <TopBar
+          page={page} setPage={setPage} user={sidebarUser} night={night} onToggleNight={toggleNight}
+          onOpenMenu={() => setMenuOpen(true)} menuOpen={menuOpen}
+        />
+        <WorldContext.Provider value={page}>
+          <main key={page}>
+            {/* While a page's code loads, its photograph is already up. */}
+            <Suspense fallback={<><PageHeader title="" /><Loading size={44} label="Setting the table…" /></>}>
+              {PAGES[page] ?? PAGES.dashboard}
+            </Suspense>
+          </main>
+        </WorldContext.Provider>
+      </div>
+      <Dock page={page} setPage={setPage} onOpenMenu={() => setMenuOpen(true)} />
+      {menuOpen && (
+        <Menu
+          page={page} setPage={setPage} user={sidebarUser} night={night}
+          onToggleNight={toggleNight} onSignOut={signOut} onClose={() => setMenuOpen(false)}
         />
       )}
-
-      {/* Sidebar - hidden off-screen on mobile, slides in when open */}
-      <div style={{
-        position: isMobile ? "fixed" : "sticky",
-        top: 0, left: 0,
-        height: isMobile ? "100vh" : undefined,
-        transform: isMobile ? (showSidebar ? "translateX(0)" : "translateX(-100%)") : "none",
-        transition: "transform 0.26s ease",
-        zIndex: 150,
-        flexShrink: 0,
-      }}>
-        <Sidebar page={page} setPage={handleNav} user={sidebarUser} onSignOut={() => supabase.auth.signOut()} />
-      </div>
-
-      <main style={{
-        flex: 1,
-        padding: isMobile ? "16px 16px 80px" : "36px 40px",
-        overflowY: "auto",
-        maxHeight: "100vh",
-        minWidth: 0,
-      }}>
-        {/* Mobile top bar */}
-        {isMobile && (
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            marginBottom: 16,
-          }}>
-            <button
-              onClick={() => setShowSidebar(v => !v)}
-              aria-label={showSidebar ? "Close navigation" : "Open navigation"}
-              aria-expanded={showSidebar}
-              style={{
-                background: "none", border: `1px solid ${C.border}`,
-                borderRadius: 8, width: 44, height: 44, cursor: "pointer",
-                color: C.text, display: "inline-flex",
-                alignItems: "center", justifyContent: "center",
-              }}
-            >
-              <IconMenu />
-            </button>
-            <span style={{
-              fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 15,
-              letterSpacing: "0.2em", textTransform: "uppercase", color: C.accent,
-            }}>
-              Season
-            </span>
-            <div style={{ width: 44 }} />
-          </div>
-        )}
-        <Suspense fallback={<Loading style={{ padding: "48px 0" }} />}>
-          {PAGES[page] ?? <Dashboard {...sharedProps} setPage={setPage} />}
-        </Suspense>
-      </main>
     </div>
   );
 }

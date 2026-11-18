@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { C, FONTS, RADIUS, alpha } from "../theme";
-import { DishArt, dishSymbol, DISH_TINT, Watermark } from "../components/art";
+import { DishArt, dishPhoto } from "../components/art";
 import DishSuggestions from "../components/DishSuggestions";
 import {
-  Card, Btn, Tag, Input, Textarea, Select, IconX,
-  Page, PageHeader, Empty, SectionLabel,
+  Card, Btn, Input, Textarea, Select, IconX,
+  Page, PageHeader, HeroTitle, Empty, SectionLabel,
 } from "../components/ui";
 
 import { insertDish, deleteDish, fetchDishesPage, fetchDishRecipe, UNIVERSAL_USER_ID } from "../lib/db";
@@ -81,223 +81,142 @@ function DishDetail({ dish: dishProp, onBack, onDelete }) {
     return { qty: display, unit: u };
   };
 
-  const renderIngList = (ingredients, color) => (
-    <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
+  const renderIngList = (ingredients, muted) => (
+    <ul className="row-list" style={{ margin: 0, padding: 0, listStyle: "none" }}>
       {ingredients.map(i => {
         const { qty: dQty, unit: dUnit } = formatIngredient(i.qty, i.unit);
         return (
           <li key={i.name} style={{
-            display: "flex", alignItems: "center", gap: 10,
-            padding: "8px 12px", borderRadius: 8,
-            background: alpha(color, 7), borderLeft: `3px solid ${color}`,
+            display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 14,
+            padding: "11px 2px", opacity: muted ? 0.7 : 1,
           }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color, minWidth: 80 }}>
+            <span style={{ fontSize: 16, fontWeight: 500, color: C.text }}>{i.name}</span>
+            <span className="mono" style={{ fontSize: 13, color: C.textMuted, whiteSpace: "nowrap" }}>
               {i.qty != null ? `${dQty}${dUnit ? " " + dUnit : ""}` : "—"}
             </span>
-            <span style={{ fontSize: 13, color: C.text }}>{i.name}</span>
           </li>
         );
       })}
     </ul>
   );
 
+  const sheetTitle = { fontFamily: FONTS.display };
+
   return (
     <Page>
-      <button
-        onClick={onBack}
-        style={{
-          background: "none", border: "none", color: C.accent,
-          fontSize: 14, cursor: "pointer", marginBottom: 20,
-          display: "flex", alignItems: "center", gap: 6,
-          fontFamily: FONTS.body,
-        }}
-      >
-        ← Back to Database
-      </button>
+      <PageHeader
+        photo={dishPhoto(dish, 2000)}
+        onBack={onBack}
+        backLabel="Back to cookbook"
+        eyebrow={dish.tags.length ? `${dish.category.toLowerCase()} · ${dish.tags.slice(0, 2).join(", ").toLowerCase()}` : dish.category.toLowerCase()}
+        title={[dish.name]}
+        stats={[
+          ...(dish.prepTime > 0 ? [{ v: dish.prepTime, l: "min prep" }] : []),
+          ...(dish.cookTime > 0 ? [{ v: dish.cookTime, l: "min cooking" }] : []),
+          ...(dish.prepTime === 0 && dish.cookTime === 0 ? [{ v: dish.time, l: "minutes" }] : []),
+          { v: baseServings, l: baseServings === 1 ? "serving" : "servings" },
+        ]}
+        action={(dish.user_id !== UNIVERSAL_USER_ID)
+          ? <Btn variant="secondary" onClick={() => onDelete(dish.id)}>Delete dish</Btn>
+          : null}
+      />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-        {/* Left */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          <Card>
-            <DishArt dish={dish} size={84} />
-            <h2 style={{
-              fontFamily: FONTS.serif, fontSize: 28,
-              color: C.head, marginTop: 14, marginBottom: 10,
-            }}>
-              {dish.name}
-            </h2>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 20 }}>
-              <Tag color={C.accent}>{dish.category}</Tag>
-              {dish.prepTime > 0 && <Tag color={C.sage}>Prep {dish.prepTime} min</Tag>}
-              {dish.cookTime > 0 && <Tag color={C.sage}>Cook {dish.cookTime} min</Tag>}
-              {dish.prepTime === 0 && dish.cookTime === 0 && <Tag color={C.sage}>{dish.time} min</Tag>}
-              {dish.tags.map(t => <Tag key={t} color={C.textMuted}>{t}</Tag>)}
+      <div className="sr-grid">
+        {/* Nutrition — one loud strip */}
+        <section className="sr-panel pop sp-12 rise" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 18, alignItems: "end" }}>
+          {[
+            ["Calories", (Number(dish.nutrients.calories) || 0).toFixed(1), "kcal"],
+            ["Protein",  dish.nutrients.protein,  "g"],
+            ["Carbs",    dish.nutrients.carbs,     "g"],
+            ["Fat",      dish.nutrients.fat,       "g"],
+            ["Fiber",    dish.nutrients.fiber,     "g"],
+          ].map(([label, val, unit], i) => (
+            <div key={label}>
+              <div className="bignum" style={{ fontSize: i === 0 ? 44 : 34, color: i === 0 ? "var(--c1)" : "inherit" }}>
+                {val}
+              </div>
+              <div className="kicker" style={{ opacity: 0.7, marginTop: 8 }}>{label} · {unit}</div>
             </div>
+          ))}
+          <div className="kicker" style={{ opacity: 0.5, alignSelf: "start", justifySelf: "end" }}>per serving</div>
+        </section>
 
-            {/* Serving size + unit system controls */}
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: C.textSub, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                Servings
+        {/* Ingredients */}
+        <section className="sr-panel sp-5 rise" style={{ "--i": 1, alignSelf: "start" }}>
+          <h3 className="sr-panel-h"><span style={sheetTitle}>Ingredients</span><span>serves {servings}</span></h3>
+
+          {/* Serving size + unit system controls */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 4, background: C.bg, borderRadius: 999, padding: 4 }}>
+              <button className="sr-step sr-press" aria-label="Fewer servings" onClick={() => setServings(s => Math.max(1, s - 1))}>−</button>
+              <span className="mono" style={{ minWidth: 34, textAlign: "center", fontSize: 15, fontWeight: 600, color: C.text }}>
+                {servings}
               </span>
-              <div style={{ display: "flex", alignItems: "center", gap: 0, border: `1.5px solid ${C.border}`, borderRadius: 8, overflow: "hidden" }}>
-                <button
-                  onClick={() => setServings(s => Math.max(1, s - 1))}
-                  style={{
-                    width: 32, height: 32, border: "none", background: C.bg,
-                    color: C.textSub, fontSize: 18, cursor: "pointer",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontFamily: FONTS.body,
-                  }}
-                >−</button>
-                <span style={{
-                  minWidth: 36, textAlign: "center", fontSize: 14,
-                  fontWeight: 700, color: C.text, fontFamily: FONTS.display,
-                  borderLeft: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`,
-                  padding: "4px 8px",
-                }}>
-                  {servings}
-                </span>
-                <button
-                  onClick={() => setServings(s => s + 1)}
-                  style={{
-                    width: 32, height: 32, border: "none", background: C.bg,
-                    color: C.textSub, fontSize: 18, cursor: "pointer",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontFamily: FONTS.body,
-                  }}
-                >+</button>
-              </div>
-              {servings !== baseServings && (
-                <button
-                  onClick={() => setServings(baseServings)}
-                  style={{
-                    fontSize: 11, color: C.textMuted, background: "none",
-                    border: `1px solid ${C.border}`, borderRadius: 6,
-                    padding: "3px 8px", cursor: "pointer", fontFamily: FONTS.body,
-                  }}
-                >
-                  Reset
-                </button>
-              )}
-
-              <div style={{ marginLeft: "auto", display: "flex", border: `1.5px solid ${C.border}`, borderRadius: 8, overflow: "hidden" }}>
-                {["metric", "imperial"].map(sys => (
-                  <button
-                    key={sys}
-                    onClick={() => setUnitSystem(sys)}
-                    style={{
-                      padding: "5px 14px", border: "none",
-                      background: unitSystem === sys ? C.accent : C.bg,
-                      color: unitSystem === sys ? "var(--on-accent)" : C.textSub,
-                      fontSize: 12, fontWeight: unitSystem === sys ? 600 : 400,
-                      cursor: "pointer", fontFamily: FONTS.body,
-                      textTransform: "capitalize",
-                      borderRight: sys === "metric" ? `1px solid ${C.border}` : "none",
-                    }}
-                  >
-                    {sys === "metric" ? "Metric" : "Imperial"}
-                  </button>
-                ))}
-              </div>
+              <button className="sr-step sr-press" aria-label="More servings" onClick={() => setServings(s => s + 1)}>+</button>
             </div>
-
-            <SectionLabel>Required Ingredients</SectionLabel>
-            <div style={{ marginBottom: 16, marginTop: 6 }}>
-              {renderIngList(dish.reqIngredients, C.accent)}
-            </div>
-
-            {dish.optIngredients.length > 0 && (
-              <>
-                <SectionLabel>Optional Ingredients</SectionLabel>
-                <div style={{ marginTop: 6 }}>
-                  {renderIngList(dish.optIngredients, C.textMuted)}
-                </div>
-              </>
+            {servings !== baseServings && (
+              <button className="chip" onClick={() => setServings(baseServings)}>Reset</button>
             )}
-          </Card>
-
-          {(dish.user_id !== UNIVERSAL_USER_ID) && <Btn variant="danger" onClick={() => onDelete(dish.id)} style={{ alignSelf: "flex-start" }}>
-            Delete dish
-          </Btn>}
-        </div>
-
-        {/* Right */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          <Card>
-            <h3 style={{ fontFamily: FONTS.display, fontSize: 18, marginBottom: 16, color: C.text }}>
-              Nutrition per Serving
-            </h3>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 8 }}>
-              {[
-                ["Calories", (Number(dish.nutrients.calories) || 0).toFixed(1), "kcal"],
-                ["Protein",  dish.nutrients.protein,  "g"],
-                ["Carbs",    dish.nutrients.carbs,     "g"],
-                ["Fat",      dish.nutrients.fat,       "g"],
-                ["Fiber",    dish.nutrients.fiber,     "g"],
-              ].map(([label, val, unit]) => (
-                <div key={label} style={{
-                  textAlign: "center", background: C.bg,
-                  borderRadius: 10, padding: 12,
-                }}>
-                  <div style={{
-                    fontSize: 20, fontWeight: 700, color: C.accent,
-                    fontFamily: FONTS.display,
-                  }}>
-                    {val}
-                  </div>
-                  <div style={{
-                    fontSize: 10, color: C.textMuted, textTransform: "uppercase",
-                    letterSpacing: 0.5, marginTop: 4, lineHeight: 1.5,
-                  }}>
-                    {unit}<br />{label}
-                  </div>
-                </div>
+            <div className="chip-row" style={{ marginLeft: "auto" }}>
+              {["metric", "imperial"].map(sys => (
+                <button
+                  key={sys}
+                  className={`chip${unitSystem === sys ? " on" : ""}`}
+                  aria-pressed={unitSystem === sys}
+                  onClick={() => setUnitSystem(sys)}
+                >
+                  {sys === "metric" ? "Metric" : "Imperial"}
+                </button>
               ))}
             </div>
-          </Card>
+          </div>
 
+          <SectionLabel>Required Ingredients</SectionLabel>
+          <div style={{ marginBottom: 22 }}>
+            {renderIngList(dish.reqIngredients, false)}
+          </div>
+
+          {dish.optIngredients.length > 0 && (
+            <>
+              <SectionLabel>Optional Ingredients</SectionLabel>
+              {renderIngList(dish.optIngredients, true)}
+            </>
+          )}
+        </section>
+
+        {/* Method */}
+        <div className="sp-7" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {dish.recipe && (
-            <Card>
-              <h3 style={{ fontFamily: FONTS.display, fontSize: 18, marginBottom: 16, color: C.text }}>
-                Recipe
-              </h3>
-              <ol style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 12 }}>
+            <section className="sr-panel rise" style={{ "--i": 2 }}>
+              <h3 className="sr-panel-h"><span style={sheetTitle}>Recipe</span></h3>
+              <ol style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 20 }}>
                 {dish.recipe.split(/(?<=[.!?])\s+/).filter(s => s.trim()).map((step, i) => (
-                  <li key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                    <span style={{
-                      minWidth: 24, height: 24, borderRadius: "50%",
-                      background: alpha(C.accent, 10), color: C.accent,
-                      fontSize: 12, fontWeight: 700,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      flexShrink: 0, marginTop: 1,
-                    }}>
+                  <li key={i} style={{ display: "grid", gridTemplateColumns: "34px 1fr", gap: 10, alignItems: "start" }}>
+                    <span className="bignum" style={{ fontSize: 28, color: C.accent }}>
                       {i + 1}
                     </span>
-                    <span style={{ fontSize: 14, color: C.textSub, lineHeight: 1.7 }}>{step.trim()}</span>
+                    <span style={{ fontSize: 17, color: C.text, lineHeight: 1.55, paddingTop: 4 }}>{step.trim()}</span>
                   </li>
                 ))}
               </ol>
-            </Card>
+            </section>
           )}
 
           {dish.youtubeLink && (
-            <Card>
-              <h3 style={{ fontFamily: FONTS.display, fontSize: 18, marginBottom: 12, color: C.text }}>
+            <section className="sr-panel pop rise" style={{ "--i": 3, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+              <h3 style={{ fontFamily: FONTS.display, fontWeight: 400, fontSize: 23 }}>
                 Video tutorial
               </h3>
               <a
                 href={dish.youtubeLink}
                 target="_blank"
                 rel="noreferrer"
-                style={{
-                  color: "#FF0000", fontSize: 14,
-                  textDecoration: "none", fontWeight: 600,
-                  display: "flex", alignItems: "center", gap: 8,
-                }}
+                className="sr-btn sr-btn-primary"
+                style={{ textDecoration: "none" }}
               >
                 ▶ Watch on YouTube
               </a>
-            </Card>
+            </section>
           )}
         </div>
       </div>
@@ -311,29 +230,24 @@ const BLANK_ING = () => ({ name: "", qty: "", unit: "" });
 const ING_UNITS = ["g", "kg", "ml", "L", "cups", "tbsp", "tsp", "pcs", "cloves", "slices", "sprigs", "leaves", "bunch"];
 
 function IngredientRow({ ing, onChange, onRemove }) {
-  const inputStyle = {
-    background: C.bg, border: `1.5px solid ${C.border}`,
-    borderRadius: RADIUS.md, padding: "8px 10px",
-    fontSize: 13, color: C.text, width: "100%", outline: "none",
-  };
-  const focus = e => { e.target.style.borderColor = C.accent; };
-  const blur  = e => { e.target.style.borderColor = C.border; };
+  const inputStyle = { padding: "10px 12px", fontSize: 14 };
+  const focus = undefined, blur = undefined;
   return (
     <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
       <input
         value={ing.name} onChange={e => onChange({ ...ing, name: e.target.value })}
         placeholder="Ingredient name"
-        style={{ ...inputStyle, flex: 1 }} onFocus={focus} onBlur={blur}
+        className="sr-field" style={{ ...inputStyle, flex: 1 }} onFocus={focus} onBlur={blur}
       />
       <input
         value={ing.qty} onChange={e => onChange({ ...ing, qty: e.target.value })}
         placeholder="Qty" type="number" min="0"
-        style={{ ...inputStyle, width: 64 }} onFocus={focus} onBlur={blur}
+        className="sr-field" style={{ ...inputStyle, width: 72 }} onFocus={focus} onBlur={blur}
       />
       <input
         list="ing-units" value={ing.unit} onChange={e => onChange({ ...ing, unit: e.target.value })}
         placeholder="unit"
-        style={{ ...inputStyle, width: 72 }} onFocus={focus} onBlur={blur}
+        className="sr-field" style={{ ...inputStyle, width: 82 }} onFocus={focus} onBlur={blur}
       />
       <datalist id="ing-units">
         {ING_UNITS.map(u => <option key={u} value={u} />)}
@@ -368,8 +282,8 @@ function IngSection({ label, list, setList }) {
   return (
     <div style={{ marginBottom: 4 }}>
       <div style={{ display: "flex", gap: 6, marginBottom: 6, paddingRight: 34 }}>
-        {[["Name", "flex: 1"], ["Qty", "width: 64px"], ["Unit", "width: 72px"]].map(([h, s]) => (
-          <span key={h} style={{ fontSize: 10, fontWeight: 700, color: C.textSub, textTransform: "uppercase", letterSpacing: 0.5, [s.split(": ")[0]]: s.split(": ")[1] }}>
+        {[["Name", "flex: 1"], ["Qty", "width: 72px"], ["Unit", "width: 82px"]].map(([h, s]) => (
+          <span key={h} style={{ fontSize: 10, fontWeight: 700, color: C.textSub, letterSpacing: 0.5, [s.split(": ")[0]]: s.split(": ")[1] }}>
             {h}
           </span>
         ))}
@@ -388,8 +302,8 @@ function IngSection({ label, list, setList }) {
       <button
         onClick={() => addIng(setList)}
         style={{
-          marginTop: 8, background: "none", border: `1.5px dashed ${C.border}`,
-          borderRadius: RADIUS.md, padding: "7px 14px", fontSize: 12,
+          marginTop: 8, background: "none", border: `1.5px dashed ${C.borderDark}`,
+          borderRadius: RADIUS.md, padding: "10px 14px", fontSize: 13, fontWeight: 600,
           color: C.textMuted, cursor: "pointer", width: "100%",
         }}
         onMouseEnter={e => { e.currentTarget.style.borderColor = C.accent; e.currentTarget.style.color = C.accent; }}
@@ -439,9 +353,10 @@ function AddDishForm({ onSave, onCancel, dishCategories, dietaryOptions }) {
   return (
     <Page>
       <PageHeader
-        title="Add New Dish"
-        eyebrow="The cookbook"
-        color={C.c2}
+        title={["New", { em: true, text: "dish." }]}
+        onBack={onCancel}
+        backLabel="Back to cookbook"
+        subtitle="Name it, list what goes in, and say how it's made."
         action={
           <div style={{ display: "flex", gap: 8 }}>
             <Btn variant="secondary" onClick={onCancel}>Cancel</Btn>
@@ -450,13 +365,11 @@ function AddDishForm({ onSave, onCancel, dishCategories, dietaryOptions }) {
         }
       />
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 14 }}>
         {/* Left - Basic info */}
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <Card>
-            <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 18, color: C.text }}>
-              Basic Info
-            </h3>
+            <h3 className="sr-panel-h"><span>Basic Info</span></h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <Input
                 label="Dish Name *"
@@ -465,8 +378,8 @@ function AddDishForm({ onSave, onCancel, dishCategories, dietaryOptions }) {
                 placeholder="e.g. Mushroom Risotto"
               />
 
-              <div style={{ display: "flex", gap: 12 }}>
-                <div style={{ flex: 1 }}>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <div style={{ flex: "1 1 160px" }}>
                   <Select
                     label="Category"
                     value={f.category}
@@ -499,28 +412,18 @@ function AddDishForm({ onSave, onCancel, dishCategories, dietaryOptions }) {
 
               {dietaryOptions?.length > 0 && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <label style={{ fontSize: 11, fontWeight: 700, color: C.textSub, letterSpacing: 0.6, textTransform: "uppercase" }}>
-                    Dietary Tags
-                  </label>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  <label className="field-label">Dietary Tags</label>
+                  <div className="chip-row">
                     {dietaryOptions.map(tag => {
                       const active = tags.includes(tag);
                       return (
                         <button
-                          key={tag}
-                          type="button"
+                          key={tag} type="button"
+                          className={`chip${active ? " on" : ""}`}
+                          aria-pressed={active}
                           onClick={() => toggleTag(tag)}
-                          style={{
-                            padding: "5px 12px", borderRadius: RADIUS.full,
-                            border: `1.5px solid ${active ? C.sage : C.border}`,
-                            background: active ? alpha(C.sage, 13) : C.card,
-                            color: active ? C.sage : C.textSub,
-                            fontSize: 12, fontWeight: active ? 600 : 400,
-                            cursor: "pointer", fontFamily: FONTS.body,
-                            transition: "all 0.18s",
-                          }}
                         >
-                          {active && "✓ "}{tag}
+                          {tag}
                         </button>
                       );
                     })}
@@ -534,18 +437,14 @@ function AddDishForm({ onSave, onCancel, dishCategories, dietaryOptions }) {
         {/* Right - Ingredients + Nutrition */}
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <Card>
-            <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 18, color: C.text }}>
-              Ingredients
-            </h3>
+            <h3 className="sr-panel-h"><span>Ingredients</span></h3>
             <IngSection label="Required" list={reqIngs} setList={setReqIngs} />
             <div style={{ borderTop: `1px solid ${C.border}`, margin: "16px 0" }} />
             <IngSection label="Optional" list={optIngs} setList={setOptIngs} />
           </Card>
 
           <Card>
-            <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 18, color: C.text }}>
-              Nutrition per Serving
-            </h3>
+            <h3 className="sr-panel-h"><span>Nutrition per Serving</span></h3>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               {[
                 ["Calories (kcal)", "calories"],
@@ -570,38 +469,23 @@ function AddDishForm({ onSave, onCancel, dishCategories, dietaryOptions }) {
   );
 }
 
-// Dish card — V3 cover card: spice-tinted field, plated dish straddling
-// the cover/body boundary, à-la-carte meta below.
+// Dish card — a polaroid: the dish photo, its name and the numbers.
 function DishCard({ dish, onClick }) {
-  const coverTint = DISH_TINT[dishSymbol(dish)] ?? "var(--c1)";
   return (
-    <button
-      onClick={onClick}
-      className="sr-card"
-      style={{ display: "block", width: "100%", fontFamily: FONTS.body }}
-    >
-      <div style={{
-        height: 84, display: "grid", placeItems: "center",
-        background: `color-mix(in srgb, ${coverTint} 22%, var(--panel))`,
-      }}>
-        <DishArt dish={dish} size={68} style={{ transform: "translateY(13px)" }} />
+    <button onClick={onClick} className="sr-card">
+      <div className="tile-cover">
+        <span className="tile-cat">{dish.category}</span>
+        {dish.youtubeLink && (
+          <span className="tile-cat" style={{ left: "auto", right: 14, }}>Video</span>
+        )}
+        <DishArt dish={dish} size={240} round={false} />
       </div>
-      <div style={{ padding: "20px 14px 12px" }}>
-        <span className="truncate" style={{
-          display: "block", fontFamily: FONTS.serif, fontWeight: 600, color: C.head,
-          fontSize: 15, marginBottom: 3, lineHeight: 1.3,
-        }}>
-          {dish.name}
-        </span>
-        <div style={{ fontSize: 11, color: C.textMuted, fontVariantNumeric: "tabular-nums" }}>
-          {dish.time} min · {(Number(dish.nutrients.calories) || 0).toFixed(1)} kcal · serves {dish.servings}
-        </div>
-        <div style={{
-          marginTop: 6, fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase",
-          color: C.accent, fontWeight: 700, display: "flex", gap: 10,
-        }}>
-          <span>{dish.category}</span>
-          {dish.youtubeLink && <span style={{ color: C.error }}>Video</span>}
+      <div className="tile-body">
+        <div className="tile-name">{dish.name}</div>
+        <div className="tile-meta">
+          <span>{dish.time} min</span>
+          <span>{(Number(dish.nutrients.calories) || 0).toFixed(1)} kcal</span>
+          <span>serves {dish.servings}</span>
         </div>
       </div>
     </button>
@@ -613,40 +497,23 @@ function DishCard({ dish, onClick }) {
 //   yours     — only dishes the user has added
 //   suggested — pantry-based suggestions (what you can cook right now)
 const TABS = [
-  { id: "explore",   label: "Explore Dishes"   },
-  { id: "yours",     label: "Your Dishes"      },
-  { id: "suggested", label: "Suggested Dishes" },
+  { id: "explore",   label: "Explore"   },
+  { id: "yours",     label: "Yours"      },
+  { id: "suggested", label: "Ready to cook" },
 ];
 
 function TabBar({ active, onChange }) {
   return (
-    <div style={{
-      display: "flex", marginBottom: 24,
-      borderBottom: `1.5px solid ${C.border}`,
-    }}>
-      {TABS.map(t => {
-        const on = active === t.id;
-        return (
-          <button
-            key={t.id}
-            onClick={() => onChange(t.id)}
-            style={{
-              flex: 1,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
-              background: "none", border: "none", cursor: "pointer",
-              padding: "12px 16px", marginBottom: -1.5,
-              borderBottom: `2.5px solid ${on ? C.accent : "transparent"}`,
-              color: on ? C.accent : C.textSub,
-              fontSize: 14, fontWeight: on ? 700 : 500,
-              fontFamily: FONTS.body, transition: "color 0.18s",
-            }}
-            onMouseEnter={e => { if (!on) e.currentTarget.style.color = C.text; }}
-            onMouseLeave={e => { if (!on) e.currentTarget.style.color = C.textSub; }}
-          >
-            {t.label}
-          </button>
-        );
-      })}
+    <div className="tabs" role="tablist" style={{ marginBottom: 22 }}>
+      {TABS.map(t => (
+        <button
+          key={t.id} role="tab" className="tab"
+          aria-selected={active === t.id}
+          onClick={() => onChange(t.id)}
+        >
+          {t.label}
+        </button>
+      ))}
     </div>
   );
 }
@@ -659,24 +526,15 @@ function Pagination({ page, totalPages, onChange }) {
     if (p === 1 || p === totalPages || Math.abs(p - page) <= 1) nums.push(p);
     else if (nums[nums.length - 1] !== "…") nums.push("…");
   }
-  const btn = (active = false, disabled = false) => ({
-    minWidth: 34, padding: "7px 11px", borderRadius: RADIUS.sm,
-    border: `1.5px solid ${active ? C.accent : C.border}`,
-    background: active ? C.accentLight : C.card,
-    color: disabled ? C.textMuted : active ? C.accent : C.textSub,
-    fontSize: 13, fontWeight: active ? 700 : 400,
-    cursor: disabled ? "default" : "pointer", fontFamily: FONTS.body,
-    opacity: disabled ? 0.5 : 1, transition: "all 0.18s",
-  });
   return (
-    <div style={{ display: "flex", gap: 6, justifyContent: "center", alignItems: "center", marginTop: 28, flexWrap: "wrap" }}>
-      <button style={btn(false, page === 1)} disabled={page === 1} onClick={() => onChange(page - 1)}>← Prev</button>
+    <div className="chip-row on-world" style={{ justifyContent: "center", marginTop: 28 }}>
+      <button className="chip" disabled={page === 1} style={{ opacity: page === 1 ? 0.4 : 1 }} onClick={() => onChange(page - 1)}>← Prev</button>
       {nums.map((p, i) =>
         p === "…"
-          ? <span key={`e${i}`} style={{ color: C.textMuted, padding: "0 2px" }}>…</span>
-          : <button key={p} style={btn(p === page)} onClick={() => onChange(p)}>{p}</button>
+          ? <span key={`e${i}`} style={{ color: "var(--ink)", padding: "0 2px" }}>…</span>
+          : <button key={p} className={`chip mono${p === page ? " on" : ""}`} aria-current={p === page ? "page" : undefined} onClick={() => onChange(p)}>{p}</button>
       )}
-      <button style={btn(false, page === totalPages)} disabled={page === totalPages} onClick={() => onChange(page + 1)}>Next →</button>
+      <button className="chip" disabled={page === totalPages} style={{ opacity: page === totalPages ? 0.4 : 1 }} onClick={() => onChange(page + 1)}>Next →</button>
     </div>
   );
 }
@@ -793,11 +651,9 @@ export default function Dishes({ dishes, setDishes, pantry, userId, dishCategori
   return (
     <Page>
       <PageHeader
-        title="Dish Database"
+        title={["The", { em: true, text: "cookbook." }]}
         subtitle={subtitle}
-        eyebrow="The cookbook"
-        color={C.c2}
-        motif="i-chili"
+        eyebrow="Dish database"
         action={<Btn onClick={() => setView("add")}>+ Add New Dish</Btn>}
       />
 
@@ -813,89 +669,52 @@ export default function Dishes({ dishes, setDishes, pantry, userId, dishCategori
         />
       ) : (
       <>
-      {/* Filters */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search dishes…"
-            style={{
-              flex: 1, minWidth: 200,
-              background: C.card,
-              border: `1.5px solid ${C.border}`,
-              borderRadius: RADIUS.md,
-              padding: "10px 16px",
-              fontSize: 14, color: C.text,
-            }}
-          />
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {categories.map(c => (
+      {/* Filters — straight on the colour */}
+      <div className="on-world" style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 22 }}>
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search dishes…"
+          aria-label="Search dishes"
+          className="world-search"
+        />
+        <div className="chip-row">
+          {categories.map(c => (
+            <button
+              key={c}
+              className={`chip${catFilter === c ? " on" : ""}`}
+              aria-pressed={catFilter === c}
+              onClick={() => setCatFilter(c)}
+            >
+              {c}
+            </button>
+          ))}
+          {allTags.length > 0 && <span aria-hidden="true" style={{ width: 1, height: 22, background: "var(--line-strong)", margin: "0 6px" }} />}
+          {allTags.map(tag => {
+            const active = tagFilters.has(tag);
+            return (
               <button
-                key={c}
-                onClick={() => setCatFilter(c)}
-                style={{
-                  padding: "8px 16px", borderRadius: RADIUS.sm,
-                  border: `1.5px solid ${catFilter === c ? C.accent : C.border}`,
-                  background: catFilter === c ? C.accentLight : C.card,
-                  color: catFilter === c ? C.accent : C.textSub,
-                  fontSize: 13, fontWeight: catFilter === c ? 600 : 400,
-                  cursor: "pointer", fontFamily: FONTS.body,
-                  transition: "all 0.18s",
-                }}
+                key={tag}
+                className={`chip${active ? " on" : ""}`}
+                aria-pressed={active}
+                onClick={() => toggleTag(tag)}
               >
-                {c}
+                {tag}
               </button>
-            ))}
-          </div>
+            );
+          })}
+          {tagFilters.size > 0 && (
+            <button className="go" style={{ color: "var(--ink)", marginLeft: 6 }} onClick={() => setTagFilters(new Set())}>
+              Clear
+            </button>
+          )}
         </div>
-
-        {allTags.length > 0 && (
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, letterSpacing: 0.6, textTransform: "uppercase", marginRight: 4 }}>
-              Diet
-            </span>
-            {allTags.map(tag => {
-              const active = tagFilters.has(tag);
-              return (
-                <button
-                  key={tag}
-                  onClick={() => toggleTag(tag)}
-                  style={{
-                    padding: "5px 12px", borderRadius: RADIUS.full,
-                    border: `1.5px solid ${active ? C.sage : C.border}`,
-                    background: active ? alpha(C.sage, 13) : C.card,
-                    color: active ? C.sage : C.textSub,
-                    fontSize: 12, fontWeight: active ? 600 : 400,
-                    cursor: "pointer", fontFamily: FONTS.body,
-                    transition: "all 0.18s",
-                  }}
-                >
-                  {active && "✓ "}{tag}
-                </button>
-              );
-            })}
-            {tagFilters.size > 0 && (
-              <button
-                onClick={() => setTagFilters(new Set())}
-                style={{
-                  padding: "5px 10px", borderRadius: RADIUS.full,
-                  border: `1.5px solid ${C.border}`,
-                  background: "none", color: C.textMuted,
-                  fontSize: 12, cursor: "pointer", fontFamily: FONTS.body,
-                }}
-              >
-                Clear
-              </button>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Grid */}
       {!loading && items.length === 0 ? (
         <Empty
-          icon={<DishArt dish={{ name: "pasta" }} size={56} />}
+          icon={<DishArt dish={{ name: "pasta" }} size={72} />}
           title={tab === "yours" ? "You haven't added any dishes yet" : "No dishes found"}
           subtitle={tab === "yours"
             ? "Dishes you create will show up here."
@@ -903,19 +722,8 @@ export default function Dishes({ dishes, setDishes, pantry, userId, dishCategori
           action={<Btn onClick={() => setView("add")}>+ Add a Dish</Btn>}
         />
       ) : (
-        <div className="sr-tint-2" style={{
-          position: "relative", overflow: "hidden",
-          borderRadius: 20, padding: 16,
-        }}>
-          <Watermark symbol="w-rings" size={230} style={{ right: -30, top: -46, color: C.c2 }} />
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))",
-            gap: 16,
-            opacity: loading ? 0.55 : 1,
-            transition: "opacity 0.15s",
-            position: "relative",
-          }}>
+        <>
+          <div className="tile-grid" style={{ opacity: loading ? 0.55 : 1, transition: "opacity 0.15s" }}>
             {items.map(d => (
               <DishCard
                 key={d.id}
@@ -925,11 +733,11 @@ export default function Dishes({ dishes, setDishes, pantry, userId, dishCategori
             ))}
           </div>
 
-          <div style={{ textAlign: "center", marginTop: 16, fontSize: 12, color: C.textMuted }}>
+          <div className="kicker" style={{ textAlign: "center", marginTop: 24, color: "var(--ink)", opacity: 0.8 }}>
             {total > 0 && `Showing ${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, total)} of ${total}`}
           </div>
           <Pagination page={page} totalPages={totalPages} onChange={p => setPage(p)} />
-        </div>
+        </>
       )}
       </>
       )}

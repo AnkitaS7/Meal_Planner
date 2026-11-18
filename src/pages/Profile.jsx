@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import { C, FONTS, RADIUS, tint } from "../theme";
+import { C, FONTS } from "../theme";
 import {
-  Card, Btn, Input, Textarea, Avatar, Toggle, Page, PageHeader, Divider,
+  Card, Btn, Input, Textarea, Toggle, Page, PageHeader,
 } from "../components/ui";
-import { Watermark } from "../components/art";
 
 import { fetchActivityStats, updateProfile } from "../lib/db";
 import NutritionTargets from "../components/NutritionTargets";
@@ -72,17 +71,26 @@ export default function Profile({ profile, setProfile, userId, dishCount, dietar
     ["Pantry items",   stats?.pantryItems,                  C.success],
   ];
 
+  const nameParts = (displayProfile.name || "You").trim().split(/\s+/);
+  const titleLines = nameParts.length > 1
+    ? [nameParts.slice(0, -1).join(" "), { em: true, text: nameParts[nameParts.length - 1] + "." }]
+    : [{ em: true, text: nameParts[0] + "." }];
+
   return (
     <Page>
       <PageHeader
-        title="Your Profile"
-        eyebrow="Your kitchen"
-        color={C.c1}
-        motif="i-apple"
+        title={titleLines}
+        eyebrow={displayProfile.handle}
+        subtitle={!editing ? (displayProfile.bio || "No bio yet.") : "Editing your profile."}
+        stats={[
+          { v: displayProfile.followers, l: "followers" },
+          { v: displayProfile.following, l: "following" },
+          { v: displayProfile.dishes, l: "dishes" },
+        ]}
         action={
           editing
             ? (
-              <div style={{ display: "flex", gap: 8 }}>
+              <div style={{ display: "flex", gap: 6 }}>
                 <Btn variant="secondary" onClick={cancel}>Cancel</Btn>
                 <Btn onClick={save}>Save changes</Btn>
               </div>
@@ -91,82 +99,62 @@ export default function Profile({ profile, setProfile, userId, dishCount, dietar
         }
       />
 
-      <div className="sr-grid" style={{ gap: 18 }}>
-        {/* Left column */}
-        <div className="sp-4" style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-          {/* Avatar & identity */}
-          <Card style={{ textAlign: "center", position: "relative", overflow: "hidden", background: tint(C.c1, 7) }}>
-            <Watermark symbol="i-egg" size={150} style={{ right: -34, top: -28, transform: "rotate(12deg)" }} />
-            <div style={{
-              width: 86, height: 86, borderRadius: "50%",
-              background: C.accentLight,
-              border: `3px solid ${C.accent}`,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 30, fontWeight: 700, color: C.accent,
-              margin: "0 auto 18px",
-              fontFamily: FONTS.body,
-              userSelect: "none",
-            }}>
-              {displayProfile.avatar}
-            </div>
+      <div className="sr-grid">
+        {/* Activity — four loud numbers */}
+        <section className="sp-12 rise" aria-label="Activity stats">
+          <div className="count-strip">
+            {activityStats.map(([label, val]) => (
+              <div key={label} className="count-cell static">
+                <div className="v">{val ?? "—"}</div>
+                <div className="kicker" style={{ marginTop: 12, opacity: 0.75 }}>{label}</div>
+              </div>
+            ))}
+          </div>
+        </section>
 
-            {editing ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {/* Left column */}
+        <div className="sp-5" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {/* Identity */}
+          {editing && (
+            <Card className="sr-pop">
+              <h3 className="sr-panel-h"><span>Who you are</span></h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 <Input label="Display Name" value={draft.name}   onChange={e => setD("name", e.target.value)} />
                 <Input label="Handle"       value={draft.handle} onChange={e => setD("handle", e.target.value)} />
+                <Textarea
+                  label="About me"
+                  value={draft.bio}
+                  onChange={e => setD("bio", e.target.value)}
+                  placeholder="Tell the community about yourself…"
+                  rows={3}
+                />
               </div>
-            ) : (
-              <>
-                <h2 style={{ fontFamily: FONTS.display, fontSize: 22, color: C.text }}>
-                  {displayProfile.name}
-                </h2>
-                <div style={{ fontSize: 13, color: C.textMuted, marginTop: 3 }}>
-                  {displayProfile.handle}
-                </div>
-              </>
-            )}
-
-            <Divider style={{ margin: "18px 0" }} />
-            <div style={{ display: "flex" }}>
-              {[["Followers", displayProfile.followers], ["Following", displayProfile.following], ["Dishes", displayProfile.dishes]].map(([label, val]) => (
-                <div key={label} style={{ flex: 1, textAlign: "center" }}>
-                  <div style={{ fontFamily: FONTS.display, fontSize: 20, fontWeight: 700, color: C.text }}>
-                    {val}
-                  </div>
-                  <div style={{ fontSize: 11, color: C.textMuted }}>{label}</div>
-                </div>
-              ))}
-            </div>
-          </Card>
+            </Card>
+          )}
 
           {/* Bio */}
-          <Card>
-            <h3 style={{ fontFamily: FONTS.display, fontSize: 18, marginBottom: 14, color: C.text }}>
-              About Me
-            </h3>
-            {editing ? (
-              <Textarea
-                value={draft.bio}
-                onChange={e => setD("bio", e.target.value)}
-                placeholder="Tell the community about yourself…"
-                rows={3}
-              />
-            ) : (
-              <p style={{ color: C.textSub, lineHeight: 1.75, fontSize: 14 }}>
+          {!editing && (
+            <section className="sr-panel pop rise" style={{ "--i": 1, display: "flex", flexDirection: "column", gap: 18 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <span className="kicker">About me</span>
+                <div aria-hidden="true" style={{
+                  width: 64, height: 64, borderRadius: "50%", background: "var(--panel)", color: "var(--c1)", border: "1px solid var(--line)",
+                  display: "grid", placeItems: "center",
+                  fontFamily: FONTS.display, fontWeight: 400, fontSize: 26,
+                }}>
+                  {displayProfile.avatar}
+                </div>
+              </div>
+              <p style={{ fontFamily: FONTS.display, fontWeight: 400, fontSize: "clamp(22px, 2vw, 28px)", lineHeight: 1.05, letterSpacing: "-0.015em" }}>
                 {displayProfile.bio || "No bio yet."}
               </p>
-            )}
-          </Card>
+            </section>
+          )}
 
           {/* Dietary preferences */}
-          <Card>
-            <div style={{
-              fontSize: 11, fontWeight: 700, color: C.textSub,
-              letterSpacing: 0.6, textTransform: "uppercase", marginBottom: 14,
-            }}>
-              Dietary Preferences
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          <Card className="rise" style={{ "--i": 2 }}>
+            <h3 className="sr-panel-h"><span>Dietary preferences</span>{editing && <span>tap to toggle</span>}</h3>
+            <div className="chip-row">
               {dietaryOptions.map(d => {
                 const active = (editing ? draft : displayProfile).dietary.includes(d);
                 return (
@@ -175,17 +163,9 @@ export default function Profile({ profile, setProfile, userId, dishCount, dietar
                     key={d}
                     disabled={!editing}
                     aria-pressed={active}
+                    className={`chip${active ? " on" : ""}`}
                     onClick={() => editing && toggleDiet(d)}
-                    style={{
-                      padding: "5px 12px", borderRadius: RADIUS.full,
-                      fontSize: 12, fontWeight: 500, fontFamily: "inherit",
-                      cursor: editing ? "pointer" : "default",
-                      border: `1.5px solid ${active ? C.sage : C.border}`,
-                      background: active ? C.sageLight : C.card,
-                      color: active ? C.sageDark : C.textMuted,
-                      transition: "all 0.18s",
-                      userSelect: "none",
-                    }}
+                    style={{ cursor: editing ? "pointer" : "default" }}
                   >
                     {d}
                   </button>
@@ -193,42 +173,11 @@ export default function Profile({ profile, setProfile, userId, dishCount, dietar
               })}
             </div>
           </Card>
-        </div>
-
-        {/* Right column */}
-        <div className="sp-8" style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-          {/* Activity stats */}
-          <Card>
-            <h3 style={{ fontFamily: FONTS.display, fontSize: 18, marginBottom: 18, color: C.text }}>
-              Activity Stats
-            </h3>
-            <div style={{ display: "flex" }}>
-              {activityStats.map(([label, val, color], i) => (
-                <div key={label} style={{
-                  flex: 1, textAlign: "center", padding: "6px 4px",
-                  borderLeft: i > 0 ? `1px solid ${C.border}` : "none",
-                }}>
-                  <div style={{ fontSize: 24, color, fontFamily: FONTS.serif, fontVariantNumeric: "tabular-nums" }}>
-                    {val ?? "—"}
-                  </div>
-                  <div style={{
-                    fontSize: 10, color: C.textSub, marginTop: 4, lineHeight: 1.4,
-                    letterSpacing: "0.12em", textTransform: "uppercase",
-                  }}>{label}</div>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          {/* Nutrition targets (DRI calculator + custom) */}
-          <NutritionTargets userId={userId} />
 
           {/* Settings */}
-          <Card>
-            <h3 style={{ fontFamily: FONTS.display, fontSize: 18, marginBottom: 18, color: C.text }}>
-              Account Settings
-            </h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+          <Card className="rise" style={{ "--i": 3 }}>
+            <h3 className="sr-panel-h"><span>Account settings</span></h3>
+            <div className="row-list">
               {[
                 ["notifications", "notif_email",     "Email notifications",  "Weekly meal reminders & recipe suggestions"],
                 ["publicProfile", "public_profile",  "Public profile",       "Anyone can view your dishes and menus"],
@@ -236,13 +185,12 @@ export default function Profile({ profile, setProfile, userId, dishCount, dietar
                 ["weeklyDigest",  "weekly_digest",    "Weekly digest",        "Receive a summary of trending recipes"],
               ].map(([key, dbKey, label, sub]) => (
                 <div key={key} style={{
-                  display: "flex", justifyContent: "space-between",
-                  alignItems: "center", padding: "14px 0",
-                  borderBottom: `1px solid ${C.border}`,
+                  display: "flex", justifyContent: "space-between", gap: 16,
+                  alignItems: "center", padding: "15px 0",
                 }}>
                   <div>
-                    <div style={{ fontWeight: 500, fontSize: 14, color: C.text }}>{label}</div>
-                    <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>{sub}</div>
+                    <div style={{ fontWeight: 600, fontSize: 16, color: C.text }}>{label}</div>
+                    <div style={{ fontSize: 13, color: C.textMuted, marginTop: 2 }}>{sub}</div>
                   </div>
                   <Toggle
                     label={label}
@@ -257,6 +205,11 @@ export default function Profile({ profile, setProfile, userId, dishCount, dietar
               ))}
             </div>
           </Card>
+        </div>
+
+        {/* Right column — nutrition targets (DRI calculator + custom) */}
+        <div className="sp-7 rise" style={{ "--i": 2, display: "flex", flexDirection: "column", gap: 14 }}>
+          <NutritionTargets userId={userId} />
         </div>
       </div>
     </Page>

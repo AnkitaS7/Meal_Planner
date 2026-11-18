@@ -1,7 +1,7 @@
 import {useEffect, useMemo, useState} from "react";
 import {C, FONTS} from "../theme";
-import {DishArt, Watermark} from "../components/art";
-import {Btn, IconX, Loading, Modal, Page, PageHeader, Tag} from "../components/ui";
+import {DishArt} from "../components/art";
+import {Btn, IconX, Loading, Modal, Page, PageHeader} from "../components/ui";
 import {DAYS, MEALS} from "../data/mockData";
 import {
     buildPlanObject,
@@ -168,29 +168,27 @@ export default function Planner({ dishes, userId }) {
   // it in place instead of remounting it on every parent render.
   const shareDropdown = (
     <div style={{ position: "relative" }}>
-      <Btn onClick={() => setShowExport(v => !v)}>Share ↗</Btn>
+      <Btn onClick={() => setShowExport(v => !v)} aria-expanded={showExport}>Share ↗</Btn>
       {showExport && (
         <>
           <div onClick={() => setShowExport(false)} style={{ position: "fixed", inset: 0, zIndex: 99 }} />
-          <div style={{
+          <div className="sr-menu" style={{
             position: "absolute", top: "calc(100% + 8px)", right: 0,
-            background: C.card, border: `1px solid ${C.border}`,
-            borderRadius: 10, boxShadow: "var(--shadow-lift)",
-            zIndex: 100, minWidth: 200, overflow: "hidden",
+            background: C.card, color: C.text, borderRadius: 20, padding: 6,
+            boxShadow: "var(--shadow-lift)", zIndex: 100, minWidth: 220,
           }}>
             {[
               { label: "Save as PDF",        action: exportPDF      },
               { label: "Send via email",     action: shareEmail     },
               { label: "Share on WhatsApp",  action: shareWhatsApp  },
-            ].map(({ label, action }, i, arr) => (
+            ].map(({ label, action }) => (
               <button
                 key={label}
                 onClick={action}
                 style={{
                   display: "block", width: "100%", padding: "12px 16px",
-                  background: "none", cursor: "pointer", border: "none",
-                  borderBottom: i < arr.length - 1 ? `1px solid ${C.border}` : "none",
-                  fontSize: 14, color: C.text,
+                  background: "none", cursor: "pointer", border: "none", borderRadius: 14,
+                  fontSize: 14, fontWeight: 500, color: C.text,
                   fontFamily: FONTS.body, textAlign: "left",
                   transition: "background 0.15s",
                 }}
@@ -211,50 +209,24 @@ export default function Planner({ dishes, userId }) {
   const renderDishCell = (day, meal) => {
     const dish = dishById(plan[day]?.[meal]);
     return dish ? (
-      <div style={{
-        background: C.card, border: `1px solid ${C.border}`,
-        borderRadius: 12, padding: 10, position: "relative",
-        boxShadow: "var(--shadow)",
-      }}>
-        <DishArt dish={dish} size={30} />
-        <div className="truncate" style={{
-          fontSize: 12, fontFamily: FONTS.serif, color: C.text, lineHeight: 1.3, marginTop: 6,
-        }}>
-          {dish.name}
-        </div>
-        <div style={{ fontSize: 11, color: C.textMuted, marginTop: 3, fontVariantNumeric: "tabular-nums" }}>
-          {(Number(dish.nutrients.calories) || 0).toFixed(1)} kcal
-        </div>
+      <div className="slot-filled">
+        <DishArt dish={dish} size={180} round={false} style={{ width: "100%", height: 66, borderRadius: 3 }} />
+        <div className="nm">{dish.name}</div>
+        <div className="kc">{(Number(dish.nutrients.calories) || 0).toFixed(1)} kcal</div>
         <button
+          className="slot-x"
           onClick={() => remove(day, meal)}
           aria-label={`Remove ${dish.name} from ${day} ${meal}`}
-          style={{
-            position: "absolute", top: 4, right: 4,
-            background: "none", border: "none",
-            color: C.textMuted, cursor: "pointer",
-            lineHeight: 1, padding: 8,
-          }}
-          onMouseEnter={e => { e.currentTarget.style.color = "var(--c2)"; }}
-          onMouseLeave={e => { e.currentTarget.style.color = "var(--faint)"; }}
-        ><IconX size={13} /></button>
+        ><IconX size={12} /></button>
       </div>
     ) : (
       <button
         type="button"
+        className="slot-empty"
         onClick={() => setModal({ day, meal })}
         aria-label={`Add a dish for ${day} ${meal}`}
-        style={{
-          width: "100%", background: "transparent",
-          border: `2px dashed ${C.borderDark}`,
-          borderRadius: 12, padding: "14px 6px",
-          textAlign: "center", cursor: "pointer",
-          color: C.textMuted, fontSize: 12, fontFamily: "inherit",
-          transition: "border-color 0.18s, background 0.18s",
-        }}
-        onMouseEnter={e => { e.currentTarget.style.borderColor = C.accent; e.currentTarget.style.background = C.accentLight; }}
-        onMouseLeave={e => { e.currentTarget.style.borderColor = C.borderDark; e.currentTarget.style.background = "transparent"; }}
       >
-        + Add
+        +
       </button>
     );
   };
@@ -272,53 +244,47 @@ export default function Planner({ dishes, userId }) {
 
   const modalContent = modal && (
     <>
-      <h3 style={{ fontFamily: FONTS.display, fontSize: 22, color: C.text, marginBottom: 4 }}>
+      <div className="kicker" style={{ color: C.textMuted, marginBottom: 8 }}>{modal.day} · pick a dish</div>
+      <h3 style={{
+        fontFamily: FONTS.display, fontWeight: 400, fontSize: 30, lineHeight: 1.1, letterSpacing: "-0.015em", color: C.head, marginBottom: 18,
+      }}>
         Add {modal.meal}
       </h3>
-      <p style={{ color: C.textSub, fontSize: 13, marginBottom: 16 }}>
-        {modal.day} · Select a dish from your database
-      </p>
       <input
         autoFocus
         value={modalSearch}
         onChange={e => setModalSearch(e.target.value)}
         placeholder="Search dishes…"
-        style={{
-          width: "100%", marginBottom: 14,
-          background: C.bg, border: `1.5px solid ${C.border}`,
-          borderRadius: 10, padding: "10px 14px",
-          fontSize: 14, color: C.text, outline: "none", boxSizing: "border-box",
-        }}
-        onFocus={e => { e.target.style.borderColor = C.accent; }}
-        onBlur={e  => { e.target.style.borderColor = C.border; }}
+        className="sr-field"
+        style={{ marginBottom: 10 }}
       />
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div className="row-list">
         {pickerMatches.map(d => (
             <button
               type="button"
               key={d.id}
               onClick={() => assign(d)}
               style={{
-                display: "flex", gap: 14, padding: 14, width: "100%",
-                background: C.bg, borderRadius: 12, cursor: "pointer",
-                border: "1.5px solid transparent", textAlign: "left",
-                fontFamily: "inherit",
-                transition: "border-color 0.18s, background 0.18s",
+                display: "flex", gap: 14, padding: "12px 8px", width: "100%", alignItems: "center",
+                background: "none", cursor: "pointer", border: 0,
+                borderBottom: `1px solid ${C.border}`, borderRadius: 0,
+                textAlign: "left", fontFamily: "inherit", color: C.text,
+                transition: "background 0.18s, padding 0.3s var(--ease-out)",
               }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = C.accent; e.currentTarget.style.background = C.accentLight; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.background = C.bg; }}
+              onMouseEnter={e => { e.currentTarget.style.background = C.bg; e.currentTarget.style.paddingLeft = "16px"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.paddingLeft = "8px"; }}
             >
-              <DishArt dish={d} size={38} />
-              <div>
-                <div style={{ fontFamily: FONTS.serif, fontWeight: 600, color: C.text }}>{d.name}</div>
-                <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
+              <DishArt dish={d} size={56} round={false} style={{ borderRadius: 4 }} />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontFamily: FONTS.display, fontWeight: 400, fontSize: 20, letterSpacing: "-0.02em" }}>{d.name}</div>
+                <div className="mono" style={{ fontSize: 11.5, color: C.textMuted, marginTop: 2 }}>
                   {d.time} min · {d.category} · {(Number(d.nutrients.calories) || 0).toFixed(1)} kcal
                 </div>
               </div>
             </button>
         ))}
         {pickerMatches.length >= PICKER_LIMIT && (
-          <p style={{ fontSize: 12, color: C.textMuted, textAlign: "center", margin: "6px 0 0" }}>
+          <p style={{ fontSize: 12, color: C.textMuted, textAlign: "center", margin: "10px 0 0", border: 0 }}>
             Showing the first {PICKER_LIMIT} — keep typing to narrow the list.
           </p>
         )}
@@ -326,237 +292,126 @@ export default function Planner({ dishes, userId }) {
     </>
   );
 
-  // Mobile layout
+  const plannedCount = DAYS.reduce((n, d) => n + MEALS.filter(m => plan[d]?.[m]).length, 0);
+  const weekKcal = DAYS.reduce((n, d) => n + dayTotal(d), 0);
+  const dayNum = d => Number(weekDates[d].split("-")[2]);
+  const pickerModal = (
+    <Modal
+      open={!!modal}
+      onClose={() => setModal(null)}
+      width={520}
+      label={modal ? `Add a dish for ${modal.day} ${modal.meal}` : "Add a dish"}
+    >
+      {modalContent}
+    </Modal>
+  );
+  const header = (
+    <PageHeader
+      eyebrow={weekLabel}
+      title={["The", { em: true, text: "week." }]}
+      subtitle="Seven days, four places a day. Tap an open place to fill it."
+      stats={[
+        { v: `${plannedCount}/28`, l: "meals planned" },
+        { v: Math.round(weekKcal).toLocaleString(), l: "kcal this week" },
+      ]}
+      action={
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+          <Btn variant="secondary" onClick={() => shiftWeek(-1)} aria-label="Previous week">←<span className="hide-sm"> Previous</span></Btn>
+          <Btn variant="secondary" onClick={goToToday}>Today</Btn>
+          <Btn variant="secondary" onClick={() => shiftWeek(1)} aria-label="Next week"><span className="hide-sm">Next </span>→</Btn>
+          {shareDropdown}
+        </div>
+      }
+    />
+  );
+
+  // Mobile layout — one day at a time
   if (isMobile) {
     return (
       <Page>
-        {/* Compact mobile header */}
-        <div style={{ marginBottom: 16 }}>
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            marginBottom: 10,
-          }}>
-            <h1 style={{ fontFamily: FONTS.display, fontSize: 22, color: C.text }}>
-              Weekly Planner
-            </h1>
-            {shareDropdown}
-          </div>
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            background: C.card, border: `1px solid ${C.border}`,
-            borderRadius: 10, padding: "8px 12px",
-          }}>
-            <button
-              onClick={() => shiftWeek(-1)}
-              style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: C.accent, padding: "0 4px" }}
-            >‹</button>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 13, color: C.textSub, fontWeight: 500 }}>{weekLabel}</span>
-              <button
-                onClick={goToToday}
-                style={{
-                  background: C.accentLight, border: `1px solid ${C.accent}`,
-                  borderRadius: 6, padding: "2px 8px",
-                  fontSize: 11, fontWeight: 600, color: C.accent,
-                  cursor: "pointer", fontFamily: FONTS.body,
-                }}
-              >Today</button>
-            </div>
-            <button
-              onClick={() => shiftWeek(1)}
-              style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: C.accent, padding: "0 4px" }}
-            >›</button>
-          </div>
-        </div>
-
-        {/* Day tab strip */}
-        <div style={{
-          display: "flex", gap: 6, overflowX: "auto",
-          paddingBottom: 4, marginBottom: 16,
-          scrollbarWidth: "none",
-        }}>
+        {header}
+        <div className="on-world chip-row" style={{ flexWrap: "nowrap", overflowX: "auto", scrollbarWidth: "none", margin: "0 calc(var(--pad) * -1) 14px", padding: "0 var(--pad)" }}>
           {DAYS.map(day => {
-            const isSelected = day === selectedDay;
-            const isToday    = day === todayLabel;
-            const kcal       = dayTotal(day);
+            const kcal = dayTotal(day);
             return (
               <button
                 key={day}
+                className={`chip${day === selectedDay ? " on" : ""}`}
                 onClick={() => setSelectedDay(day)}
-                style={{
-                  flexShrink: 0,
-                  display: "flex", flexDirection: "column", alignItems: "center",
-                  gap: 2, padding: "8px 12px",
-                  borderRadius: 10, border: "none", cursor: "pointer",
-                  background: isSelected ? C.accent : isToday ? C.accentLight : C.card,
-                  color: isSelected ? "var(--on-accent)" : isToday ? C.accent : C.textSub,
-                  fontFamily: FONTS.body,
-                  boxShadow: isSelected ? "0 2px 8px rgba(0,0,0,0.12)" : "none",
-                  transition: "all 0.18s",
-                }}
+                aria-pressed={day === selectedDay}
+                style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1, padding: "8px 14px", borderRadius: 18, flexShrink: 0 }}
               >
-                <span style={{ fontSize: 12, fontWeight: 600 }}>{day}</span>
-                {kcal > 0 && (
-                  <span style={{
-                    fontSize: 10,
-                    color: isSelected ? "var(--on-accent)" : C.accent,
-                    fontWeight: 500,
-                  }}>
-                    {kcal.toFixed(1)}
-                  </span>
-                )}
+                <span>{day}{weekDates[day] === todayDate ? " •" : ""}</span>
+                <span className="mono" style={{ fontSize: 10, opacity: 0.75 }}>{kcal > 0 ? kcal.toFixed(0) : "—"}</span>
               </button>
             );
           })}
         </div>
 
-        {/* Selected day meal cards */}
         {loading ? (
-          <div style={{ color: C.textMuted, fontSize: 14, textAlign: "center", padding: "40px 0" }}>
-            Loading plan…
-          </div>
+          <Loading label="Reading the week's menu…" style={{ color: "var(--ink)", padding: "60px 0" }} />
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <button
-                onClick={() => clearDay(selectedDay)}
-                style={{
-                  background: "none", border: "none", fontSize: 12,
-                  color: C.textMuted, cursor: "pointer", fontFamily: FONTS.body,
-                }}
-              >
-                Clear {selectedDay}
-              </button>
+          <div className={`day-col${weekDates[selectedDay] === todayDate ? " today" : ""}`}>
+            <div className="day-head">
+              <div className="day-name">
+                <span>{selectedDay}</span>
+                <button onClick={() => clearDay(selectedDay)} className="kicker" style={{ background: "none", border: 0, color: "inherit", cursor: "pointer", textDecoration: "underline" }}>
+                  Clear {selectedDay}
+                </button>
+              </div>
+              <div className="day-num">{dayNum(selectedDay)}</div>
             </div>
             {MEALS.map(meal => (
-              <div key={meal} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                <div style={{
-                  width: 72, flexShrink: 0,
-                  fontSize: 10, fontWeight: 700, color: C.textSub,
-                  letterSpacing: 0.5, paddingTop: 14,
-                }}>
-                  {meal.toUpperCase()}
-                </div>
-                <div style={{ flex: 1 }}>
-                  {renderDishCell(selectedDay, meal)}
-                </div>
+              <div key={meal} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div className="slot-label">{meal}</div>
+                {renderDishCell(selectedDay, meal)}
               </div>
             ))}
           </div>
         )}
-
-        <Modal
-          open={!!modal}
-          onClose={() => setModal(null)}
-          width={500}
-          label={modal ? `Add a dish for ${modal.day} ${modal.meal}` : "Add a dish"}
-        >
-          {modalContent}
-        </Modal>
+        {pickerModal}
       </Page>
     );
   }
 
-  // Desktop layout
+  // Desktop layout — the whole week as a board of seven columns
   return (
     <Page>
-      <PageHeader
-        title="Weekly Planner"
-        subtitle={weekLabel}
-        eyebrow="The week ahead"
-        color={C.c1}
-        motif="i-tomato"
-        action={
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <Btn variant="secondary" onClick={() => shiftWeek(-1)}>← Previous</Btn>
-            <Btn variant="secondary" onClick={goToToday}>Today</Btn>
-            <Btn variant="secondary" onClick={() => shiftWeek(1)}>Next →</Btn>
-            {shareDropdown}
-          </div>
-        }
-      />
-
+      {header}
       {loading ? (
-        <Loading label="Reading the week's menu…" />
+        <Loading label="Reading the week's menu…" style={{ color: "var(--ink)", padding: "80px 0" }} size={56} />
       ) : (
-        <div className="sr-panel sr-tint-1 clip" style={{ marginBottom: 8, padding: "14px 16px" }}>
-          <Watermark symbol="w-steam" size={200} style={{ right: -26, top: -34 }} />
-          <div style={{ overflowX: "auto", position: "relative" }}>
-          <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 8 }}>
-            <thead>
-              <tr>
-                <th style={{
-                  width: 96, padding: "6px 10px",
-                  textAlign: "left", fontSize: 11,
-                  color: C.textMuted, fontWeight: 700, letterSpacing: 0.6,
-                }}>
-                  MEAL
-                </th>
-                {DAYS.map(d => {
-                  const isToday = weekDates[d] === todayDate;
-                  return (
-                    <th key={d} style={{
-                      minWidth: 138, padding: "6px 4px",
-                      background: isToday ? C.accentLight : "transparent",
-                      borderRadius: 10,
-                    }}>
-                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                        <span style={{
-                          fontSize: 13, fontWeight: 700,
-                          color: isToday ? C.accent : C.text,
-                        }}>{d}</span>
-                        {dayTotal(d) > 0 && <Tag color={C.accent}>{dayTotal(d).toFixed(1)} kcal</Tag>}
-                        <button onClick={() => clearDay(d)}
-                          style={{
-                            fontSize: 10, color: C.textMuted, background: "none",
-                            border: "none", cursor: "pointer", fontFamily: FONTS.body,
-                          }}>
-                          clear
-                        </button>
-                      </div>
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              {MEALS.map(meal => (
-                <tr key={meal}>
-                  <td style={{
-                    fontSize: 11, fontWeight: 700, color: C.textSub,
-                    padding: "4px 10px", verticalAlign: "top", paddingTop: 16,
-                    letterSpacing: 0.5,
-                  }}>
-                    {meal.toUpperCase()}
-                  </td>
-                  {DAYS.map(day => {
-                    const isToday = weekDates[day] === todayDate;
-                    return (
-                      <td key={day} style={{
-                        verticalAlign: "top", padding: "4px",
-                        background: isToday ? C.accentLight : "transparent",
-                        borderRadius: 10,
-                      }}>
-                        {renderDishCell(day, meal)}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          </div>
+        <div className="board">
+          {DAYS.map((d, i) => {
+            const isToday = weekDates[d] === todayDate;
+            const total = dayTotal(d);
+            return (
+              <section key={d} className={`day-col rise${isToday ? " today" : ""}`} style={{ "--i": i }} aria-label={d}>
+                <div className="day-head">
+                  <div className="day-name">
+                    <span>{d}{isToday ? " · today" : ""}</span>
+                    <button
+                      onClick={() => clearDay(d)}
+                      style={{ background: "none", border: 0, color: "inherit", cursor: "pointer", font: "inherit", textDecoration: "underline", textUnderlineOffset: 3 }}
+                    >
+                      clear
+                    </button>
+                  </div>
+                  <div className="day-num">{dayNum(d)}</div>
+                  <div className="day-kcal">{total > 0 ? `${total.toFixed(1)} kcal` : "nothing yet"}</div>
+                </div>
+                {MEALS.map(meal => (
+                  <div key={meal} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    <div className="slot-label">{meal}</div>
+                    {renderDishCell(d, meal)}
+                  </div>
+                ))}
+              </section>
+            );
+          })}
         </div>
       )}
-
-      <Modal
-        open={!!modal}
-        onClose={() => setModal(null)}
-        width={500}
-        label={modal ? `Add a dish for ${modal.day} ${modal.meal}` : "Add a dish"}
-      >
-        {modalContent}
-      </Modal>
+      {pickerModal}
     </Page>
   );
 }

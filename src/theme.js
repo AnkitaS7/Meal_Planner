@@ -1,4 +1,4 @@
-// Design tokens — Season (Spice Route system)
+// Design tokens — Season (Home kitchen system)
 //
 // Every value here resolves to a CSS custom property defined in index.css,
 // so the whole app re-themes (including day/night) without touching call
@@ -14,17 +14,17 @@ export const C = {
   sidebar:     "var(--head)",
   sidebarHover:"var(--line)",
 
-  // Primary — c1, brand/evening indigo
+  // Primary — c1, cobalt
   accent:      "var(--c1)",
   accentLight: "var(--c1-soft)",
   accentDark:  "var(--c1)",
 
-  // Secondary — c4, mint
+  // Secondary — c4, celadon
   sage:        "var(--c4)",
   sageDark:    "var(--c4)",
   sageLight:   "var(--c4-soft)",
 
-  // Tertiary — c3, saffron gold
+  // Tertiary — c3, gold lustre
   gold:        "var(--c3)",
   goldLight:   "var(--c3-soft)",
 
@@ -66,12 +66,14 @@ export const FONTS = {
   display: "var(--font-display)",
   serif:   "var(--font-serif)",
   body:    "var(--font-body)",
+  accent:  "var(--font-accent)",
+  mono:    "var(--font-mono)",
 };
 
 export const RADIUS = {
-  sm:   6,
-  md:   10,
-  lg:   14,
+  sm:   8,
+  md:   12,
+  lg:   16,
   xl:   20,
   full: 9999,
 };

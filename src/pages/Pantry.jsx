@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { C, FONTS, RADIUS, SHADOW, alpha } from "../theme";
-import { IngredientArt, Watermark } from "../components/art";
+import { C, FONTS, RADIUS } from "../theme";
+import { IngredientArt } from "../components/art";
 import {
   Card, Btn, Input, Select, Page, PageHeader, Empty, IconX,
 } from "../components/ui";
@@ -127,9 +127,9 @@ function ItemNameAutocomplete({ value, onChange, onPick, pantryCategories }) {
       {open && (
         <div className="sr-menu" style={{
           position: "absolute", top: "100%", left: 0, right: 0, zIndex: 30,
-          marginTop: 4, background: C.card,
-          border: `1.5px solid ${C.border}`, borderRadius: RADIUS.md,
-          boxShadow: SHADOW.md, overflow: "hidden", maxHeight: 264, overflowY: "auto",
+          marginTop: 6, background: C.card, padding: 6,
+          borderRadius: 18,
+          boxShadow: "var(--shadow-lift)", overflow: "hidden", maxHeight: 264, overflowY: "auto",
         }}>
           {suggestions.map((s, i) => {
             const color = catColor(s.category);
@@ -141,19 +141,15 @@ function ItemNameAutocomplete({ value, onChange, onPick, pantryCategories }) {
                 onMouseEnter={() => setHi(i)}
                 style={{
                   display: "flex", justifyContent: "space-between", alignItems: "center",
-                  gap: 10, padding: "9px 14px", cursor: "pointer",
-                  background: i === hi ? C.accentLight : C.card,
-                  borderBottom: i < suggestions.length - 1 ? `1px solid ${alpha(C.border, 33)}` : "none",
+                  gap: 10, padding: "10px 12px", cursor: "pointer", borderRadius: 12,
+                  background: i === hi ? C.bg : "transparent",
                 }}
               >
                 <span style={{ fontSize: 13, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {name}
                 </span>
                 <span style={{
-                  fontSize: 10, fontWeight: 700, color, flexShrink: 0,
-                  background: alpha(color, 10), border: `1px solid ${alpha(color, 27)}`,
-                  borderRadius: RADIUS.full, padding: "2px 8px",
-                  letterSpacing: 0.4, textTransform: "uppercase",
+                  fontSize: 10, fontWeight: 500, color, flexShrink: 0, fontFamily: FONTS.mono,
                 }}>
                   {s.category}
                 </span>
@@ -175,25 +171,15 @@ function PantryCard({ item, accent, onDec, onInc, onRemove, flashing, removing }
 
   return (
     <div
-      className={`sr-pitem${removing ? " removing" : ""}${flashing ? " sr-flash" : ""}`}
+      className={`sr-pitem${f.days !== null && f.days <= 3 ? " warn" : ""}${removing ? " removing" : ""}${flashing ? " sr-flash" : ""}`}
       tabIndex={0}
-      style={{ minWidth: 128 }}
     >
-      {/* Delete — demoted to a subtle corner escape hatch */}
+      {/* Delete — a subtle corner escape hatch */}
       <button
-        className="sr-press"
+        className="sr-press slot-x"
         onClick={onRemove}
         aria-label={`Remove ${item.name} from pantry`}
-        style={{
-          position: "absolute", top: 3, left: 3, zIndex: 2,
-          width: 26, height: 26, borderRadius: "50%",
-          border: "none", background: "none", color: C.textMuted,
-          cursor: "pointer", display: "inline-flex",
-          alignItems: "center", justifyContent: "center",
-          transition: "background 0.18s, color 0.18s, transform 0.14s ease-out",
-        }}
-        onMouseEnter={e => { e.currentTarget.style.color = "var(--c2)"; e.currentTarget.style.background = alpha(C.error, 10); }}
-        onMouseLeave={e => { e.currentTarget.style.color = "var(--faint)"; e.currentTarget.style.background = "none"; }}
+        style={{ top: 6, right: "auto", left: 6 }}
       >
         <IconX size={10} />
       </button>
@@ -201,26 +187,25 @@ function PantryCard({ item, accent, onDec, onInc, onRemove, flashing, removing }
       {/* Freshness cue, opposite the delete affordance */}
       {f.level !== "none" && (
         soon ? (
-          <span style={{
-            position: "absolute", top: 2, right: 2, zIndex: 2,
-            background: alpha(f.color, 12), color: f.color,
-            border: `1px solid ${alpha(f.color, 35)}`,
-            fontSize: 9, fontWeight: 700, borderRadius: 999,
-            padding: "1px 7px", letterSpacing: "0.06em",
+          <span className="mono" style={{
+            position: "absolute", top: 9, right: 9, zIndex: 2,
+            background: f.color, color: "var(--on-accent)",
+            fontSize: 12, fontWeight: 500, borderRadius: 999,
+            padding: "2px 8px",
           }}>
             {freshnessLabel(f.days)}
           </span>
         ) : (
           <span aria-label="fresh" title="Fresh" style={{
-            position: "absolute", top: 8, right: 8, zIndex: 2,
+            position: "absolute", top: 14, right: 14, zIndex: 2,
             width: 8, height: 8, borderRadius: "50%", background: f.color,
           }} />
         )
       )}
 
-      <IngredientArt name={item.name} category={item.category} size={44} jarColor={accent} />
+      <IngredientArt name={item.name} category={item.category} size={62} jarColor={accent} />
 
-      <div className="truncate" style={{ fontSize: 12, color: C.text, marginTop: 5, maxWidth: 116 }}>
+      <div className="truncate pname" style={{ color: C.head, marginTop: 4 }}>
         {item.name}
       </div>
 
@@ -233,7 +218,7 @@ function PantryCard({ item, accent, onDec, onInc, onRemove, flashing, removing }
         >
           <span aria-hidden="true">−</span>
         </button>
-        <span style={{ fontSize: 11, color: C.textMuted, fontVariantNumeric: "tabular-nums", minWidth: 40, textAlign: "center" }}>
+        <span className="mono" style={{ fontSize: 14, color: C.textSub, minWidth: 54, textAlign: "center" }}>
           {item.qty} {item.unit}
         </span>
         <button
@@ -379,23 +364,35 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
   return (
     <Page>
       <PageHeader
-        title="Pantry"
+        title={["Your", { em: true, text: "pantry." }]}
         subtitle={countLine}
         eyebrow="Your shelf"
-        color={C.c4}
-        motif="i-jar"
+        stats={[
+          { v: pantry.length, l: "items on the shelf" },
+          { v: useSoon.length, l: "to use soon" },
+        ]}
+        action={
+          <div style={{ display: "flex", gap: 6 }}>
+            {onScan && <Btn variant="secondary" onClick={onScan}>Scan a bill</Btn>}
+            {!isMobile && <Btn onClick={() => setShowAdd(v => !v)}>{showAdd ? "Close" : "+ Add item"}</Btn>}
+          </div>
+        }
       />
+
+      {/* Desktop: quick-add panel opens right under the hero */}
+      {!isMobile && showAdd && (
+        <div className="sr-pop">
+          <Card style={{ marginBottom: 14 }}>
+            <h3 className="sr-panel-h"><span>Add pantry item</span></h3>
+            {addFields}
+          </Card>
+        </div>
+      )}
 
       {/* Use-soon triage — the one band that drives action */}
       {useSoon.length > 0 && (
-        <div style={{ marginBottom: 22 }}>
-          <div style={{
-            fontSize: 10, letterSpacing: "0.24em", textTransform: "uppercase",
-            color: C.textMuted, marginBottom: 8, display: "flex", gap: 8, alignItems: "center",
-          }}>
-            <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: C.warning }} />
-            Use soon · {useSoon.length}
-          </div>
+        <section className="sr-panel pop rise" style={{ marginBottom: 14 }}>
+          <h3 className="sr-panel-h"><span>Use soon</span><span>{useSoon.length} running out of time</span></h3>
           <div className="sr-usesoon">
             {useSoon.map(item => {
               const f = freshness(item.expiry);
@@ -406,62 +403,41 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
                   onClick={() => setSearch(item.name)}
                   title={`Find ${item.name}`}
                   style={{
-                    display: "flex", alignItems: "center", gap: 8, flexShrink: 0,
-                    padding: "7px 12px 7px 8px", borderRadius: RADIUS.full,
-                    border: `1.5px solid ${alpha(f.color, 40)}`,
-                    background: alpha(f.color, 8), cursor: "pointer",
+                    display: "flex", alignItems: "center", gap: 10, flexShrink: 0,
+                    padding: "8px 16px 8px 10px", borderRadius: RADIUS.full,
+                    border: "1px solid var(--line)", background: "var(--panel)", color: "var(--ink)", cursor: "pointer",
                     fontFamily: FONTS.body, transition: "transform 0.14s ease-out",
                   }}
                 >
-                  <IngredientArt name={item.name} category={item.category} size={26} jarColor={catColor(item.category)} />
-                  <span style={{ fontSize: 12, color: C.text, whiteSpace: "nowrap" }}>{item.name}</span>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: f.color, whiteSpace: "nowrap" }}>
+                  <IngredientArt name={item.name} category={item.category} size={34} jarColor={catColor(item.category)} />
+                  <span style={{ fontSize: 14, fontWeight: 600, whiteSpace: "nowrap" }}>{item.name}</span>
+                  <span style={{ fontSize: 12.5, fontWeight: 500, background: f.color, color: "var(--on-accent)", borderRadius: 999, padding: "2px 9px", whiteSpace: "nowrap" }}>
                     {freshnessLabel(f.days)}
                   </span>
                 </button>
               );
             })}
           </div>
-        </div>
+        </section>
       )}
 
-      {/* Quick-add UI lives below the toolbar (desktop) or in a bottom sheet
-          (mobile) — see below. */}
-
-      {/* Toolbar: add (desktop) + search + view switch */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap", alignItems: "center" }}>
-        {!isMobile && (
-          <Btn onClick={() => setShowAdd(v => !v)}>{showAdd ? "Close" : "+ Add"}</Btn>
-        )}
-        {onScan && (
-          <Btn variant="sage" onClick={onScan}>Scan</Btn>
-        )}
+      {/* Toolbar: search + view switch, straight on the colour */}
+      <div className="on-world" style={{ display: "flex", gap: 10, margin: "22px 0 16px", flexWrap: "wrap", alignItems: "center" }}>
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Search pantry…"
-          style={{
-            flex: 1, minWidth: 200,
-            background: C.card, border: `1.5px solid ${C.border}`,
-            borderRadius: RADIUS.md, padding: "10px 16px",
-            fontSize: 14, color: C.text,
-          }}
+          aria-label="Search pantry"
+          className="world-search"
+          style={{ flex: 1, minWidth: 200, width: "auto" }}
         />
-        <div style={{ display: "flex", gap: 4, background: C.card, border: `1.5px solid ${C.border}`, borderRadius: RADIUS.full, padding: 3 }}>
+        <div className="chip-row">
           {[["shelf", "Shelf"], ["fresh", "Freshness"], ["az", "A–Z"]].map(([id, label]) => (
             <button
               key={id}
-              className="sr-press"
+              className={`chip${view === id ? " on" : ""}`}
               onClick={() => setView(id)}
               aria-pressed={view === id}
-              style={{
-                padding: "6px 14px", borderRadius: RADIUS.full, border: "none",
-                background: view === id ? C.accentLight : "transparent",
-                color: view === id ? C.accent : C.textSub,
-                fontSize: 12, fontWeight: view === id ? 700 : 500,
-                cursor: "pointer", fontFamily: FONTS.body,
-                transition: "background 0.18s, color 0.18s, transform 0.14s ease-out",
-              }}
             >
               {label}
             </button>
@@ -469,55 +445,37 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
         </div>
       </div>
 
-      {/* Desktop: quick-add panel opens inline, right under the toolbar button */}
-      {!isMobile && showAdd && (
-        <div className="sr-pop">
-          <Card style={{ marginBottom: 24 }}>
-            <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 18, color: C.text }}>
-              Add Pantry Item
-            </h3>
-            {addFields}
-          </Card>
-        </div>
-      )}
-
       {/* Body */}
       {pantry.length === 0 ? (
         <Empty
-          icon={<IngredientArt name="jar" size={56} />}
+          icon={<IngredientArt name="jar" size={80} />}
           title="Your pantry is empty"
           subtitle="Scan a grocery receipt to fill it fast, or add your first item by hand."
           action={
             <div style={{ display: "flex", gap: 8 }}>
-              {onScan && <Btn variant="sage" onClick={onScan}>Scan a receipt</Btn>}
+              {onScan && <Btn variant="secondary" onClick={onScan}>Scan a receipt</Btn>}
               <Btn onClick={() => setShowAdd(true)}>+ Add Item</Btn>
             </div>
           }
         />
       ) : filtered.length === 0 ? (
         <Empty
-          icon={<IngredientArt name="chili" size={56} />}
+          icon={<IngredientArt name="chili" size={80} />}
           title="No items match your search"
           subtitle="Try a different term."
           action={<Btn variant="secondary" onClick={() => setSearch("")}>Clear search</Btn>}
         />
       ) : (
-        <div className="sr-panel sr-tint-4 clip" style={{ paddingBottom: 10 }}>
-          <Watermark symbol="i-garlic" size={170} style={{ left: -32, top: -22 }} />
-          <Watermark symbol="i-herb" size={190} style={{ right: -28, bottom: -36, transform: "rotate(14deg)" }} />
-
-          {groups.map(group => (
-            <div key={group.label ?? "all"} style={{ marginBottom: 22, position: "relative" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 34 }}>
+          {groups.map((group, gi) => (
+            <section key={group.label ?? "all"} className="rise" style={{ "--i": gi }}>
               {group.label && (
-                <div style={{
-                  fontSize: 10, letterSpacing: "0.24em", textTransform: "uppercase",
-                  color: C.textMuted, marginBottom: 2, display: "flex", gap: 8, alignItems: "center",
-                }}>
-                  <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: group.color }} />
-                  {group.label} · {group.items.length}
+                <div className="head">
+                  <h3>{group.label}</h3>
+                  <span className="note">{group.items.length} {group.items.length === 1 ? "jar" : "jars"}</span>
                 </div>
               )}
-              <div className="sr-shelf">
+              <div className="sr-shelf plank">
                 {group.items.map(item => (
                   <PantryCard
                     key={item.id}
@@ -531,7 +489,7 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
                   />
                 ))}
               </div>
-            </div>
+            </section>
           ))}
         </div>
       )}
@@ -555,7 +513,7 @@ export default function Pantry({ pantry, setPantry, userId, pantryCategories, pa
           />
           <div className={`sr-sheet${sheetShown ? " open" : ""}`} role="dialog" aria-modal="true" aria-label="Add pantry item">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 600, color: C.text }}>Add Pantry Item</h3>
+              <h3 style={{ fontFamily: FONTS.display, fontWeight: 400, fontSize: 28, letterSpacing: "-0.015em", color: C.head }}>Add pantry item</h3>
               <button
                 className="sr-press"
                 onClick={() => setShowAdd(false)}

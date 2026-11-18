@@ -66,7 +66,7 @@ export default function CustomTargets({ userId }) {
 
   return (
     <>
-      <p style={{ fontSize: 13, color: C.textSub, marginBottom: 16, lineHeight: 1.6 }}>
+      <p style={{ fontSize: 15, color: C.textSub, marginBottom: 18, lineHeight: 1.55, maxWidth: "62ch" }}>
         Set your own daily targets. These replace any values from the DRI
         calculator and drive the progress bars on your Dashboard and Nutrition
         page.
@@ -75,17 +75,19 @@ export default function CustomTargets({ userId }) {
       {loading ? (
         <p style={{ fontSize: 13, color: C.textMuted }}>Loading your targets…</p>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ display: "flex", flexDirection: "column" }}>
           {STANDARD_TARGETS.map(t => (
             <div
               key={t.name}
               style={{
                 display: "flex", alignItems: "center", justifyContent: "space-between",
-                gap: 12, padding: "10px 12px", borderRadius: RADIUS.md, background: C.bg,
-                borderLeft: `3px solid ${t.color}`,
+                gap: 12, padding: "10px 2px", borderBottom: `1px solid ${C.border}`,
               }}
             >
-              <div style={{ fontSize: 14, color: C.text }}>{t.name}</div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: C.text, display: "flex", alignItems: "center", gap: 9 }}>
+                <span aria-hidden="true" style={{ width: 10, height: 10, borderRadius: "50%", background: t.color }} />
+                {t.name}
+              </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <Input
                   type="number"
@@ -93,7 +95,7 @@ export default function CustomTargets({ userId }) {
                   onChange={e => setVal(t.name, e.target.value)}
                   style={{ width: 110, textAlign: "right" }}
                 />
-                <span style={{ fontSize: 13, color: C.textMuted, width: 34 }}>{t.unit}</span>
+                <span className="mono" style={{ fontSize: 12, color: C.textMuted, width: 34 }}>{t.unit}</span>
               </div>
             </div>
           ))}
@@ -103,7 +105,7 @@ export default function CustomTargets({ userId }) {
       {error && <div style={{ color: C.error, fontSize: 13, marginTop: 12 }}>{error}</div>}
 
       <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 12 }}>
-        <Btn variant="sage" onClick={save} disabled={saving || loading}>
+        <Btn onClick={save} disabled={saving || loading}>
           {saving ? "Saving…" : "Save my targets"}
         </Btn>
         {saveMsg && (

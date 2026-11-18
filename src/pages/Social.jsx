@@ -1,47 +1,58 @@
 import { useState, useEffect } from "react";
-import { C, FONTS, RADIUS } from "../theme";
-import { Card, Btn, Avatar, Loading, Page, PageHeader, Empty } from "../components/ui";
-import { Watermark } from "../components/art";
+import { C, FONTS } from "../theme";
+import { Btn, Loading, Page, PageHeader, Empty } from "../components/ui";
 import { fetchCommunityUsers, followUser, unfollowUser } from "../lib/db";
 
-function UserCard({ user, onToggle }) {
+// Each cook gets a coin in one of the house colours, picked from their name.
+const COINS = [
+  ["#F3DDCF", "#A64B2A"], ["#DCE6F2", "#37577F"], ["#DDE9DC", "#3C6A4C"],
+  ["#F4E8C6", "#8A6412"], ["#EBDCE7", "#77456B"], ["#F6DDE2", "#9C4560"],
+];
+const coinFor = name => {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return COINS[h % COINS.length];
+};
+
+function UserCard({ user, onToggle, i }) {
+  const [bg, fg] = coinFor(user.name ?? "");
   return (
-    <Card>
-      <div style={{
-        display: "flex", justifyContent: "space-between",
-        alignItems: "flex-start", marginBottom: 16,
-      }}>
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          <Avatar initials={user.avatar} size={46} color={C.accent} />
-          <div>
-            <div style={{ fontFamily: FONTS.serif, fontWeight: 600, color: C.head, fontSize: 16 }}>{user.name}</div>
-            <div style={{ fontSize: 12, color: C.textMuted }}>{user.handle}</div>
-          </div>
+    <article className="sr-panel clip rise" style={{ "--i": i, display: "flex", flexDirection: "column", gap: 18 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+        <div aria-hidden="true" style={{
+          width: 72, height: 72, borderRadius: "50%", background: bg, color: fg, flexShrink: 0,
+          display: "grid", placeItems: "center",
+          fontFamily: FONTS.display, fontWeight: 400, fontSize: 28,
+        }}>
+          {user.avatar}
         </div>
         <Btn
           variant={user.following ? "secondary" : "primary"}
           onClick={() => onToggle(user.id)}
-          style={{ padding: "7px 16px", fontSize: 13 }}
+          aria-pressed={user.following}
         >
           {user.following ? "Following" : "Follow"}
         </Btn>
       </div>
 
-      <div style={{
-        display: "flex", gap: 0,
-        borderTop: `1px solid ${C.border}`,
-        padding: "12px 0 0",
-      }}>
+      <div>
+        <div className="mono" style={{ fontSize: 12, color: C.textMuted }}>{user.handle}</div>
+        <div style={{
+          fontFamily: FONTS.display, fontWeight: 400, fontSize: 28, lineHeight: 1.1, letterSpacing: "-0.015em", color: C.head, marginTop: 4,
+        }}>
+          {user.name}
+        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: 26, borderTop: `1px solid ${C.border}`, paddingTop: 14 }}>
         {[["Followers", user.followers.toLocaleString()], ["Dishes", user.dishes]].map(([label, val]) => (
-          <div key={label} style={{ flex: 1, textAlign: "center" }}>
-            <div style={{ fontFamily: FONTS.serif, fontSize: 18, color: C.head, fontVariantNumeric: "tabular-nums" }}>
-              {val}
-            </div>
-            <div style={{ fontSize: 10, color: C.textMuted, letterSpacing: "0.14em", textTransform: "uppercase", marginTop: 2 }}>{label}</div>
+          <div key={label}>
+            <div className="bignum" style={{ fontSize: 30, color: C.head }}>{val}</div>
+            <div className="kicker" style={{ color: C.textMuted, marginTop: 5 }}>{label}</div>
           </div>
         ))}
       </div>
-    </Card>
+    </article>
   );
 }
 
@@ -88,36 +99,22 @@ export default function Social({ userId }) {
   return (
     <Page>
       <PageHeader
-        title="Community"
-        subtitle="Follow cooks and explore their menus, dishes, and recipes"
-        eyebrow="Fellow cooks"
-        color={C.c3}
-        motif="i-bread"
+        title={["Your", { em: true, text: "circle." }]}
+        subtitle="Follow cooks and explore their menus, dishes, and recipes."
+        eyebrow="Community"
+        stats={[
+          { v: followingCount, l: "following" },
+          { v: discoverCount, l: "to discover" },
+        ]}
       />
 
-      <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap", alignItems: "center" }}>
-        <div style={{
-          display: "flex", background: C.card,
-          border: `1px solid ${C.border}`,
-          borderRadius: RADIUS.md, overflow: "hidden", flexShrink: 0,
-        }}>
+      <div className="on-world" style={{ display: "flex", gap: "14px 30px", marginBottom: 22, flexWrap: "wrap", alignItems: "center" }}>
+        <div className="tabs" role="tablist" style={{ borderBottom: 0 }}>
           {[
             { id: "following", label: `Following (${followingCount})` },
             { id: "discover",  label: `Discover (${discoverCount})`  },
           ].map(t => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              style={{
-                padding: "10px 20px", border: "none",
-                background: tab === t.id ? C.accent : "transparent",
-                color: tab === t.id ? "var(--on-accent)" : C.textSub,
-                fontWeight: tab === t.id ? 600 : 400,
-                fontSize: 14, cursor: "pointer",
-                fontFamily: FONTS.body,
-                transition: "all 0.18s",
-              }}
-            >
+            <button key={t.id} role="tab" className="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}>
               {t.label}
             </button>
           ))}
@@ -127,21 +124,18 @@ export default function Social({ userId }) {
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Search people…"
-          style={{
-            flex: 1, minWidth: 200,
-            background: C.card, border: `1.5px solid ${C.border}`,
-            borderRadius: RADIUS.md, padding: "10px 16px",
-            fontSize: 14, color: C.text,
-          }}
+          aria-label="Search people"
+          className="world-search"
+          style={{ flex: 1, minWidth: 200, width: "auto" }}
         />
       </div>
 
       {loading ? (
-        <Loading label="Gathering the table…" />
+        <Loading label="Gathering the table…" size={56} style={{ color: "var(--ink)", padding: "80px 0" }} />
       ) : displayed.length === 0 ? (
         <Empty
           icon={
-            <svg viewBox="0 0 60 60" width={56} height={56} style={{ color: C.textMuted }} aria-hidden="true">
+            <svg viewBox="0 0 60 60" width={80} height={80} aria-hidden="true">
               <use href="#w-plates" />
             </svg>
           }
@@ -153,21 +147,10 @@ export default function Social({ userId }) {
           }
         />
       ) : (
-        <div className="sr-tint-3" style={{
-          position: "relative", overflow: "hidden",
-          borderRadius: 20, padding: 16,
-        }}>
-          <Watermark symbol="w-plates" size={230} style={{ right: -30, top: -48, color: C.c3 }} />
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-            gap: 18,
-            position: "relative",
-          }}>
-            {displayed.map(u => (
-              <UserCard key={u.id} user={u} onToggle={toggle} />
-            ))}
-          </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
+          {displayed.map((u, i) => (
+            <UserCard key={u.id} user={u} onToggle={toggle} i={i} />
+          ))}
         </div>
       )}
     </Page>

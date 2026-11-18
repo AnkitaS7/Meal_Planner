@@ -91,15 +91,10 @@ export default function DriCalculator({ userId }) {
 
   const UnitBtn = ({ value, label }) => (
     <button
+      type="button"
+      className={`chip${units === value ? " on" : ""}`}
+      aria-pressed={units === value}
       onClick={() => { setUnits(value); reset(); }}
-      style={{
-        flex: 1, padding: "8px 12px", fontSize: 13, fontWeight: 600,
-        cursor: "pointer", fontFamily: FONTS.body,
-        border: `1.5px solid ${units === value ? C.accent : C.border}`,
-        background: units === value ? C.accentLight : C.card,
-        color: units === value ? C.accentDark : C.textMuted,
-        borderRadius: RADIUS.md,
-      }}
     >
       {label}
     </button>
@@ -107,7 +102,7 @@ export default function DriCalculator({ userId }) {
 
   return (
     <>
-      <p style={{ fontSize: 13, color: C.textSub, marginBottom: 16, lineHeight: 1.6 }}>
+      <p style={{ fontSize: 15, color: C.textSub, marginBottom: 18, lineHeight: 1.55, maxWidth: "62ch" }}>
         Estimate your daily calorie & macronutrient targets from the USDA / National
         Academies Dietary Reference Intakes. Inputs are used only for this calculation
         and are not stored.
@@ -173,26 +168,28 @@ export default function DriCalculator({ userId }) {
       {/* Results */}
       {result && (
         <div style={{ marginTop: 20, paddingTop: 18, borderTop: `1px solid ${C.border}` }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: C.textSub, letterSpacing: 0.6, textTransform: "uppercase", marginBottom: 12 }}>
+          <div className="kicker" style={{ color: C.textMuted, marginBottom: 6 }}>
             Recommended Daily Targets
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column" }}>
             {result.targets.map(t => (
               <div key={t.nutrient_name} style={{
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-                padding: "10px 12px", borderRadius: RADIUS.md, background: C.bg,
-                borderLeft: `3px solid ${TARGET_STYLE[t.nutrient_name].color}`,
+                display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+                padding: "13px 2px", borderBottom: `1px solid ${C.border}`,
               }}>
                 <div>
-                  <div style={{ fontSize: 14, color: C.text }}>{t.nutrient_name}</div>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: C.text, display: "flex", alignItems: "center", gap: 9 }}>
+                    <span aria-hidden="true" style={{ width: 10, height: 10, borderRadius: "50%", background: TARGET_STYLE[t.nutrient_name].color }} />
+                    {t.nutrient_name}
+                  </div>
                   {t.basis && (
                     <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>{t.basis}</div>
                   )}
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <strong style={{ fontSize: 14, color: TARGET_STYLE[t.nutrient_name].color }}>
-                    {t.target_value} {t.unit}
-                  </strong>
+                  <span className="bignum" style={{ fontSize: 32, color: C.head }}>
+                    {t.target_value}<span className="mono" style={{ fontSize: 12, fontWeight: 400, letterSpacing: 0, marginLeft: 5, color: C.textMuted }}>{t.unit}</span>
+                  </span>
                   {t.range && (
                     <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
                       range {t.range[0]}–{t.range[1]} {t.unit}
@@ -211,7 +208,7 @@ export default function DriCalculator({ userId }) {
           )}
 
           <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 12 }}>
-            <Btn variant="sage" onClick={save} disabled={saving}>
+            <Btn onClick={save} disabled={saving}>
               {saving ? "Saving…" : "Save as my targets"}
             </Btn>
             {saveMsg && (

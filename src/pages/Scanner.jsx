@@ -1,7 +1,6 @@
 import { useState, useRef } from "react";
-import { C, FONTS, RADIUS, alpha, tint } from "../theme";
-import { Card, Btn, Page, PageHeader, IconCheck } from "../components/ui";
-import { Watermark } from "../components/art";
+import { C, FONTS, RADIUS } from "../theme";
+import { Btn, Page, PageHeader, IconCheck, Mark } from "../components/ui";
 import { insertPantryItem, matchIngredientAliases, addCatalogIngredient, mergePantryRows } from "../lib/db";
 import { supabase } from "../lib/supabase";
 
@@ -205,40 +204,41 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
 
   const reset = () => { setStage("idle"); setItems([]); setErrorMsg(""); setSaveError(""); };
 
+  const bigTitle = {
+    fontFamily: FONTS.display, fontWeight: 400, fontSize: "clamp(28px, 3vw, 40px)", lineHeight: 1.1, letterSpacing: "-0.015em",
+  };
+
   return (
     <Page>
       <PageHeader
-        title="Bill Scanner"
-        subtitle="Upload a grocery receipt and AI will populate your pantry automatically"
+        title={["Scan", { em: true, text: "a receipt." }]}
+        subtitle="Upload a grocery receipt and AI will populate your pantry automatically."
         eyebrow="Receipt to shelf"
-        color={C.c4}
-        motif="i-can"
       />
 
       {/* ── Idle ── */}
       {stage === "idle" && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24 }}>
-
-          <div>
+        <div className="sr-grid" style={{ alignItems: "start" }}>
+          {/* The drop zone is the receipt itself */}
+          <div className="sp-5 rise">
             <div
+              className="receipt"
+              role="button"
+              tabIndex={0}
+              aria-label="Upload a receipt image"
               onDragOver={e  => { e.preventDefault(); setDrag(true);  }}
               onDragLeave={  () => setDrag(false)}
               onDrop={e      => { e.preventDefault(); setDrag(false); handleFile(e.dataTransfer.files[0]); }}
               onClick={      () => fileRef.current?.click()}
+              onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileRef.current?.click(); } }}
               style={{
-                border: `2.5px dashed ${drag ? C.accent : C.borderDark}`,
-                borderRadius: RADIUS.xl,
-                padding: "64px 40px",
-                textAlign: "center",
-                cursor: "pointer",
-                background: drag ? C.accentLight : tint(C.c4, 7),
-                transition: "all 0.22s",
-                boxShadow: drag ? `0 0 0 4px ${alpha(C.accent, 13)}` : "none",
-                position: "relative",
-                overflow: "hidden",
+                cursor: "pointer", textAlign: "center",
+                padding: "44px 26px 64px",
+                transform: drag ? "scale(1.015)" : "none",
+                transition: "transform 0.3s var(--ease-out), background 0.2s",
+                background: drag ? "var(--c1-soft)" : undefined,
               }}
             >
-              <Watermark symbol="w-receipt" size={190} style={{ right: -40, bottom: -50, transform: "rotate(10deg)" }} />
               <input
                 ref={fileRef}
                 type="file"
@@ -246,135 +246,111 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
                 style={{ display: "none" }}
                 onChange={e => handleFile(e.target.files[0])}
               />
-              <svg viewBox="0 0 60 60" width={56} height={56} style={{ color: C.textMuted, margin: "0 auto 20px", display: "block" }} aria-hidden="true">
+              <div style={{ fontFamily: FONTS.display, fontStyle: "italic", fontSize: 20 }}>Season</div>
+              <hr className="receipt-rule" />
+              <svg viewBox="0 0 60 60" width={72} height={72} style={{ margin: "14px auto 18px", display: "block" }} aria-hidden="true">
                 <use href="#w-receipt" />
               </svg>
-              <h3 style={{ fontFamily: FONTS.display, fontSize: 24, color: C.text, marginBottom: 10 }}>
-                Upload Your Receipt
+              <h3 style={{ ...bigTitle, fontSize: "clamp(28px, 3vw, 38px)", marginBottom: 14 }}>
+                Drop your receipt here
               </h3>
-              <p style={{ color: C.textSub, fontSize: 14, lineHeight: 1.7 }}>
+              <p style={{ fontSize: 13, lineHeight: 1.7 }}>
                 Drag & drop or click to browse.<br />
                 Supports JPG, PNG, and WebP.
               </p>
+              <hr className="receipt-rule" />
+              <div style={{ fontSize: 14, color: C.textMuted }}>One photo fills the shelf.</div>
             </div>
           </div>
 
-          <Card>
-            <h3 style={{ fontFamily: FONTS.display, fontSize: 20, marginBottom: 20, color: C.text }}>
-              How It Works
-            </h3>
-            {[
-              ["Upload",       "Take a photo or scan of your grocery receipt"],
-              ["AI reads",     "AI identifies items, quantities, and categories from the image"],
-              ["Review & edit","Adjust any quantities, units, or categories before adding"],
-              ["Done",         "Selected items are saved directly to your pantry"],
-            ].map(([title, desc], i) => (
-              <div key={i} style={{ display: "flex", gap: 14, marginBottom: 18, alignItems: "flex-start" }}>
-                <div style={{
-                  width: 32, height: 32, borderRadius: "50%",
-                  background: C.accentLight, flexShrink: 0,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontFamily: FONTS.serif, fontSize: 15, color: C.accent,
-                }}>{i + 1}</div>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 14, color: C.text }}>{title}</div>
-                  <div style={{ fontSize: 13, color: C.textSub, marginTop: 3, lineHeight: 1.5 }}>{desc}</div>
+          <section className="sr-panel sp-7 rise" style={{ "--i": 1 }}>
+            <h3 className="sr-panel-h"><span>How it works</span><span>four steps</span></h3>
+            <div className="row-list">
+              {[
+                ["Upload",       "Take a photo or scan of your grocery receipt"],
+                ["AI reads",     "AI identifies items, quantities, and categories from the image"],
+                ["Review & edit","Adjust any quantities, units, or categories before adding"],
+                ["Done",         "Selected items are saved directly to your pantry"],
+              ].map(([title, desc], i) => (
+                <div key={i} style={{ display: "grid", gridTemplateColumns: "48px 1fr", gap: 14, padding: "16px 0", alignItems: "center" }}>
+                  <div className="bignum" style={{ fontSize: 40, color: "var(--c1)" }}>{i + 1}</div>
+                  <div>
+                    <div style={{ fontFamily: FONTS.display, fontWeight: 400, fontSize: 22, letterSpacing: "-0.015em" }}>{title}</div>
+                    <div style={{ fontSize: 15, opacity: 0.75, marginTop: 2, lineHeight: 1.45 }}>{desc}</div>
+                  </div>
                 </div>
-              </div>
-            ))}
-            <div style={{
-              background: C.bg, borderRadius: RADIUS.md,
-              padding: 14, marginTop: 6,
-              fontSize: 12, color: C.textMuted, lineHeight: 1.6,
-            }}>
-              Your receipt image is sent directly to the Google Gemini API and is not stored by this app.
+              ))}
             </div>
-          </Card>
+            <p className="mono" style={{ fontSize: 11.5, opacity: 0.6, lineHeight: 1.6, marginTop: 14 }}>
+              Your receipt image is sent directly to the Google Gemini API and is not stored by this app.
+            </p>
+          </section>
         </div>
       )}
 
       {/* ── Scanning ── */}
       {stage === "scanning" && (
-        <Card style={{ textAlign: "center", padding: "80px 40px" }}>
-          <div aria-hidden="true" style={{
-            width: 64, height: 64, borderRadius: "50%",
-            margin: "0 auto 24px",
-            border: `5px solid ${C.accentLight}`,
-            borderTopColor: C.accent,
-            animation: "spin 1.1s linear infinite",
-          }} />
-          <h3 style={{ fontFamily: FONTS.display, fontSize: 26, color: C.text, marginBottom: 10 }}>
+        <section className="sr-panel rise" style={{ padding: "clamp(28px, 5vw, 64px)" }} role="status">
+          <Mark size={48} spin style={{ color: "var(--c1)", marginBottom: 26 }} />
+          <h3 style={{ ...bigTitle, marginBottom: 14 }}>
             Analyzing your receipt…
           </h3>
-          <p style={{ color: C.textSub, fontSize: 14, marginBottom: 32 }}>
+          <p style={{ fontSize: 18, opacity: 0.8, marginBottom: 30 }}>
             {SCAN_STEPS[scanStep]}
           </p>
-          <div style={{ width: 300, height: 5, background: C.border, borderRadius: 3, margin: "0 auto 24px" }}>
+          <div style={{ maxWidth: 520, height: 14, background: "var(--bg)", borderRadius: 999, marginBottom: 22, overflow: "hidden" }}>
             <div style={{
-              height: "100%", background: C.accent, borderRadius: 3,
+              height: "100%", background: "var(--c1)", borderRadius: 999,
               width: `${((scanStep + 1) / SCAN_STEPS.length) * 100}%`,
-              transition: "width 0.5s ease",
+              transition: "width 0.5s var(--ease-out)",
             }} />
           </div>
-          <div style={{ display: "flex", justifyContent: "center", gap: 24 }}>
+          <div style={{ display: "flex", gap: "8px 22px", flexWrap: "wrap", fontSize: 14 }}>
             {SCAN_STEPS.map((step, i) => (
-              <div key={step} style={{
-                fontSize: 12,
-                color: i < scanStep ? C.accent : i === scanStep ? C.text : C.textMuted,
-                fontWeight: i === scanStep ? 600 : 400,
-              }}>
+              <div key={step} style={{ opacity: i <= scanStep ? 1 : 0.45, color: i < scanStep ? "var(--c1)" : "inherit" }}>
                 {i < scanStep ? "✓ " : i === scanStep ? "→ " : ""}{step}
               </div>
             ))}
           </div>
-        </Card>
+        </section>
       )}
 
       {/* ── Error ── */}
       {stage === "error" && (
-        <Card style={{ textAlign: "center", padding: "60px 40px" }}>
-          <div aria-hidden="true" style={{
-            width: 56, height: 56, borderRadius: "50%",
-            margin: "0 auto 16px",
-            background: alpha(C.error, 12), border: `2px solid ${alpha(C.error, 35)}`,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontFamily: FONTS.serif, fontSize: 28, color: C.error,
-          }}>!</div>
-          <h3 style={{ fontFamily: FONTS.display, fontSize: 22, color: C.text, marginBottom: 12 }}>
-            Scan Failed
+        <section className="sr-panel rise" style={{ padding: "clamp(28px, 5vw, 64px)", background: "var(--c2-soft)" }} role="alert">
+          <div className="kicker" style={{ marginBottom: 16 }}>Something went wrong</div>
+          <h3 style={{ ...bigTitle, marginBottom: 16 }}>
+            Scan failed
           </h3>
-          <p style={{
-            color: C.textSub, fontSize: 14, lineHeight: 1.7,
-            maxWidth: 440, margin: "0 auto 28px",
-          }}>
+          <p style={{ fontSize: 17, lineHeight: 1.6, maxWidth: 520, marginBottom: 28 }}>
             {errorMsg}
           </p>
           <Btn onClick={reset}>Try Again</Btn>
-        </Card>
+        </section>
       )}
 
       {/* ── Result ── */}
       {stage === "result" && (
         <div>
-          <Card style={{ marginBottom: 20 }}>
+          <section className="sr-panel rise" style={{ marginBottom: 16 }}>
             <div style={{
               display: "flex", justifyContent: "space-between",
-              alignItems: "center", flexWrap: "wrap", gap: 14,
+              alignItems: "flex-end", flexWrap: "wrap", gap: 18,
             }}>
               <div>
-                <h3 style={{ fontFamily: FONTS.display, fontSize: 22, color: C.text }}>
+                <div className="kicker" style={{ opacity: 0.7, marginBottom: 10 }}>
+                  {items.length} items detected · {selectedCount} selected
+                </div>
+                <h3 style={bigTitle}>
                   Scan complete
                 </h3>
-                <p style={{ color: C.textSub, fontSize: 13, marginTop: 4 }}>
-                  {items.length} items detected · {selectedCount} selected
-                </p>
               </div>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 <Btn variant="secondary" onClick={selectAll}>Select All</Btn>
                 <Btn variant="secondary" onClick={deselectAll}>Deselect All</Btn>
                 <Btn variant="secondary" onClick={reset}>Rescan</Btn>
                 <Btn
-                  variant="sage"
+                  variant="pop"
                   onClick={addToPantry}
                   disabled={selectedCount === 0 || saving}
                 >
@@ -384,20 +360,20 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
             </div>
 
             {saveError && (
-              <div style={{
-                marginTop: 14, background: "#FDECEA", border: "1px solid #F5C6CB",
-                borderRadius: RADIUS.md, padding: "10px 14px",
-                fontSize: 13, color: C.error, lineHeight: 1.6,
+              <div role="alert" style={{
+                marginTop: 16, background: "var(--c2-soft)", color: "var(--c2)",
+                borderRadius: RADIUS.md, padding: "12px 16px",
+                fontSize: 14, lineHeight: 1.6,
               }}>
                 {saveError}
               </div>
             )}
-          </Card>
+          </section>
 
           <div style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
-            gap: 12,
+            gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+            gap: 14,
           }}>
             {items.map((item, index) => {
               const isSel  = !!selected[index];
@@ -423,18 +399,19 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
 
               return (
                 <div key={index} style={{
-                  border: `2px solid ${isSel ? C.sage : C.border}`,
-                  borderRadius: RADIUS.md,
-                  padding: 14,
-                  background: isSel ? C.sageLight : C.card,
-                  transition: "border-color 0.18s, background 0.18s",
+                  boxShadow: isSel ? `inset 0 0 0 2.5px ${C.text}` : "none",
+                  borderRadius: 24,
+                  padding: 18,
+                  background: C.card, color: C.text,
+                  opacity: isSel ? 1 : 0.72,
+                  transition: "box-shadow 0.18s, opacity 0.18s",
                 }}>
 
                   {/* Scanned name + checkbox */}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                     <div style={{ flex: 1, lineHeight: 1.3 }}>
-                      <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 2 }}>Scanned</div>
-                      <div style={{ fontWeight: 600, color: C.text, fontSize: 14 }}>{item.name}</div>
+                      <div className="kicker" style={{ color: C.textMuted, marginBottom: 4 }}>Scanned</div>
+                      <div style={{ fontFamily: FONTS.display, fontWeight: 400, color: C.head, fontSize: 19, letterSpacing: "-0.02em", lineHeight: 1.1 }}>{item.name}</div>
                     </div>
                     <button
                       type="button"
@@ -443,20 +420,20 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
                       aria-label={`Include ${item.name}`}
                       onClick={() => toggleItem(index)}
                       style={{
-                        width: 22, height: 22, borderRadius: 6, flexShrink: 0, padding: 0,
-                        border: `2px solid ${isSel ? C.sage : C.borderDark}`,
-                        background: isSel ? C.sage : "transparent",
+                        width: 28, height: 28, borderRadius: "50%", flexShrink: 0, padding: 0,
+                        border: `2px solid ${isSel ? C.text : C.borderDark}`,
+                        background: isSel ? C.text : "transparent",
                         display: "flex", alignItems: "center", justifyContent: "center",
                         transition: "all 0.18s", marginLeft: 10, cursor: "pointer",
                       }}
                     >
-                      {isSel && <span style={{ color: "var(--on-accent)", display: "flex" }}><IconCheck size={13} /></span>}
+                      {isSel && <span style={{ color: C.panel, display: "flex" }}><IconCheck size={13} /></span>}
                     </button>
                   </div>
 
                   {/* Add as: matched ingredient options */}
                   <div style={{ marginBottom: 10 }}>
-                    <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>
+                    <div className="kicker" style={{ color: C.textMuted, marginBottom: 6 }}>
                       Add as{item.matches?.length ? "" : " · no close match"}
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -470,22 +447,22 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
                             onClick={() => updateItem(index, { ...item, chosenName: o.value })}
                             style={{
                               display: "flex", alignItems: "center", gap: 8, width: "100%",
-                              padding: "6px 8px", borderRadius: RADIUS.sm, cursor: "pointer",
-                              border: `1.5px solid ${active ? C.sage : C.border}`,
-                              background: active ? C.card : "transparent",
+                              padding: "9px 12px", borderRadius: 14, cursor: "pointer",
+                              border: 0,
+                              background: active ? C.bg : "transparent",
                               fontFamily: "inherit", textAlign: "left",
                             }}
                           >
                             <span style={{
                               width: 14, height: 14, borderRadius: "50%", flexShrink: 0,
-                              border: `2px solid ${active ? C.sage : C.borderDark}`,
-                              background: active ? C.sage : "transparent",
+                              border: `2px solid ${active ? C.text : C.borderDark}`,
+                              background: active ? C.text : "transparent",
                             }} />
                             <span style={{ fontSize: 13, color: C.text, flex: 1 }}>
                               {o.original ? `Keep “${o.value}”` : o.value}
                             </span>
                             {o.score != null && (
-                              <span style={{ fontSize: 11, fontWeight: 700, color: C.sage }}>
+                              <span className="mono" style={{ fontSize: 11, color: C.textMuted }}>
                                 {Math.round(o.score * 100)}%
                               </span>
                             )}
@@ -498,9 +475,8 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
                   {/* Add a not-found item to the shared ingredient catalog */}
                   {chosenIsNew && (
                     <div style={{
-                      marginBottom: 10, padding: "8px 10px",
-                      background: C.bg, borderRadius: RADIUS.sm,
-                      border: `1px dashed ${C.border}`,
+                      marginBottom: 10, padding: "10px 12px",
+                      background: C.bg, borderRadius: 14,
                     }}>
                       <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
                         <input
@@ -533,11 +509,8 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
                                   ...item,
                                   nutrients: { ...item.nutrients, [key]: e.target.value },
                                 })}
-                                style={{
-                                  width: "100%", padding: "5px 7px",
-                                  border: `1.5px solid ${C.border}`, borderRadius: RADIUS.sm,
-                                  fontSize: 12, color: C.text, background: C.card, outline: "none",
-                                }}
+                                className="sr-field"
+                                style={{ padding: "7px 10px", fontSize: 12.5, borderRadius: 10, background: C.card }}
                               />
                             ))}
                           </div>
@@ -553,22 +526,16 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
                       value={item.qty}
                       min="0"
                       onChange={e => updateItem(index, { ...item, qty: parseFloat(e.target.value) || 0 })}
-                      style={{
-                        width: 68, padding: "5px 8px",
-                        border: `1.5px solid ${C.border}`, borderRadius: RADIUS.sm,
-                        fontSize: 13, color: C.text, background: C.card,
-                        outline: "none",
-                      }}
+                      aria-label="Quantity"
+                      className="sr-field"
+                      style={{ width: 78, padding: "9px 12px", fontSize: 14, borderRadius: 12 }}
                     />
                     <select
                       value={item.unit}
                       onChange={e => updateItem(index, { ...item, unit: e.target.value })}
-                      style={{
-                        flex: 1, padding: "5px 6px",
-                        border: `1.5px solid ${C.border}`, borderRadius: RADIUS.sm,
-                        fontSize: 12, color: C.text, background: C.card,
-                        outline: "none", cursor: "pointer",
-                      }}
+                      aria-label="Unit"
+                      className="sr-field"
+                      style={{ flex: 1, width: "auto", padding: "9px 12px", fontSize: 14, borderRadius: 12 }}
                     >
                       {units.map(u => <option key={u}>{u}</option>)}
                     </select>
@@ -578,14 +545,9 @@ export default function Scanner({ setPantry, userId, pantryCategories, pantryUni
                   <select
                     value={item.category}
                     onChange={e => updateItem(index, { ...item, category: e.target.value })}
-                    style={{
-                      width: "100%", padding: "5px 8px",
-                      border: `1.5px solid ${alpha(color, 33)}`,
-                      borderRadius: RADIUS.sm,
-                      fontSize: 12, fontWeight: 600,
-                      color, background: alpha(color, 8),
-                      outline: "none", cursor: "pointer",
-                    }}
+                    aria-label="Category"
+                    className="sr-field"
+                    style={{ padding: "9px 12px", fontSize: 14, fontWeight: 600, borderRadius: 12, color }}
                   >
                     {categories.map(c => <option key={c}>{c}</option>)}
                   </select>
