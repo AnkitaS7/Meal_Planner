@@ -235,6 +235,7 @@ th, td { padding: 0; }
    ============================================================ */
 .hero {
   position: relative; isolation: isolate;
+  z-index: 2; /* sit above the page content so menus opened in the hero aren't covered */
   margin: 0 calc(50% - 50vw) 8px;
   min-height: clamp(380px, 54vh, 520px);
   display: flex; align-items: flex-end;
