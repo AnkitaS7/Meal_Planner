@@ -18,6 +18,46 @@ import {
 // modal only needs enough rows to pick from — typing narrows the rest.
 const PICKER_LIMIT = 40;
 
+// Share dropdown — plain JSX (not a nested component) so React reconciles
+// it in place instead of remounting it on every parent render.
+export const ShareDropdown = ({open, setOpen, onPDF, onEmail, onWhatsApp}) => (
+    <div style={{ position: "relative" }}>
+      <Btn onClick={() => setOpen(v => !v)} aria-expanded={open}>Share ↗</Btn>
+      {open && (
+          <>
+            <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 99 }} />
+            <div className="sr-menu" style={{
+              position: "absolute", top: "calc(100% + 8px)", right: 0,
+              background: C.card, color: C.text, borderRadius: 20, padding: 6,
+              boxShadow: "var(--shadow-lift)", zIndex: 100, minWidth: 220,
+            }}>
+              {[
+                { label: "Save as PDF",        action: onPDF      },
+                { label: "Send via email",     action: onEmail     },
+                { label: "Share on WhatsApp",  action: onWhatsApp  },
+              ].map(({ label, action }) => (
+                  <button
+                      key={label}
+                      onClick={action}
+                      style={{
+                        display: "block", width: "100%", padding: "12px 16px",
+                        background: "none", cursor: "pointer", border: "none", borderRadius: 14,
+                        fontSize: 14, fontWeight: 500, color: C.text,
+                        fontFamily: FONTS.body, textAlign: "left",
+                        transition: "background 0.15s",
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = C.bg}
+                      onMouseLeave={e => e.currentTarget.style.background = "none"}
+                  >
+                    {label}
+                  </button>
+              ))}
+            </div>
+          </>
+      )}
+    </div>
+);
+
 export default function Planner({ dishes, userId }) {
   const [weekStart, setWeekStart] = useState(getWeekStart);
   const weekDates = getWeekDates(weekStart);
@@ -164,46 +204,6 @@ export default function Planner({ dishes, userId }) {
     window.open(`https://wa.me/?text=${encodeURIComponent(buildPlanText())}`, "_blank");
   };
 
-  // Share dropdown — plain JSX (not a nested component) so React reconciles
-  // it in place instead of remounting it on every parent render.
-  const shareDropdown = (
-    <div style={{ position: "relative" }}>
-      <Btn onClick={() => setShowExport(v => !v)} aria-expanded={showExport}>Share ↗</Btn>
-      {showExport && (
-        <>
-          <div onClick={() => setShowExport(false)} style={{ position: "fixed", inset: 0, zIndex: 99 }} />
-          <div className="sr-menu" style={{
-            position: "absolute", top: "calc(100% + 8px)", right: 0,
-            background: C.card, color: C.text, borderRadius: 20, padding: 6,
-            boxShadow: "var(--shadow-lift)", zIndex: 100, minWidth: 220,
-          }}>
-            {[
-              { label: "Save as PDF",        action: exportPDF      },
-              { label: "Send via email",     action: shareEmail     },
-              { label: "Share on WhatsApp",  action: shareWhatsApp  },
-            ].map(({ label, action }) => (
-              <button
-                key={label}
-                onClick={action}
-                style={{
-                  display: "block", width: "100%", padding: "12px 16px",
-                  background: "none", cursor: "pointer", border: "none", borderRadius: 14,
-                  fontSize: 14, fontWeight: 500, color: C.text,
-                  fontFamily: FONTS.body, textAlign: "left",
-                  transition: "background 0.15s",
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = C.bg}
-                onMouseLeave={e => e.currentTarget.style.background = "none"}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
-
   // Dish cell, shared between mobile and desktop layouts (called as a plain
   // function so the cells keep their DOM between renders)
   const renderDishCell = (day, meal) => {
@@ -319,7 +319,8 @@ export default function Planner({ dishes, userId }) {
           <Btn variant="secondary" onClick={() => shiftWeek(-1)} aria-label="Previous week">←<span className="hide-sm"> Previous</span></Btn>
           <Btn variant="secondary" onClick={goToToday}>Today</Btn>
           <Btn variant="secondary" onClick={() => shiftWeek(1)} aria-label="Next week"><span className="hide-sm">Next </span>→</Btn>
-          {shareDropdown}
+          <ShareDropdown open={showExport} setOpen={setShowExport}
+                         onPDF={exportPDF} onEmail={shareEmail} onWhatsApp={shareWhatsApp} />
         </div>
       }
     />

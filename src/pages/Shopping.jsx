@@ -8,6 +8,7 @@ import {
   addManualShoppingItem, toggleManualShoppingItem, deleteManualShoppingItem,
   insertPantryItem, getWeekStart, mergePantryRows,
 } from "../lib/db";
+import {ShareDropdown} from "./Planner.jsx";
 
 export default function Shopping({ userId, setPantry }) {
   const weekStart = getWeekStart();
@@ -269,46 +270,8 @@ export default function Shopping({ userId, setPantry }) {
           { v: left, l: "left to get" },
           { v: `${doneItems}/${totalItems}`, l: "collected" },
         ]}
-        action={
-          <div style={{ position: "relative" }}>
-            <Btn onClick={() => setShowExport(v => !v)} aria-expanded={showExport}>Share ↗</Btn>
-            {showExport && (
-              <>
-                <div
-                  onClick={() => setShowExport(false)}
-                  style={{ position: "fixed", inset: 0, zIndex: 99 }}
-                />
-                <div className="sr-menu" style={{
-                  position: "absolute", top: "calc(100% + 8px)", right: 0,
-                  background: C.card, color: C.text, borderRadius: 20, padding: 6,
-                  boxShadow: "var(--shadow-lift)", zIndex: 100, minWidth: 220,
-                }}>
-                  {[
-                    { label: "Save as PDF",       action: exportPDF     },
-                    { label: "Send via email",    action: shareEmail    },
-                    { label: "Share on WhatsApp", action: shareWhatsApp },
-                  ].map(({ label, action }) => (
-                    <button
-                      key={label}
-                      onClick={action}
-                      style={{
-                        display: "block", width: "100%", padding: "12px 16px",
-                        background: "none", cursor: "pointer", border: "none", borderRadius: 14,
-                        fontSize: 14, fontWeight: 500, color: C.text,
-                        fontFamily: FONTS.body, textAlign: "left",
-                        transition: "background 0.15s",
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.background = C.bg}
-                      onMouseLeave={e => e.currentTarget.style.background = "none"}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        }
+        action={<ShareDropdown open={showExport} setOpen={setShowExport}
+                               onPDF={exportPDF} onEmail={shareEmail} onWhatsApp={shareWhatsApp} />}
       />
 
       {loading ? (
