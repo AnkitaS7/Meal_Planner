@@ -116,7 +116,7 @@ export default function UpdatePassword({ onDone }) {
             onChange={e => setPassword(e.target.value)}
             required placeholder="••••••••"
             autoComplete="new-password"
-            style={authInputStyle}
+            className="sr-field" style={authInputStyle}
           />
         </div>
 
@@ -127,7 +127,7 @@ export default function UpdatePassword({ onDone }) {
             onChange={e => setConfirm(e.target.value)}
             required placeholder="••••••••"
             autoComplete="new-password"
-            style={authInputStyle}
+            className="sr-field" style={authInputStyle}
           />
         </div>
 

@@ -4,8 +4,8 @@ import {
   PieChart, Pie, Cell,
 } from "recharts";
 import { C, FONTS, alpha } from "../theme";
-import { Tag, Loading, Page, PageHeader, IconX } from "../components/ui";
-import { DishArt, SpiceMound, SPICE, NUTRIENT_SPICE } from "../components/art";
+import { Loading, Page, PageHeader, IconX } from "../components/ui";
+import { DishArt, SPICE, NUTRIENT_SPICE } from "../components/art";
 import { DAYS } from "../data/mockData";
 import { fetchNutrientTargets, fetchWeeklyPlan, getWeekStart } from "../lib/db";
 
@@ -29,18 +29,17 @@ function WeekSpark({ values, todayIdx, color }) {
   return (
     <div
       aria-hidden="true"
-      style={{
-        display: "flex", gap: 3, alignItems: "flex-end",
-        justifyContent: "center", height: 22, marginTop: 8,
-      }}
+      style={{ display: "flex", gap: 4, alignItems: "flex-end", height: 54, marginTop: 16 }}
     >
       {values.map((v, i) => (
         <span
           key={i}
           style={{
-            width: 6, borderRadius: 2,
-            height: Math.max(3, Math.round((v / max) * 20)),
-            background: i === todayIdx ? color : alpha(color, 25),
+            flex: 1, borderRadius: 6,
+            height: Math.max(5, Math.round((v / max) * 54)),
+            background: i === todayIdx ? color : alpha(color, 26),
+            transformOrigin: "bottom",
+            animation: `pour 0.8s var(--ease-out) ${0.2 + i * 0.05}s both`,
           }}
         />
       ))}
@@ -163,136 +162,128 @@ export default function Nutrients({ dishes, userId }) {
     .map(n => ({ ...n, pct: Math.round((n.current / n.target) * 100) }))
     .sort((a, b) => a.pct - b.pct)[0];
 
+  const cal = nutrientData.find(n => n.name === "Calories");
+  const sentence = { fontFamily: FONTS.display, fontWeight: 400, fontSize: "clamp(21px, 2vw, 27px)", lineHeight: 1.25, letterSpacing: "-0.015em", margin: 0 };
+
   return (
     <Page>
       <PageHeader
-        title="The spice stall"
+        title={["Your", { em: true, text: "macros." }]}
         subtitle={`${dateStr}${calPct != null ? ` · ${calPct}% of today's calories` : ""}`}
-        eyebrow="Nourishment"
-        color={C.c2}
-        motif="i-herb"
+        eyebrow="Nutrition tracking"
+        stats={cal ? [
+          { v: Math.round(cal.current).toLocaleString(), l: "kcal today" },
+          { v: calPct != null ? `${calPct}%` : "—", l: "of your target" },
+        ] : undefined}
       />
 
       <div className="sr-grid">
-        {/* ---- HERO: the stall — five mounds, a week under each ---- */}
-        <section className="sr-panel sr-tint-2 clip sp-12">
-          <svg
-            className="sr-wm" viewBox="0 0 120 70" width={360} height={210}
-            style={{ left: -64, bottom: -52 }} aria-hidden="true"
-          >
-            <use href="#moundShape" fill="currentColor" />
-          </svg>
-
-          <h3 className="sr-panel-h">
-            <span>Today's intake</span>
-            <span>a week under each mound</span>
-          </h3>
-
-          {loading ? (
-            <Loading label="Raising the stall…" size={30} style={{ padding: "14px 0" }} />
-          ) : nutrientData.length === 0 ? (
-            <p style={{ fontFamily: FONTS.serif, fontStyle: "italic", fontSize: 14, color: C.textSub }}>
-              Set nutrition targets in your profile to raise the stall.
+        {/* ---- TODAY: one tile per nutrient, the week underneath ---- */}
+        {loading ? (
+          <div className="sp-12"><Loading label="Adding it up…" size={56} style={{ padding: "70px 0", color: "var(--ink)" }} /></div>
+        ) : nutrientData.length === 0 ? (
+          <section className="sr-panel sp-12">
+            <p style={{ ...sentence, maxWidth: "26ch" }}>
+              Set nutrition targets in your profile to start tracking.
             </p>
-          ) : (
-            <div style={{
-              display: "flex", gap: 18, alignItems: "flex-end",
-              flexWrap: "wrap", position: "relative",
-            }}>
-              {nutrientData.map((n, i) => (
-                <div key={n.name} style={{ flex: "1 1 128px", minWidth: 108, maxWidth: 210 }}>
-                  <SpiceMound
-                    name={n.name} current={n.current} target={n.target}
-                    unit={n.unit} color={n.color} sub={SPICE_NAME[n.name]}
-                    pourDelay={0.15 + i * 0.12}
-                    style={{ flex: "none", width: "100%", minWidth: 0, maxWidth: "none" }}
-                  />
+          </section>
+        ) : (
+          <div className="sp-12" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
+            {nutrientData.map((n, i) => {
+              const pct = n.target > 0 ? Math.round((n.current / n.target) * 100) : 0;
+              return (
+                <section key={n.name} className="sr-panel rise" style={{ "--i": i }} aria-label={`${n.name}: ${n.current} of ${n.target} ${n.unit}`}>
+                  <div className="kicker" style={{ display: "flex", justifyContent: "space-between", color: C.textMuted }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                      <span aria-hidden="true" style={{ width: 10, height: 10, borderRadius: "50%", background: n.color }} />
+                      {n.name}
+                    </span>
+                    <span>{pct}%</span>
+                  </div>
+                  <div className="bignum" style={{ fontSize: 42, color: C.head, marginTop: 18 }}>
+                    {Number.isInteger(n.current) ? n.current.toLocaleString() : Number(n.current).toFixed(1)}
+                  </div>
+                  <div className="mono" style={{ fontSize: 12, color: C.textMuted, marginTop: 8 }}>
+                    of {Number(n.target).toLocaleString()} {n.unit}
+                  </div>
+                  <div className="meter-track" style={{ marginTop: 14 }}>
+                    <div className="meter-fill" style={{ width: `${Math.max(Math.min(pct, 100), 1.5)}%`, "--mc": n.color, "--d": `${0.3 + i * 0.1}s` }} />
+                  </div>
                   <WeekSpark
                     values={weekData.map(d => d[WEEK_KEY[n.name]] ?? 0)}
                     todayIdx={todayIdx}
                     color={n.color}
                   />
-                </div>
-              ))}
-            </div>
-          )}
+                  <div className="kicker" style={{ color: C.textMuted, marginTop: 8, fontSize: 9.5, display: "flex", justifyContent: "space-between" }}>
+                    <span>Mon</span><span>this week</span><span>Sun</span>
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+        )}
 
-          {/* The read of the day */}
-          {!loading && nutrientData.length > 0 && (
-            <div style={{
-              borderTop: `1px solid ${C.border}`, marginTop: 18, paddingTop: 14,
-              position: "relative",
-            }}>
-              <div style={{
-                fontSize: 10, letterSpacing: "0.24em", textTransform: "uppercase",
-                color: C.textMuted, fontWeight: 600, marginBottom: 6,
-              }}>
-                Read of the day
-              </div>
-              <p style={{
-                margin: 0, fontFamily: FONTS.serif, fontStyle: "italic",
-                fontSize: 15, lineHeight: 1.55, color: C.textSub, maxWidth: "64ch",
-              }}>
-                {!weekPlanned ? (
-                  <>Nothing planned this week yet — fill the planner and the mounds rise with it.</>
-                ) : (
-                  <>
-                    {bestProtein && bestProtein.protein > 0 && (
-                      <>
-                        Protein peaks at{" "}
-                        <b style={{ color: C.success, fontStyle: "normal" }}>
-                          {bestProtein.protein} g on {DAY_FULL[bestProtein.day] ?? bestProtein.day}
-                        </b>
-                        {" "}— the week's strongest plate.{" "}
-                      </>
-                    )}
-                    {behind && (behind.pct < 100 ? (
-                      <>{behind.name} sits furthest from today's target, at {behind.pct}%.</>
-                    ) : (
-                      <>Every mound is full today.</>
-                    ))}
-                  </>
-                )}
-              </p>
-            </div>
-          )}
-        </section>
+        {/* ---- The read of the day ---- */}
+        {!loading && nutrientData.length > 0 && (
+          <section className="sr-panel pop sp-5 rise" style={{ "--i": 2, display: "flex", flexDirection: "column", justifyContent: "center", gap: 16 }}>
+            <div className="kicker">Read of the day</div>
+            <p style={sentence}>
+              {!weekPlanned ? (
+                <>Nothing planned this week yet — fill the planner and the numbers rise with it.</>
+              ) : (
+                <>
+                  {bestProtein && bestProtein.protein > 0 && (
+                    <>
+                      Protein peaks at{" "}
+                      <span className="accent">
+                        {bestProtein.protein} g on {DAY_FULL[bestProtein.day] ?? bestProtein.day}
+                      </span>
+                      {" "}— the week's strongest plate.{" "}
+                    </>
+                  )}
+                  {behind && (behind.pct < 100 ? (
+                    <>{behind.name} sits furthest from today's target, at {behind.pct}%.</>
+                  ) : (
+                    <>Every target is met today.</>
+                  ))}
+                </>
+              )}
+            </p>
+          </section>
+        )}
 
         {/* ---- Weekly calories ---- */}
-        <section className="sr-panel sp-7">
-          <h3 className="sr-panel-h"><span>The week in calories</span></h3>
-          <ResponsiveContainer width="100%" height={210}>
-            <BarChart data={weekData} barSize={28}>
-              <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
-              <XAxis dataKey="day" tick={{ fontSize: 12, fill: C.textMuted, fontFamily: FONTS.body }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: C.textMuted, fontFamily: FONTS.body }} axisLine={false} tickLine={false} />
-              <Tooltip {...chartTooltipStyle} />
-              <Bar dataKey="calories" fill={C.accent} radius={[6, 6, 0, 0]} />
+        <section className={`sr-panel rise ${!loading && nutrientData.length > 0 ? "sp-7" : "sp-12"}`} style={{ "--i": 3 }}>
+          <h3 className="sr-panel-h"><span>The week in calories</span><span>kcal per day</span></h3>
+          <ResponsiveContainer width="100%" height={230}>
+            <BarChart data={weekData} barCategoryGap="18%">
+              <CartesianGrid stroke="var(--line)" vertical={false} />
+              <XAxis dataKey="day" tick={{ fontSize: 11, fill: "var(--faint)", fontFamily: "var(--font-body)" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: "var(--faint)", fontFamily: "var(--font-body)" }} axisLine={false} tickLine={false} width={44} />
+              <Tooltip {...chartTooltipStyle} cursor={{ fill: "var(--bg)" }} />
+              <Bar dataKey="calories" fill="var(--c1)" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </section>
 
         {/* ---- Macro split ---- */}
-        <section className="sr-panel sp-5" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <h3 className="sr-panel-h" style={{ alignSelf: "stretch" }}>
-            <span>Macro split · today</span>
-          </h3>
+        <section className="sr-panel sp-12 rise" style={{ "--i": 4, display: "flex", gap: "clamp(20px, 4vw, 60px)", alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ flex: "1 1 220px" }}>
+            <h3 className="sr-panel-h" style={{ marginBottom: 8 }}><span>Macro split</span></h3>
+            <p style={{ color: C.textSub, fontSize: 16, maxWidth: "32ch" }}>How today's protein, carbs and fat divide the plate.</p>
+          </div>
           {macroData.every(m => !m.value) ? (
-            <p style={{
-              fontFamily: FONTS.serif, fontStyle: "italic", fontSize: 14,
-              color: C.textSub, margin: "auto 0", textAlign: "center",
-            }}>
-              No macros on the plate yet today.
-            </p>
+            <p style={{ ...sentence, flex: "2 1 300px" }}>No macros on the plate yet today.</p>
           ) : (
             <>
-              <PieChart width={180} height={180}>
+              <PieChart width={210} height={210}>
                 <Pie
                   data={macroData}
-                  cx={90} cy={90}
-                  innerRadius={52} outerRadius={82}
+                  cx={105} cy={105}
+                  innerRadius={58} outerRadius={100}
                   dataKey="value"
-                  paddingAngle={4}
+                  paddingAngle={3}
+                  stroke="none"
                 >
                   {macroData.map((entry, i) => (
                     <Cell key={i} fill={entry.color} />
@@ -300,11 +291,16 @@ export default function Nutrients({ dishes, userId }) {
                 </Pie>
                 <Tooltip {...chartTooltipStyle} />
               </PieChart>
-              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
+              <div style={{ display: "flex", gap: "clamp(18px, 3vw, 44px)", flexWrap: "wrap", flex: "1 1 300px" }}>
                 {macroData.map(m => (
-                  <div key={m.name} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ width: 10, height: 10, borderRadius: 3, background: m.color }} />
-                    <span style={{ fontSize: 12, color: C.textSub }}>{m.name} · {m.value}g</span>
+                  <div key={m.name}>
+                    <div className="bignum" style={{ fontSize: 38, color: C.head }}>
+                      {m.value}<span className="mono" style={{ fontSize: 14, fontWeight: 400, letterSpacing: 0, marginLeft: 4, color: C.textMuted }}>g</span>
+                    </div>
+                    <div className="kicker" style={{ color: C.textMuted, marginTop: 8, display: "flex", alignItems: "center", gap: 8 }}>
+                      <span aria-hidden="true" style={{ width: 10, height: 10, borderRadius: "50%", background: m.color }} />
+                      {m.name}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -313,16 +309,20 @@ export default function Nutrients({ dishes, userId }) {
         </section>
 
         {/* ---- Per-dish comparison ---- */}
-        <section className="sr-panel sp-12">
-          <h3 className="sr-panel-h">
-            <span>Compare dishes</span>
-            <span>{compDishes.length}/3</span>
-          </h3>
+        <section className="sp-12 rise" style={{ "--i": 5, marginTop: 18 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 16, marginBottom: 18, color: "var(--ink)" }}>
+            <h3 style={{
+              fontFamily: FONTS.display, fontWeight: 400, fontSize: "clamp(26px, 2.6vw, 34px)", letterSpacing: "-0.015em", lineHeight: 1.1,
+            }}>
+              Compare <span className="accent">dishes</span>
+            </h3>
+            <span className="kicker">{compDishes.length}/3</span>
+          </div>
 
           <div style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
-            gap: 16,
+            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+            gap: 14,
             alignItems: "start",
           }}>
             {/* Filled dish cards */}
@@ -334,45 +334,33 @@ export default function Nutrients({ dishes, userId }) {
                 { key: "fiber",   label: "Fiber",   unit: "g", color: SPICE.matcha   },
               ];
               return (
-                <div key={d.id} style={{
-                  border: `1.5px solid ${C.border}`, borderRadius: 14,
-                  padding: 20, background: C.card,
-                  display: "flex", flexDirection: "column", gap: 12,
-                  position: "relative",
+                <div key={d.id} className="sr-panel" style={{
+                  display: "flex", flexDirection: "column", gap: 14,
+                  animation: "pop-in 0.5s var(--ease-spring) both",
                 }}>
                   <button
                     onClick={() => removeDish(d.id)}
                     aria-label={`Remove ${d.name} from comparison`}
-                    style={{
-                      position: "absolute", top: 8, right: 8,
-                      background: "none", border: "none",
-                      color: C.textMuted, cursor: "pointer",
-                      lineHeight: 1, padding: 8,
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.color = C.error; }}
-                    onMouseLeave={e => { e.currentTarget.style.color = C.textMuted; }}
+                    className="slot-x"
+                    style={{ top: 12, right: 12 }}
                   ><IconX /></button>
 
-                  <div style={{ textAlign: "center" }}>
-                    <DishArt dish={d} size={56} style={{ margin: "0 auto 8px", display: "block" }} />
-                    <div style={{
-                      fontFamily: FONTS.serif, fontSize: 15, color: C.head,
-                      lineHeight: 1.3, marginBottom: 4,
-                    }}>{d.name}</div>
-                    <Tag color={C.accent}>{d.category}</Tag>
+                  <div style={{ display: "flex", alignItems: "center", gap: 14, paddingRight: 30 }}>
+                    <DishArt dish={d} size={64} />
+                    <div style={{ minWidth: 0 }}>
+                      <div className="kicker" style={{ color: C.textMuted }}>{d.category}</div>
+                      <div style={{
+                        fontFamily: FONTS.display, fontWeight: 400, fontSize: 20, color: C.head,
+                        lineHeight: 1.05, letterSpacing: "-0.015em",
+                      }}>{d.name}</div>
+                    </div>
                   </div>
 
-                  <div style={{
-                    textAlign: "center", padding: "12px 0",
-                    borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`,
-                  }}>
-                    <div style={{
-                      fontSize: 28, fontWeight: 700, color: SPICE.saffron,
-                      fontFamily: FONTS.display, fontVariantNumeric: "tabular-nums",
-                    }}>
+                  <div>
+                    <div className="bignum" style={{ fontSize: 40, color: C.head }}>
                       {d.nutrients.calories}
                     </div>
-                    <div style={{ fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: 0.5 }}>kcal</div>
+                    <div className="kicker" style={{ color: C.textMuted, marginTop: 6 }}>kcal</div>
                   </div>
 
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -382,10 +370,10 @@ export default function Nutrients({ dishes, userId }) {
                       return (
                         <div key={key}>
                           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                            <span style={{ fontSize: 11, color: C.textSub, fontWeight: 600 }}>{label}</span>
-                            <span style={{ fontSize: 11, color: C.text, fontWeight: 700 }}>{val}{unit}</span>
+                            <span className="kicker" style={{ color: C.textMuted }}>{label}</span>
+                            <span className="mono" style={{ fontSize: 12, color: C.text, fontWeight: 600 }}>{val}{unit}</span>
                           </div>
-                          <div style={{ height: 6, background: "var(--mound)", borderRadius: 4, overflow: "hidden" }}>
+                          <div style={{ height: 10, background: "var(--bg)", borderRadius: 999, overflow: "hidden" }}>
                             <div style={{
                               height: "100%", width: `${pct}%`,
                               background: color, borderRadius: 4,
@@ -404,11 +392,8 @@ export default function Nutrients({ dishes, userId }) {
             {compDishes.length < 3 && (
               <div>
                 {isSearching ? (
-                  <div style={{
-                    border: `1.5px solid ${C.accent}`, borderRadius: 14,
-                    background: C.card, overflow: "hidden",
-                  }}>
-                    <div style={{ padding: "12px 14px", borderBottom: `1px solid ${C.border}` }}>
+                  <div className="sr-panel" style={{ padding: 0, overflow: "hidden" }}>
+                    <div style={{ padding: "16px 18px", borderBottom: `1px solid ${C.border}` }}>
                       <input
                         autoFocus
                         value={compSearch}
@@ -416,7 +401,7 @@ export default function Nutrients({ dishes, userId }) {
                         placeholder="Search dishes…"
                         style={{
                           width: "100%", border: "none", outline: "none",
-                          fontSize: 13, color: C.text, background: "transparent",
+                          fontSize: 16, color: C.text, background: "transparent",
                           fontFamily: FONTS.body,
                         }}
                       />
@@ -459,20 +444,21 @@ export default function Nutrients({ dishes, userId }) {
                 ) : (
                   <button
                     onClick={() => setIsSearching(true)}
+                    className="on-world"
                     style={{
-                      width: "100%", minHeight: 200,
-                      border: `2px dashed ${C.border}`, borderRadius: 14,
+                      width: "100%", minHeight: 220,
+                      border: "1px dashed var(--line-strong)", borderRadius: 20,
                       background: "none", cursor: "pointer",
                       display: "flex", flexDirection: "column",
-                      alignItems: "center", justifyContent: "center", gap: 8,
-                      color: C.textMuted, fontFamily: FONTS.body,
-                      transition: "all 0.18s",
+                      alignItems: "center", justifyContent: "center", gap: 10,
+                      color: "var(--ink)", fontFamily: FONTS.body,
+                      transition: "background 0.2s",
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = C.accent; e.currentTarget.style.color = C.accent; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = C.border;  e.currentTarget.style.color = C.textMuted; }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "var(--panel)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "none"; }}
                   >
-                    <span style={{ fontSize: 28, lineHeight: 1 }}>+</span>
-                    <span style={{ fontSize: 13 }}>
+                    <span style={{ fontSize: 34, lineHeight: 1, fontWeight: 300 }}>+</span>
+                    <span style={{ fontSize: 15, fontWeight: 600 }}>
                       {compDishes.length === 0 ? "Add a dish" : "Compare another"}
                     </span>
                   </button>

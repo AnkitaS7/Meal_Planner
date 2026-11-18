@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { C, RADIUS, FONTS } from "../theme";
+import { C, FONTS } from "../theme";
 import { supabase } from "../lib/supabase";
 import {
   AuthShell, AuthNotice, AuthButton, AuthLink,
@@ -73,49 +73,44 @@ export default function Login() {
     <AuthShell>
       {mode === "forgot" ? (
         <div style={{ marginBottom: 24, position: "relative" }}>
-          <div style={{ fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 6 }}>
+          <h2 style={{ fontFamily: FONTS.display, fontWeight: 400, fontSize: 32, letterSpacing: "-0.015em", color: C.head, lineHeight: 1.1, marginBottom: 12 }}>
             Reset your password
-          </div>
-          <div style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.5 }}>
+          </h2>
+          <div style={{ fontSize: 15, color: C.textSub, lineHeight: 1.5 }}>
             Enter your email and we'll send you a link to set a new password.
           </div>
         </div>
       ) : (
-        /* Mode tabs */
-        <div style={{
-          display: "flex", background: C.bg, borderRadius: RADIUS.md,
-          padding: 4, marginBottom: 28,
-        }}>
-          {[["signin", "Sign In"], ["signup", "Sign Up"]].map(([m, label]) => (
-            <button
-              key={m}
-              onClick={() => switchMode(m)}
-              style={{
-                flex: 1, padding: "9px 0", border: "none",
-                borderRadius: RADIUS.sm,
-                background: mode === m ? C.card : "transparent",
-                color: mode === m ? C.text : C.textMuted,
-                fontWeight: mode === m ? 600 : 400,
-                fontSize: 14, cursor: "pointer",
-                fontFamily: FONTS.body,
-                boxShadow: mode === m ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
-                transition: "all 0.18s",
-              }}
-            >
-              {label}
-            </button>
-          ))}
+        /* The headline says which mode you're in; the chips switch it */
+        <div style={{ marginBottom: 28 }}>
+          <h2 style={{
+            fontFamily: FONTS.display, fontWeight: 400, fontSize: 36, letterSpacing: "-0.015em", lineHeight: 1.1,
+            color: C.head, marginBottom: 20,
+          }}>
+            {mode === "signin" ? "Welcome back." : "Pull up a chair."}
+          </h2>
+          <div role="tablist" className="chip-row">
+            {[["signin", "Sign In"], ["signup", "Sign Up"]].map(([m, label]) => (
+              <button
+                key={m} type="button" role="tab" aria-selected={mode === m}
+                className={`chip${mode === m ? " on" : ""}`}
+                onClick={() => switchMode(m)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
-      <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
         <div>
           <label style={authLabelStyle}>Email</label>
           <input
             type="email" value={email}
             onChange={e => setEmail(e.target.value)}
             required placeholder="you@example.com"
-            style={authInputStyle}
+            className="sr-field" style={authInputStyle}
           />
         </div>
 
@@ -133,7 +128,7 @@ export default function Login() {
               type="password" value={password}
               onChange={e => setPassword(e.target.value)}
               required placeholder="••••••••"
-              style={authInputStyle}
+              className="sr-field" style={authInputStyle}
             />
           </div>
         )}

@@ -1,73 +1,63 @@
-import { C, FONTS, RADIUS, SHADOW } from "../theme";
-import { SvgDefs, Watermark } from "./art";
+import { C, FONTS, RADIUS } from "../theme";
+import { DishArt } from "./art";
+import { HeroTitle } from "./ui";
+import { SCENES, photoUrl } from "../lib/photos";
 
-// Shared chrome for the signed-out screens (sign in / sign up / password reset)
-// so they stay visually identical without each page re-declaring the card.
+// Shared chrome for the signed-out screens (sign in / sign up / password reset).
 
-export const authInputStyle = {
-  width: "100%",
-  border: `1.5px solid ${C.border}`,
-  borderRadius: RADIUS.md,
-  padding: "11px 14px",
-  fontSize: 14,
-  color: C.text,
-  fontFamily: FONTS.body,
-  outline: "none",
-  boxSizing: "border-box",
-};
+export const authInputStyle = {};   // fields take their look from .sr-field
 
 export const authLabelStyle = {
-  display: "block", fontSize: 12, fontWeight: 600,
-  color: C.textSub, marginBottom: 6, letterSpacing: 0.4,
-  textTransform: "uppercase",
+  display: "block", fontSize: 13, fontWeight: 500,
+  color: C.textSub, marginBottom: 6,
 };
 
+// Three polaroids from the cookbook, tucked under the headline.
+const SHELF = [
+  ["breakfast", "Masala Dosa"],
+  ["lunch", "Vegetable Biryani"],
+  ["tea time", "Masala Chai"],
+];
+
+// The opening page: a table of food photographed from above, fading into
+// the linen, with the promise on the left and the form on a paper card.
 export const AuthShell = ({ children }) => (
-  <div style={{
-    minHeight: "100vh",
-    background: C.bg,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  }}>
-    <SvgDefs />
-    <div style={{
-      background: C.card,
-      borderRadius: RADIUS.xl,
-      boxShadow: SHADOW.lg,
-      padding: "48px 40px",
-      width: "100%",
-      maxWidth: 400,
-      position: "relative",
-      overflow: "hidden",
-    }}>
-      <Watermark symbol="w-steam" size={170} style={{ right: -34, top: -30 }} />
-      {/* Brand */}
-      <div style={{ textAlign: "center", marginBottom: 32, position: "relative" }}>
-        <div style={{
-          fontFamily: FONTS.display, fontSize: 26, fontWeight: 800,
-          color: C.accent, letterSpacing: "0.3em", textTransform: "uppercase",
-        }}>
-          Season
-        </div>
-        <div style={{
-          fontSize: 13, color: C.textMuted, marginTop: 4,
-          letterSpacing: 1.5, textTransform: "uppercase",
-        }}>
-          Meal Planner
-        </div>
+  <div className="auth-wrap">
+    <div className="auth-bg" aria-hidden="true">
+      <img src={photoUrl(SCENES.signin, 2200)} alt="" />
+    </div>
+    <div className="auth-top">
+      <span className="wordmark" style={{ cursor: "default" }}>Season<span className="sub">home kitchen</span></span>
+    </div>
+
+    <div className="auth-poster">
+      <div className="eyebrow">the week's cooking, sorted</div>
+      <HeroTitle className="auth-title" lines={["Eat well,", { em: true, text: "plan less." }]} />
+      <p className="hero-sub" style={{ marginTop: 0, fontSize: 18, maxWidth: "40ch" }}>
+        Plan the week's menu, keep track of what's on your shelves, and let
+        the market list and the macros write themselves.
+      </p>
+      <div className="auth-shelf" aria-hidden="true">
+        {SHELF.map(([meal, name], i) => (
+          <div key={name} className="pola" style={{ "--i": i }}>
+            <div className="ph"><DishArt dish={{ name }} size={130} round={false} /></div>
+            <div className="meal">{meal}</div>
+          </div>
+        ))}
       </div>
+    </div>
+
+    <div className="auth-card rise">
       {children}
     </div>
   </div>
 );
 
 export const AuthNotice = ({ tone = "error", children }) => (
-  <div style={{
-    background: `color-mix(in srgb, var(${tone === "error" ? "--c2" : "--c4"}) 10%, var(--panel))`,
-    border: `1px solid color-mix(in srgb, var(${tone === "error" ? "--c2" : "--c4"}) 35%, transparent)`,
-    borderRadius: RADIUS.md, padding: "10px 14px",
-    fontSize: 13, color: tone === "error" ? C.error : C.success,
+  <div role={tone === "error" ? "alert" : "status"} style={{
+    background: tone === "error" ? "var(--c2-soft)" : "var(--c4-soft)",
+    borderRadius: 6, padding: "12px 16px",
+    fontSize: 14, color: tone === "error" ? C.error : C.success,
   }}>
     {children}
   </div>
@@ -77,15 +67,8 @@ export const AuthButton = ({ loading, children, ...rest }) => (
   <button
     {...rest}
     disabled={loading}
-    style={{
-      background: loading ? C.border : C.accent,
-      color: "var(--on-accent)", border: "none",
-      borderRadius: RADIUS.md, padding: "13px 0",
-      fontSize: 15, fontWeight: 600,
-      fontFamily: FONTS.body,
-      cursor: loading ? "not-allowed" : "pointer",
-      marginTop: 4, transition: "background 0.18s",
-    }}
+    className="sr-press sr-btn sr-btn-primary"
+    style={{ width: "100%", padding: "14px 0", fontSize: 16, marginTop: 6 }}
   >
     {children}
   </button>
@@ -97,7 +80,8 @@ export const AuthLink = ({ children, style = {}, ...rest }) => (
     {...rest}
     style={{
       background: "none", border: "none", padding: 0,
-      color: C.accent, fontSize: 13, fontWeight: 600,
+      color: C.text, fontSize: 13, fontWeight: 600,
+      textDecoration: "underline", textUnderlineOffset: 3,
       fontFamily: FONTS.body, cursor: "pointer",
       ...style,
     }}

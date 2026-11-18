@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { C, FONTS, RADIUS } from "../theme";
 import { Btn, Loading, Page, PageHeader, CheckRow, IconX, IconCheck } from "../components/ui";
-import { IngredientArt, Watermark } from "../components/art";
+import { IngredientArt } from "../components/art";
 import { todayDateStr } from "../lib/db";
 import {
   fetchShoppingNeeded, fetchManualShoppingItems,
@@ -201,27 +201,24 @@ export default function Shopping({ userId, setPantry }) {
         onToggle={() => toggleAuto(item.name)}
         label={`${item.name}${qtyLabel ? `, ${qtyLabel}` : ""}${item.dish ? `, for ${item.dish}` : ""}`}
       >
-        {item.qty != null && (
+        <span style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
           <span style={{
-            fontSize: 13, fontWeight: 600,
-            color: checked ? C.textMuted : C.accent,
+            fontSize: 25, fontWeight: 600, lineHeight: 1.1, color: C.text, flex: 1, minWidth: 0,
             textDecoration: checked ? "line-through" : "none",
-            marginRight: 4,
           }}>
-            {item.qty}{item.unit ? " " + item.unit : ""}
+            {item.name}
+            {item.dish && (
+              <span style={{ display: "block", fontSize: 17, fontWeight: 500, color: C.textMuted, marginTop: 1 }}>
+                for {item.dish}
+              </span>
+            )}
           </span>
-        )}
-        <span style={{
-          fontSize: 14, color: checked ? C.textMuted : C.text,
-          textDecoration: checked ? "line-through" : "none",
-        }}>
-          {item.name}
+          {item.qty != null && (
+            <span style={{ fontSize: 21, color: C.textSub, whiteSpace: "nowrap" }}>
+              {item.qty}{item.unit ? " " + item.unit : ""}
+            </span>
+          )}
         </span>
-        {item.dish && (
-          <span style={{ fontSize: 11, color: C.textMuted, marginLeft: 8 }}>
-            ({item.dish})
-          </span>
-        )}
       </CheckRow>
     );
   };
@@ -244,8 +241,7 @@ export default function Shopping({ userId, setPantry }) {
       }
     >
       <span style={{
-        fontSize: 14,
-        color: item.is_checked ? C.textMuted : C.text,
+        fontSize: 17, fontWeight: 500, color: C.text,
         textDecoration: item.is_checked ? "line-through" : "none",
       }}>
         {item.name}
@@ -261,42 +257,44 @@ export default function Shopping({ userId, setPantry }) {
     ...manual.filter(m => m.is_checked).map(m => ({ name: m.name, qty: null, unit: null, _k: `m-${m.id}` })),
   ];
 
+  const left = totalItems - doneItems;
+
   return (
     <Page>
       <PageHeader
-        title="The market ticket"
-        subtitle="Built from this week's plan — what's already on your shelves stays home"
-        eyebrow="The market"
-        color={C.c3}
-        motif="i-lemon"
+        title={["The", { em: true, text: "market list." }]}
+        subtitle="Built from this week's plan — what's already on your shelves stays home."
+        eyebrow="Shopping list"
+        stats={[
+          { v: left, l: "left to get" },
+          { v: `${doneItems}/${totalItems}`, l: "collected" },
+        ]}
         action={
           <div style={{ position: "relative" }}>
-            <Btn onClick={() => setShowExport(v => !v)}>Share ↗</Btn>
+            <Btn onClick={() => setShowExport(v => !v)} aria-expanded={showExport}>Share ↗</Btn>
             {showExport && (
               <>
                 <div
                   onClick={() => setShowExport(false)}
                   style={{ position: "fixed", inset: 0, zIndex: 99 }}
                 />
-                <div style={{
+                <div className="sr-menu" style={{
                   position: "absolute", top: "calc(100% + 8px)", right: 0,
-                  background: C.card, border: `1px solid ${C.border}`,
-                  borderRadius: 10, boxShadow: "var(--shadow-lift)",
-                  zIndex: 100, minWidth: 200, overflow: "hidden",
+                  background: C.card, color: C.text, borderRadius: 20, padding: 6,
+                  boxShadow: "var(--shadow-lift)", zIndex: 100, minWidth: 220,
                 }}>
                   {[
                     { label: "Save as PDF",       action: exportPDF     },
                     { label: "Send via email",    action: shareEmail    },
                     { label: "Share on WhatsApp", action: shareWhatsApp },
-                  ].map(({ label, action }, i, arr) => (
+                  ].map(({ label, action }) => (
                     <button
                       key={label}
                       onClick={action}
                       style={{
                         display: "block", width: "100%", padding: "12px 16px",
-                        background: "none", cursor: "pointer", border: "none",
-                        borderBottom: i < arr.length - 1 ? `1px solid ${C.border}` : "none",
-                        fontSize: 14, color: C.text,
+                        background: "none", cursor: "pointer", border: "none", borderRadius: 14,
+                        fontSize: 14, fontWeight: 500, color: C.text,
                         fontFamily: FONTS.body, textAlign: "left",
                         transition: "background 0.15s",
                       }}
@@ -314,165 +312,147 @@ export default function Shopping({ userId, setPantry }) {
       />
 
       {loading ? (
-        <Loading label="Writing the ticket…" />
+        <Loading label="Writing the ticket…" style={{ color: "var(--ink)", padding: "80px 0" }} size={56} />
       ) : (
-        <div className="sr-grid">
-          {/* ---- THE TICKET & BASKET COUNTER: ticked items land here ---- */}
-          <section className="sr-panel sr-tint-3 clip sp-12">
-            <Watermark symbol="i-lemon" size={210} style={{ right: -44, top: -48, transform: "rotate(-14deg)" }} />
+        <div className="sr-grid" style={{ alignItems: "start" }}>
+          {/* ---- THE LIST: chalked up on the kitchen board ---- */}
+          <section className="sp-7 rise">
+            <div className="receipt" style={{ padding: "clamp(22px, 3vw, 40px) clamp(18px, 3vw, 40px) 46px" }}>
+              <div style={{ textAlign: "center" }}>
+                <div className="hand" style={{ fontSize: 40, lineHeight: 1 }}>
+                  To buy
+                </div>
+                <div style={{ fontSize: 14, marginTop: 6, color: C.textMuted }}>
+                  {needed.length} required · {optNeed.length} optional
+                </div>
+              </div>
+              <hr className="receipt-rule" />
+              <div className="row-list">
+                {needed.length === 0 ? (
+                  <p style={{ fontSize: 15, color: C.textSub, margin: 0, padding: "10px 0", border: 0 }}>
+                    Everything this week's plan needs is already on your shelves.
+                  </p>
+                ) : (
+                  needed.map(renderAutoItem)
+                )}
+              </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: 18, position: "relative" }}>
-              <div style={{ flex: 1, minWidth: 160 }}>
-                <div style={{ fontSize: 13, color: C.textSub, marginBottom: 6 }}>
-                  {doneItems} of {totalItems} items collected
-                </div>
-                <div
-                  role="progressbar"
-                  aria-valuemin={0}
-                  aria-valuemax={totalItems}
-                  aria-valuenow={doneItems}
-                  aria-label="Items collected"
-                  style={{ height: 6, background: "var(--mound)", borderRadius: 3 }}
-                >
-                  <div style={{
-                    height: "100%", borderRadius: 3,
-                    width: `${totalItems ? (doneItems / totalItems) * 100 : 0}%`,
-                    background: doneItems === totalItems && totalItems > 0 ? C.success : C.accent,
-                    transition: "width 0.4s ease",
-                  }} />
-                </div>
-              </div>
-              <div style={{
-                fontFamily: FONTS.serif, fontSize: 28, color: C.head,
-                fontVariantNumeric: "tabular-nums", lineHeight: 1,
-              }}>
-                {totalItems - doneItems}
-                <span style={{ fontSize: 12, color: C.textMuted, fontFamily: FONTS.body, marginLeft: 5 }}>left</span>
-              </div>
-              {checkedAutoCount > 0 && (
-                <Btn
-                  variant="sage"
-                  disabled={addingToPantry}
-                  onClick={addCheckedToPantry}
-                  style={{ borderRadius: 999, fontSize: 12 }}
-                >
-                  {addingToPantry ? "Adding…" : `Add ${checkedAutoCount} to pantry`}
-                </Btn>
+              {optNeed.length > 0 && (
+                <>
+                  <hr className="receipt-rule" />
+                  <div style={{ fontSize: 14, fontWeight: 500, color: C.textMuted }}>
+                    Optional · nice to have
+                  </div>
+                  <div className="row-list">
+                    {optNeed.map(renderAutoItem)}
+                  </div>
+                </>
               )}
-            </div>
-
-            {/* The basket counter */}
-            <div style={{ marginTop: 16, position: "relative" }}>
-              <div style={{
-                fontSize: 10, letterSpacing: "0.24em", textTransform: "uppercase",
-                color: C.textMuted, marginBottom: 2, fontWeight: 600,
-              }}>
-                In the basket · {basket.length}
+              <hr className="receipt-rule" />
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, color: C.textSub }}>
+                <span>Collected</span><span>{doneItems} / {totalItems}</span>
               </div>
+            </div>
+          </section>
+
+          <div className="sp-5" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {/* ---- THE BASKET: ticked items land here ---- */}
+            <section className="sr-panel pop rise" style={{ "--i": 1 }}>
+              <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 14 }}>
+                <div>
+                  <div className="bignum" style={{ fontSize: 64 }}>{left}</div>
+                  <div className="kicker" style={{ marginTop: 10 }}>left to get</div>
+                </div>
+                {checkedAutoCount > 0 && (
+                  <Btn disabled={addingToPantry} onClick={addCheckedToPantry}>
+                    {addingToPantry ? "Adding…" : `Add ${checkedAutoCount} to pantry`}
+                  </Btn>
+                )}
+              </div>
+              <div
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={totalItems}
+                aria-valuenow={doneItems}
+                aria-label="Items collected"
+                style={{ height: 14, background: "var(--bg)", borderRadius: 999, marginTop: 18, overflow: "hidden" }}
+              >
+                <div style={{
+                  height: "100%", borderRadius: 999,
+                  width: `${totalItems ? (doneItems / totalItems) * 100 : 0}%`,
+                  background: "var(--c1)",
+                  transition: "width 0.5s var(--ease-out)",
+                }} />
+              </div>
+
+              <div className="kicker" style={{ margin: "22px 0 10px" }}>In the basket · {basket.length}</div>
               {basket.length === 0 ? (
-                <p style={{
-                  fontFamily: FONTS.serif, fontStyle: "italic", fontSize: 14,
-                  color: C.textSub, margin: "10px 0 4px",
-                  borderBottom: "3px solid color-mix(in srgb, var(--faint) 45%, var(--line))",
-                  paddingBottom: 14,
-                }}>
-                  Tick items as you shop — they land on this counter.
+                <p style={{ fontSize: 15, margin: 0 }}>
+                  Tick items as you shop — they land here.
                 </p>
               ) : (
-                <div className="sr-shelf">
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                   {basket.map(item => (
-                    <div key={item._k} className="sr-pitem" style={{ minWidth: 74, padding: "4px 8px 8px" }}>
-                      <IngredientArt name={item.name} size={38} />
-                      <div className="truncate" style={{ fontSize: 11, color: C.text, marginTop: 4, maxWidth: 96 }}>
-                        {item.name}
-                      </div>
+                    <div key={item._k} style={{
+                      display: "flex", alignItems: "center", gap: 8, padding: "6px 14px 6px 8px",
+                      background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 999, animation: "pop-in 0.4s var(--ease-out) both",
+                    }}>
+                      <IngredientArt name={item.name} size={30} />
+                      <span style={{ fontSize: 13.5, fontWeight: 600 }}>{item.name}</span>
                       {item.qty != null && (
-                        <div style={{ fontSize: 10, color: C.textMuted, fontVariantNumeric: "tabular-nums" }}>
+                        <span className="mono" style={{ fontSize: 11, opacity: 0.7 }}>
                           {item.qty}{item.unit ? ` ${item.unit}` : ""}
-                        </div>
+                        </span>
                       )}
                     </div>
                   ))}
                 </div>
               )}
-            </div>
-          </section>
+            </section>
 
-          {/* ---- TO BUY ---- */}
-          <section className="sr-panel sp-7">
-            <h3 className="sr-panel-h">
-              <span>To buy</span>
-              <span>{needed.length} required</span>
-            </h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {needed.length === 0 ? (
-                <p style={{ fontFamily: FONTS.serif, fontStyle: "italic", fontSize: 14, color: C.textSub, margin: 0 }}>
-                  Everything this week's plan needs is already on your shelves.
-                </p>
-              ) : (
-                needed.map(renderAutoItem)
-              )}
-            </div>
-
-            {optNeed.length > 0 && (
-              <div style={{ borderTop: `1px solid ${C.border}`, marginTop: 16, paddingTop: 14 }}>
-                <div style={{
-                  fontSize: 10, letterSpacing: "0.24em", textTransform: "uppercase",
-                  color: C.textMuted, marginBottom: 8, fontWeight: 600,
-                }}>
-                  Optional · nice to have
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {optNeed.map(renderAutoItem)}
-                </div>
-              </div>
-            )}
-          </section>
-
-          {/* ---- YOUR ADDITIONS + ALREADY STOCKED ---- */}
-          <div className="sp-5" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <section className="sr-panel">
+            {/* ---- YOUR ADDITIONS ---- */}
+            <section className="sr-panel rise" style={{ "--i": 2 }}>
               <h3 className="sr-panel-h"><span>Your own additions</span></h3>
-              {manual.map(item => (
-                <div key={item.id} style={{ marginBottom: 6 }}>
-                  {renderManualItem(item)}
-                </div>
-              ))}
-              <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+              <div className="row-list">
+                {manual.map(item => (
+                  <div key={item.id}>
+                    {renderManualItem(item)}
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
                 <input
                   value={extraInput}
                   onChange={e => setExtraInput(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && addExtra()}
                   placeholder="Type an item and press Enter…"
-                  style={{
-                    flex: 1, background: C.bg,
-                    border: `1.5px solid ${C.border}`,
-                    borderRadius: RADIUS.md, padding: "10px 14px",
-                    fontSize: 14, color: C.text,
-                  }}
+                  aria-label="Add your own item"
+                  className="sr-field"
+                  style={{ flex: 1, borderRadius: 999, paddingLeft: 20 }}
                 />
                 <Btn onClick={addExtra} disabled={!extraInput.trim()}>Add</Btn>
               </div>
             </section>
 
-            <section className="sr-panel sr-tint-4">
+            {/* ---- ALREADY STOCKED ---- */}
+            <section className="sr-panel rise" style={{ "--i": 3 }}>
               <h3 className="sr-panel-h">
                 <span>Already on your shelves</span>
                 <span>{have.length}</span>
               </h3>
               {have.length === 0 ? (
-                <p style={{ fontFamily: FONTS.serif, fontStyle: "italic", fontSize: 14, color: C.textSub, margin: 0 }}>
+                <p style={{ fontSize: 16, color: C.textSub, margin: 0 }}>
                   Nothing from this week's plan is in your pantry yet.
                 </p>
               ) : (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                   {have.map(name => (
                     <span key={name} style={{
-                      display: "inline-flex", alignItems: "center", gap: 6,
-                      padding: "6px 12px", borderRadius: RADIUS.full,
-                      background: C.sageLight, fontSize: 13, color: C.sageDark,
+                      display: "inline-flex", alignItems: "center", gap: 7,
+                      padding: "7px 14px", borderRadius: RADIUS.full,
+                      background: "var(--c4-soft)", color: "var(--c4)", fontSize: 14, fontWeight: 500,
                     }}>
-                      <span style={{ color: C.sage, display: "flex" }} aria-hidden="true"><IconCheck size={11} /></span>
+                      <span style={{ display: "flex" }} aria-hidden="true"><IconCheck size={11} /></span>
                       {name}
                     </span>
                   ))}
